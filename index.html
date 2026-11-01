@@ -84,7 +84,7 @@
       }
     }
 
-    /* Janela do Jogo (15x11 SQMs exatos) */
+    /* Janela do jogo: quantidade de colunas adaptada à largura disponível */
     .viewport-container {
       grid-column: 1;
       grid-row: 1;
@@ -98,7 +98,8 @@
     }
 
     #gameCanvas {
-      aspect-ratio: 15 / 11;
+      /* A proporção real acompanha o número de colunas do mapa. */
+      aspect-ratio: auto;
       max-width: 100%;
       max-height: 100%;
       width: auto;
@@ -153,9 +154,9 @@
 <body>
 
 <div class="client-grid">
-  <!-- ÁREA CENTRAL/ESQUERDA SUPERIOR: VIEWPORT 15x11 SQMs -->
+  <!-- ÁREA CENTRAL/ESQUERDA SUPERIOR: VIEWPORT ADAPTÁVEL -->
   <div class="viewport-container tibia-panel">
-    <canvas id="gameCanvas" width="480" height="352"></canvas>
+    <canvas id="gameCanvas" width="720" height="528"></canvas>
 
     <!-- Indicador de Zona Segura (Protection Zone) e Dicas Rápidas -->
     <div id="pzBadge" class="absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-emerald-300 font-bold shadow-lg">
@@ -440,7 +441,7 @@
  */
 (function() {
   // Grade 15x11 SQMs renderizados a 48x48 pixels por SQM para riqueza máxima de detalhes pixel-art
-  const VIEW_COLS = 15;
+  let VIEW_COLS = 15; // Ajustado à proporção do espaço disponível
   const VIEW_ROWS = 11;
   const TILE_SIZE = 48; // 15 * 48 = 720px | 11 * 48 = 528px
   const MAP_SIZE = 44;
@@ -450,6 +451,25 @@
   canvas.height = VIEW_ROWS * TILE_SIZE;
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
+
+  // Ajuste de viewport sem esticar os sprites ou reiniciar o estado do jogador.
+  // Mantemos 11 linhas e revelamos mais colunas em monitores largos.
+  function fitGameViewport() {
+    const container = canvas.parentElement;
+    if (!container) return;
+    const r = container.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const availableW = Math.max(1, r.width - 16);
+    const availableH = Math.max(1, r.height - 16);
+    const desiredCols = Math.max(9, Math.min(MAP_SIZE, Math.round((availableW / availableH) * VIEW_ROWS)));
+    if (desiredCols !== VIEW_COLS) {
+      VIEW_COLS = desiredCols;
+      canvas.width = VIEW_COLS * TILE_SIZE;
+      canvas.height = VIEW_ROWS * TILE_SIZE;
+      ctx.imageSmoothingEnabled = false;
+    }
+  }
+  window.addEventListener('resize', fitGameViewport);
 
   const minimapCanvas = document.getElementById('minimapCanvas');
   const mctx = minimapCanvas.getContext('2d');
@@ -2237,8 +2257,8 @@
   function renderViewport(now) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const camX = player.renderX - 7;
-    const camY = player.renderY - 5;
+    const camX = player.renderX - Math.floor(VIEW_COLS / 2);
+    const camY = player.renderY - Math.floor(VIEW_ROWS / 2);
 
     const startCol = Math.floor(camX) - 1;
     const endCol = startCol + VIEW_COLS + 3;
@@ -2771,8 +2791,8 @@
     const clickX = (e.clientX - rect.left) * scaleX;
     const clickY = (e.clientY - rect.top) * scaleY;
 
-    const camX = player.renderX - 7;
-    const camY = player.renderY - 5;
+    const camX = player.renderX - Math.floor(VIEW_COLS / 2);
+    const camY = player.renderY - Math.floor(VIEW_ROWS / 2);
 
     const tileX = Math.floor(camX + clickX / TILE_SIZE);
     const tileY = Math.floor(camY + clickY / TILE_SIZE);
@@ -2868,6 +2888,7 @@
   }
 
   window.onload = function() {
+    fitGameViewport();
     buildTileSprites();
     initWorldMap();
     initEntities();
