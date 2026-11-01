@@ -1489,6 +1489,10 @@
     for(let yy=20;yy<=42;yy++)for(let xx=21;xx<=23;xx++)
       if(maps[1][yy][xx]!==TILE.BRIDGE)maps[1][yy][xx]=TILE.DIRT_ROAD;
 
+    // Horta da vila, com canteiros e vegetação cultivada.
+    for(let y=10;y<=16;y++)for(let x=3;x<=7;x++)maps[1][y][x]=TILE.FARM;
+    maps[1][13][8]=TILE.SIGNPOST;
+
     // Bosques, pradarias floridas, ruínas e acampamento de saqueadores.
     for(let y=19;y<=42;y++)for(let x=1;x<=42;x++){
       const t=maps[1][y][x],n=(x*19+y*31+x*y*3)%23;
@@ -1595,7 +1599,7 @@
         dialog:'A mata é bonita, mas perigosa. Há suprimentos no baú da casa; guarde poções para a travessia.'},
       {id:'npc_taro',name:'Taro (Batedor)',sprite:'smith',x:18,y:16,
         dialog:'Vi os bandidos junto às tendas no sudeste, depois da ponte. Cuidado com os lobos dos bosques!'},
-      {id:'npc_eron',name:'Eron (Mercador do Vale)',sprite:'merchant',x:26,y:16,
+      {id:'npc_eron',name:'Eron (Mercador do Vale)',sprite:'merchant',x:25,y:15,
         dialog:'Bem-vindo à Vila das Lanternas! Tenho poções e comida para sua próxima expedição.'}
     ].forEach(n=>entities.push({...n,type:'npc',floor:1,renderX:n.x,renderY:n.y,
       dir:'down',hp:100,maxHp:100}));
@@ -1608,7 +1612,7 @@
       {name:'Chefe Saqueador',sprite:'bandit',x:32,y:38,hp:225,atk:31,xp:180,gold:[70,115]},
       {name:'Bandido da Estrada',sprite:'bandit',x:38,y:40,hp:145,atk:25,xp:115,gold:[30,60]},
       {name:'Sentinela do Acampamento',sprite:'bandit',x:35,y:41,hp:165,atk:27,xp:125,gold:[45,80]},
-      {name:'Lobo Cinzento',sprite:'wolf',x:12,y:24,hp:105,atk:19,xp:75,gold:[8,18]},
+      {name:'Lobo Cinzento',sprite:'wolf',x:16,y:22,hp:105,atk:19,xp:75,gold:[8,18]},
       {name:'Lobo do Bosque',sprite:'wolf',x:12,y:35,hp:110,atk:20,xp:78,gold:[9,19]}
     ];
     valeSpawns.forEach((m,idx)=>entities.push({
