@@ -2721,11 +2721,63 @@
     player.path = findPathTo(tx, ty);
   });
 
+  // Salvamento local no navegador: conserva nivel, atributos, moedas, outfit,
+  // equipamentos e inventario. Nao exige cadastro ou servidor.
+  const SAVE_KEY = 'reinos-das-cinzas-save-v1';
+  const savedFields = [
+    'level','floor','x','y','hp','maxHp','mp','maxMp','xp','maxXp',
+    'gold','blessing','cap','atk','def','weaponName','legendarySword',
+    'hpPots','mpPots','questKills','questCompleted','lootBag','outfit','stance','chase'
+  ];
+  function saveProgress() {
+    try {
+      const data = {};
+      savedFields.forEach(k => { data[k] = player[k]; });
+      localStorage.setItem(SAVE_KEY, JSON.stringify({version:1,player:data}));
+    } catch (err) {
+      // Em navegacao privada ou armazenamento desativado, o jogo continua normalmente.
+    }
+  }
+  function restoreProgress() {
+    try {
+      const save = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+      if (!save || save.version !== 1 || !save.player) return false;
+      const data = save.player;
+      for (const k of savedFields) {
+        if (!(k in data)) continue;
+        if (typeof player[k] === 'number' && (!Number.isFinite(data[k]) || typeof data[k] !== 'number')) continue;
+        if (typeof player[k] === 'boolean' && typeof data[k] !== 'boolean') continue;
+        if (typeof player[k] === 'string' && typeof data[k] !== 'string') continue;
+        if (k === 'lootBag' && !Array.isArray(data[k])) continue;
+        if (k === 'outfit' && (!data[k] || typeof data[k] !== 'object' || Array.isArray(data[k]))) continue;
+        player[k] = data[k];
+      }
+      if (![0,-1,-2].includes(player.floor)) player.floor = 0;
+      if (!Number.isInteger(player.x) || !Number.isInteger(player.y) ||
+          player.x < 1 || player.y < 1 || player.x >= MAP_SIZE-1 || player.y >= MAP_SIZE-1 ||
+          isTileBlocked(player.floor,player.x,player.y,'player')) {
+        player.x = 22; player.y = 14; player.floor = 0;
+      }
+      player.renderX=player.x; player.renderY=player.y;
+      player.hp=Math.max(1,Math.min(player.maxHp,player.hp));
+      player.mp=Math.max(0,Math.min(player.maxMp,player.mp));
+      player.targetId=null; player.path=[];
+      return true;
+    } catch (err) { return false; }
+  }
+  window.addEventListener('pagehide',saveProgress);
+  window.saveGame = saveProgress;
+
+  let lastSave = 0;
   let lastBattleRefresh = 0;
   function gameLoop(now) {
     updateGameLogic(now);
     renderViewport(now);
 
+    if (now - lastSave > 5000) {
+      saveProgress();
+      lastSave = now;
+    }
     if (now - lastBattleRefresh > 320) {
       renderBattleList();
       renderMinimap();
@@ -2738,13 +2790,14 @@
     buildTileSprites();
     initWorldMap();
     initEntities();
+    const restored = restoreProgress();
     updateHUD();
     updateZoneUI();
     renderBackpack();
     renderBattleList();
 
     addLog('Bem-vindo ao REINOS DAS CINZAS (MMORPG Clássico 7.6 • O Bastião de Cinza).', '#ffd700');
-    addLog('Ivo (Cavaleiro das Cinzas) entra no Bastião das Cinzas.', '#ffffff');
+    addLog(restored ? 'Progresso local recuperado! Boa aventura, Ivo.' : 'Ivo (Cavaleiro das Cinzas) entra no Bastião das Cinzas.', '#ffffff');
     addLog('Dica: Pise no bueiro [26,14] para descer às Catacumbas (-1), depois na escada [28,21] para explorar a Cripta dos Ecos (-2).', '#66e0ff');
 
     requestAnimationFrame(gameLoop);
