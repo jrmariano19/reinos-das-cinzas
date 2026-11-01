@@ -470,7 +470,7 @@
     <div class="tibia-inset flex flex-col min-h-0 overflow-hidden">
       <div class="bg-neutral-800 px-2 py-0.5 border-b border-neutral-700 flex justify-between items-center text-[10px] font-bold text-amber-300">
         <span>🎒 Backpack (Inventário)</span>
-        <span class="text-[9px] text-gray-400">Clique p/ Usar</span>
+        <span class="text-[9px] text-gray-400">Clique p/ Usar • <b id="backpackSlots">3 pilhas</b></span>
       </div>
       <div id="backpackGrid" class="p-1.5 grid grid-cols-5 gap-1 overflow-y-auto"></div>
     </div>
@@ -768,23 +768,82 @@
 
   const cooldowns = { 1: 0, 2: 0, 3: 0, 4: 0 };
 
+  // Inventário por pilhas: itens equivalentes se agrupam até 100 unidades.
+  const MAX_ITEM_STACK=100;
+  const STACKABLE_ITEM_TYPES=new Set(['food','treasure','material','resource','herb','ammo','rune','potion']);
+  function isStackableItem(item){
+    return !!item && (item.stackable===true || STACKABLE_ITEM_TYPES.has(item.type));
+  }
+  function itemStackKey(item){
+    if(item.stackKey)return String(item.stackKey);
+    const name=String(item.name||item.id||'item').trim().toLocaleLowerCase();
+    return [item.type||'',name,item.icon||'',Number(item.value)||0].join('|');
+  }
+  function addItemToBag(item,quantity=null){
+    if(!item||typeof item!=='object')return {added:0,remaining:0};
+    const amount=Math.max(1,Math.floor(Number(quantity??item.qty??1)||1));
+    const base={...item};
+    delete base.qty;delete base.maxStack;
+    if(!isStackableItem(base)){
+      for(let i=0;i<amount;i++)player.lootBag.push({...base,qty:1,maxStack:1});
+      return {added:amount,remaining:0};
+    }
+    const key=itemStackKey(base);
+    let remaining=amount;
+    for(const stack of player.lootBag){
+      if(!isStackableItem(stack)||itemStackKey(stack)!==key)continue;
+      const current=Math.max(1,Math.floor(Number(stack.qty)||1));
+      if(current>=MAX_ITEM_STACK)continue;
+      const moved=Math.min(MAX_ITEM_STACK-current,remaining);
+      stack.qty=current+moved;remaining-=moved;
+      if(remaining<=0)break;
+    }
+    while(remaining>0){
+      const moved=Math.min(MAX_ITEM_STACK,remaining);
+      player.lootBag.push({...base,qty:moved,maxStack:MAX_ITEM_STACK,stackKey:key});
+      remaining-=moved;
+    }
+    return {added:amount,remaining:0};
+  }
+  function normalizeLootBag(){
+    const previous=Array.isArray(player.lootBag)?player.lootBag.slice():[];
+    player.lootBag=[];
+    previous.forEach(item=>addItemToBag(item,Math.max(1,Math.floor(Number(item?.qty)||1))));
+  }
+  function backpackUnitCount(){
+    return player.lootBag.reduce((total,item)=>total+Math.max(1,Math.floor(Number(item.qty)||1)),0);
+  }
+
+
   // Dois mapas de superfície interligados e dois níveis subterrâneos.
   const maps = { 0: [], 1: [], '-1': [], '-2': [] };
 
-  // Construções autorais. A porta fica sempre na parede sul de cada casa.
+  // Bastião redesenhado: doze edifícios em três quarteirões, além da Vila das Lanternas.
   const houses = [
-    {id:'arquivo',name:'Arquivo das Cinzas',x:12,y:6,w:5,h:5,door:14},
-    {id:'forja',name:'Forja do Bastião',x:27,y:6,w:6,h:5,door:29},
-    {id:'estalagem',name:'Estalagem da Brasa',x:12,y:13,w:5,h:5,door:14},
-    {id:'laboratorio',name:'Laboratório da Névoa',x:28,y:13,w:5,h:5,door:30},
-    {id:'arquivo_vale',name:'Casa do Cartógrafo',floor:1,x:11,y:10,w:6,h:5,door:14},
-    {id:'alquimia_vale',name:'Armazém das Lanternas',floor:1,x:28,y:10,w:6,h:5,door:30}
+    {id:'arquivo',name:'Arquivo dos Reinos',x:6,y:5,w:5,h:5,door:8,style:'stone'},
+    {id:'templo',name:'Templo da Chama Serena',x:13,y:5,w:5,h:5,door:15,style:'slate'},
+    {id:'quartel',name:'Quartel da Guarda',x:26,y:5,w:5,h:5,door:28,style:'stone'},
+    {id:'forja',name:'Forja das Brasas',x:33,y:5,w:5,h:5,door:35,style:'brick'},
+    {id:'estalagem',name:'Estalagem da Última Brasa',x:6,y:12,w:5,h:5,door:8,style:'timber'},
+    {id:'banco',name:'Banco do Bastião',x:13,y:12,w:5,h:5,door:15,style:'plaster'},
+    {id:'deposito',name:'Depósito dos Aventureiros',x:26,y:12,w:5,h:5,door:28,style:'timber'},
+    {id:'laboratorio',name:'Laboratório da Névoa',x:33,y:12,w:5,h:5,door:35,style:'slate'},
+    {id:'residencial',name:'Morada dos Artífices',x:6,y:19,w:5,h:4,door:8,style:'plaster'},
+    {id:'taverna',name:'Taverna do Corvo',x:13,y:19,w:5,h:4,door:15,style:'timber'},
+    {id:'arsenal',name:'Arsenal da Muralha',x:26,y:19,w:5,h:4,door:28,style:'stone'},
+    {id:'guilda',name:'Guilda dos Mercadores',x:33,y:19,w:5,h:4,door:35,style:'brick'},
+    {id:'arquivo_vale',name:'Casa do Cartógrafo',floor:1,x:11,y:10,w:6,h:5,door:14,style:'brick'},
+    {id:'alquimia_vale',name:'Armazém das Lanternas',floor:1,x:28,y:10,w:6,h:5,door:30,style:'moss'}
   ];
   const chests = [
-    {id:'arquivo',name:'Baú dos Registros',x:13,y:9,gold:80,mp:1},
-    {id:'forja',name:'Baú do Ferreiro',x:31,y:9,gold:110,hp:1},
-    {id:'estalagem',name:'Baú de Provisões',x:13,y:16,gold:65,food:true},
-    {id:'laboratorio',name:'Baú Alquímico',x:31,y:16,gold:90,mp:2},
+    {id:'arquivo',name:'Baú dos Registros',x:7,y:8,gold:80,mp:1},
+    {id:'forja',name:'Baú do Ferreiro',x:34,y:8,gold:110,hp:1},
+    {id:'estalagem',name:'Baú de Provisões',x:7,y:15,gold:65,food:true},
+    {id:'laboratorio',name:'Baú Alquímico',x:34,y:15,gold:90,mp:2},
+    {id:'banco',name:'Cofre de Reserva',x:14,y:15,gold:130,hp:1},
+    {id:'deposito',name:'Baú dos Aventureiros',x:27,y:15,gold:150,mp:1},
+    {id:'arsenal',name:'Arca do Arsenal',x:27,y:21,gold:180,hp:2},
+    {id:'guilda',name:'Cofre da Guilda',x:34,y:21,gold:190,mp:2},
     {id:'cartas_vale',name:'Baú das Cartas do Vale',floor:1,x:12,y:13,gold:140,mp:1},
     {id:'suprimentos_vale',name:'Baú dos Exploradores',floor:1,x:32,y:13,gold:180,hp:2}
   ];
@@ -1101,22 +1160,39 @@
       spriteCache['water_'+v]=c;
     }
 
-    // Parede frontal das moradias, telha de barro e colunas de madeira.
-    const houseWall = createOffscreen(48, 64), hw = houseWall.getContext('2d');
-    hw.fillStyle = 'rgba(0,0,0,.25)'; hw.fillRect(3,18,44,46);
-    hw.fillStyle = '#ad9270'; hw.fillRect(0,14,48,46);
-    hw.fillStyle = '#dac5a1'; hw.fillRect(2,17,44,24);
-    hw.fillStyle = '#7e6146'; hw.fillRect(0,41,48,18);
-    hw.fillStyle = '#5d3c25'; hw.fillRect(2,16,5,43); hw.fillRect(42,16,5,43);
-    hw.fillStyle = '#3e231d'; hw.fillRect(0,10,48,9);
-    for (let x = 0; x < 48; x += 12) {
-      hw.fillStyle = (x/12)%2 ? '#a64e35' : '#bb6140';
-      hw.fillRect(x,-0+2,11,14);
-      hw.fillStyle = '#e09360'; hw.fillRect(x+1,3,9,2);
-      hw.fillStyle = '#6c3026'; hw.fillRect(x,13,12,2);
-    }
-    hw.fillStyle = '#e6d7aa'; hw.fillRect(7,21,31,2);
-    spriteCache['house_wall'] = houseWall;
+    // Fachadas com seis paletas autorais: a cidade não parece um conjunto de casas copiadas.
+    const housePalettes={
+      brick:{wall:'#dac5a1',base:'#7e6146',post:'#5d3c25',trim:'#3e231d',roof:'#a64e35',light:'#e09360',dark:'#6c3026'},
+      slate:{wall:'#b9c4c8',base:'#596873',post:'#35434c',trim:'#202b35',roof:'#40536f',light:'#8299b6',dark:'#263447'},
+      stone:{wall:'#c7c3b3',base:'#777365',post:'#514e45',trim:'#34332f',roof:'#777c79',light:'#bfc5bd',dark:'#454a48'},
+      timber:{wall:'#c69a69',base:'#79502f',post:'#4d3020',trim:'#302019',roof:'#75462d',light:'#bd8652',dark:'#43271c'},
+      plaster:{wall:'#e0d3b6',base:'#92795d',post:'#6a4a31',trim:'#493328',roof:'#8d5339',light:'#d18a5d',dark:'#573126'},
+      moss:{wall:'#b9bd9d',base:'#65704f',post:'#455337',trim:'#283326',roof:'#526447',light:'#9bad76',dark:'#34432e'}
+    };
+    Object.entries(housePalettes).forEach(([style,p])=>{
+      const houseWall=createOffscreen(48,64),hw=houseWall.getContext('2d');
+      hw.fillStyle='rgba(0,0,0,.25)';hw.fillRect(3,18,44,46);
+      hw.fillStyle=p.base;hw.fillRect(0,14,48,46);
+      hw.fillStyle=p.wall;hw.fillRect(2,17,44,24);
+      hw.fillStyle=p.base;hw.fillRect(0,41,48,18);
+      hw.fillStyle=p.post;hw.fillRect(2,16,5,43);hw.fillRect(42,16,5,43);
+      hw.fillStyle=p.trim;hw.fillRect(0,10,48,9);
+      for(let x=0;x<48;x+=12){
+        hw.fillStyle=(x/12)%2?p.roof:p.dark;hw.fillRect(x,2,11,14);
+        hw.fillStyle=p.light;hw.fillRect(x+1,3,9,2);
+        hw.fillStyle=p.dark;hw.fillRect(x,13,12,2);
+      }
+      hw.fillStyle=p.light;hw.fillRect(7,21,31,2);
+      if(style==='slate'||style==='stone'){
+        hw.fillStyle='rgba(255,255,255,.16)';
+        hw.fillRect(5,27,8,2);hw.fillRect(27,34,12,2);
+      }
+      if(style==='timber'){
+        hw.fillStyle='#49301f';hw.fillRect(10,25,3,15);hw.fillRect(35,25,3,15);
+      }
+      spriteCache['house_wall_'+style]=houseWall;
+    });
+    spriteCache['house_wall']=spriteCache['house_wall_brick'];
 
     // Postes e mobiliário próprios, sem recurso gráfico protegido.
     const lamp = createOffscreen(48,64), lg = lamp.getContext('2d');
@@ -1622,60 +1698,51 @@
           continue;
         }
 
-        // Interior da Cidadela de Valdoria (x: 10..34, y: 4..19)
-        if (x >= 10 && x <= 34 && y >= 4 && y >= 4 && y <= 19) {
-          const isBorder = (x === 10 || x === 34 || y === 4 || y === 19);
-          const isSouthGate = (y === 19 && x >= 20 && x <= 24);
-
-          if (isSouthGate) {
-            maps[0][y][x] = (x === 20 || x === 24) ? TILE.GATE_ARCH : TILE.DIRT_ROAD;
+        // Bastião das Cinzas: muralhas amplas, dois portões e ruas que ligam três quarteirões.
+        if (x >= 4 && x <= 39 && y >= 4 && y <= 24) {
+          const isBorder = x===4 || x===39 || y===4 || y===24;
+          const northGate = y===4 && x>=20 && x<=24;
+          const southGate = y===24 && x>=20 && x<=24;
+          if (northGate || southGate) {
+            maps[0][y][x] = (x===20 || x===24) ? TILE.GATE_ARCH : TILE.DIRT_ROAD;
           } else if (isBorder) {
-            maps[0][y][x] = (x % 4 === 0 && y === 19) ? TILE.TORCH_WALL : TILE.CASTLE_WALL;
-          } else if (x >= 21 && x <= 23) {
+            maps[0][y][x] = ((x+y)%7===0) ? TILE.TORCH_WALL : TILE.CASTLE_WALL;
+          } else if ((x>=21 && x<=23) || y===10 || y===11 || y===17 || y===18 || y===23) {
             maps[0][y][x] = TILE.DIRT_ROAD;
           } else {
             maps[0][y][x] = TILE.STONE_FLOOR;
           }
+        } else if (x >= 21 && x <= 23 && y > 24 && y < 40) {
+          maps[0][y][x] = TILE.DIRT_ROAD;
         } else {
-          if (x >= 21 && x <= 23 && y > 19 && y < 40) {
-            maps[0][y][x] = TILE.DIRT_ROAD;
-          } else {
-            maps[0][y][x] = TILE.GRASS;
-          }
+          maps[0][y][x] = TILE.GRASS;
         }
       }
     }
 
-    // Elementos fiéis ao Bastião das Cinzas (Andar 0)
-    maps[0][15][16] = TILE.FLOWERS;
-    maps[0][12][15] = TILE.FLOWERS;
-    maps[0][15][28] = TILE.TREE;
-    maps[0][10][29] = TILE.TREE;
-    maps[0][8][18]  = TILE.ALTAR;
-    maps[0][14][26] = TILE.SEWER_GRATE; // Bueiro interativo para descer às Catacumbas de Brasa (-1)
-    maps['-1'][14][26] = TILE.ROPE_LADDER; // Ponto de corda/escada para subir de volta ao Térreo (0)
-
-    maps['-1'][21][28] = TILE.STAIR_DOWN; // Catacumbas -> Cripta
-    maps['-2'][21][28] = TILE.STAIR_UP;   // Cripta -> Catacumbas
+    // Praça central, entrada das Catacumbas e marcos subterrâneos.
+    maps[0][14][24] = TILE.SEWER_GRATE;
+    maps['-1'][14][26] = TILE.ROPE_LADDER;
+    maps['-1'][21][28] = TILE.STAIR_DOWN;
+    maps['-2'][21][28] = TILE.STAIR_UP;
     [[15,11],[24,10],[16,23],[29,14]].forEach(([x,y]) => { maps['-2'][y][x] = TILE.RUIN_PILLAR; });
     maps['-2'][12][25] = TILE.FLOWERS;
 
-    // Pilares nas Catacumbas (-1)
+    // Pilares das Catacumbas (-1).
     [[18,12],[26,12],[18,18],[26,18]].forEach(([px, py]) => {
       maps['-1'][py][px] = TILE.RUIN_PILLAR;
     });
 
-    // Árvores e Ruínas ao Sul da Cidadela (Andar 0)
+    // Ruínas e árvores ficam fora das ruas e dos quarteirões da cidade.
     const trees = [
-      [13,23],[16,25],[28,23],[31,26],[12,30],[18,33],[27,31],[33,34],
-      [9,22],[36,24],[14,37],[29,37],[25,27],[19,24]
+      [2,25],[8,26],[16,27],[28,26],[37,26],[3,30],[18,33],[27,31],
+      [41,34],[14,37],[29,37],[25,34],[19,36]
     ];
     trees.forEach(([tx, ty]) => { if (maps[0][ty]) maps[0][ty][tx] = TILE.TREE; });
-
     const ruins = [[15,28],[17,28],[15,31],[28,29],[30,29],[29,33]];
     ruins.forEach(([rx, ry]) => { if (maps[0][ry]) maps[0][ry][rx] = TILE.RUIN_PILLAR; });
 
-    // Construções com portas e interiores em ambas as regiões.
+    // Todas as moradias recebem interiores, portas e fachadas com identidade visual própria.
     houses.forEach(({x,y,w,h,door,floor=0}) => {
       for (let yy = y; yy < y + h; yy++) {
         for (let xx = x; xx < x + w; xx++) {
@@ -1687,12 +1754,21 @@
       maps[floor][y + 1][x + 1] = TILE.FURNITURE;
       maps[floor][y + 1][x + w - 2] = TILE.FURNITURE;
     });
-    // Objetos interativos colocados em locais livres e alcançáveis do interior.
     chests.forEach(ch => { maps[ch.floor??0][ch.y][ch.x] = TILE.CHEST; });
-    [[20,7],[25,7],[20,16],[25,16]].forEach(([x,y]) => { maps[0][y][x] = TILE.LANTERN; });
-    maps[0][12][17] = TILE.FOUNTAIN;
-    maps[0][12][29] = TILE.MARKET_STALL;
-    maps[0][16][26] = TILE.FOUNTAIN;
+
+    // Praça do mercado: fonte, bancas, iluminação e placas de orientação.
+    maps[0][13][19] = TILE.FOUNTAIN;
+    maps[0][13][25] = TILE.MARKET_STALL;
+    maps[0][15][25] = TILE.MARKET_STALL;
+    maps[0][15][19] = TILE.FLOWERS;
+    maps[0][12][20] = TILE.LANTERN;
+    maps[0][16][20] = TILE.LANTERN;
+    maps[0][12][24] = TILE.LANTERN;
+    maps[0][16][24] = TILE.LANTERN;
+    maps[0][18][20] = TILE.SIGNPOST;
+    maps[0][18][24] = TILE.SIGNPOST;
+    [[11,10],[18,10],[25,10],[32,10],[11,17],[18,17],[25,17],[32,17]]
+      .forEach(([x,y]) => { if (maps[0][y][x]===TILE.DIRT_ROAD) maps[0][y][x]=TILE.LANTERN; });
 
     // Lago de Pedra Clara e passarela de madeira ao sudoeste.
     for (let y=28;y<=36;y++) for(let x=3;x<=14;x++){
@@ -1840,8 +1916,8 @@
       type: 'npc',
       sprite: 'guard',
       floor: 0,
-      x: 19,
-      y: 17,
+      x: 20,
+      y: 18,
       renderX: 19,
       renderY: 17,
       dir: 'down',
@@ -1857,7 +1933,7 @@
       sprite: 'healer',
       floor: 0,
       x: 18,
-      y: 9,
+      y: 14,
       renderX: 18,
       renderY: 9,
       dir: 'down',
@@ -1869,24 +1945,41 @@
     // Mercador original: permanece no corredor comercial do Bastião.
     entities.push({
       id: 'npc_breno', name: 'Breno (Mercador das Cinzas)', type: 'npc',
-      sprite: 'merchant', floor: 0, x: 31, y: 12, renderX: 31, renderY: 12,
+      sprite: 'merchant', floor: 0, x: 29, y: 14, renderX: 29, renderY: 14,
       dir: 'down', hp: 100, maxHp: 100,
       dialog: 'Bem-vindo ao meu mercado! Tenho poções e provisões para a próxima expedição.'
     });
 
     // Moradores locais, cada um com seu próprio diálogo e estabelecimento.
     [
-      {id:'mira',name:'Mira (Cronista)',sprite:'scribe',x:15,y:8,
+      {id:'mira',name:'Mira (Cronista)',sprite:'scribe',x:8,y:8,
        dialog:'Bem-vindo ao Arquivo. Os registros dos Reinos estão guardados aqui. Procure o baú ao fundo para descobrir suprimentos antigos.'},
-      {id:'doran',name:'Doran (Ferreiro)',sprite:'smith',x:30,y:8,
+      {id:'doran',name:'Doran (Ferreiro)',sprite:'smith',x:35,y:8,
        dialog:'Uma boa espada é feita na forja e aperfeiçoada no campo de batalha. As minhas provisões estão no baú da oficina.'},
-      {id:'seris',name:'Seris (Estalajadeira)',sprite:'innkeeper',x:15,y:15,
+      {id:'seris',name:'Seris (Estalajadeira)',sprite:'innkeeper',x:8,y:15,
        dialog:'Entre, guerreiro! A Estalagem da Brasa é um lugar seguro. Há provisões guardadas junto à parede de madeira.'},
-      {id:'veyra',name:'Veyra (Alquimista)',sprite:'alchemist',x:30,y:15,
+      {id:'veyra',name:'Veyra (Alquimista)',sprite:'alchemist',x:35,y:15,
        dialog:'A névoa esconde segredos nas Catacumbas. Meu baú contém frascos úteis para sua próxima expedição.'}
     ].forEach(n=>entities.push({
       ...n,type:'npc',floor:0,renderX:n.x,renderY:n.y,dir:'down',hp:100,maxHp:100
     }));
+
+    // Novos moradores dão função e personalidade aos bairros recém-construídos.
+    [
+      {id:'npc_rurik',name:'Rurik (Intendente da Guarda)',sprite:'guard',x:28,y:8,
+       dialog:'O quartel mantém as patrulhas e os portões. O caminho sul leva aos Ermos; não saia sem provisões.'},
+      {id:'npc_nara',name:'Nara (Tesoureira)',sprite:'scribe',x:15,y:15,
+       dialog:'O Banco do Bastião guarda os registros das caravanas. As antigas rotas comerciais ainda escondem tesouros.'},
+      {id:'npc_elira',name:'Elira (Curandeira do Bairro)',sprite:'healer',x:8,y:21,
+       dialog:'A chama ainda protege esta casa. Se estiver ferido, aproxime-se e peça minha bênção.'},
+      {id:'npc_ferren',name:'Ferren (Taverneiro)',sprite:'innkeeper',x:15,y:21,
+       dialog:'Na Taverna do Corvo chegam histórias de todos os reinos. Dizem que há passagens antigas sob as muralhas.'},
+      {id:'npc_odran',name:'Odran (Mestre do Arsenal)',sprite:'smith',x:28,y:21,
+       dialog:'O arsenal guarda armas de reserva. Doran, na forja ao norte, pode aperfeiçoar seu equipamento.'},
+      {id:'npc_lysa',name:'Lysa (Mercadora da Guilda)',sprite:'merchant',x:35,y:21,shop:true,
+       dialog:'A Guilda dos Mercadores abastece os aventureiros. Posso vender provisões antes de sua próxima jornada.'}
+    ].forEach(n=>entities.push({...n,type:'npc',floor:0,renderX:n.x,renderY:n.y,
+      dir:'down',hp:100,maxHp:100}));
 
     // Vila das Lanternas: habitantes com profissões, comerciantes e diálogos únicos.
     [
@@ -1924,14 +2017,14 @@
 
     // Monstros dos Ermos Cinzentos (Floor 0 - Sul do Portão)
     const surfaceSpawns = [
-      { name: 'Rato das Cinzas', sprite: 'rat', x: 21, y: 22, hp: 35, atk: 7, xp: 20, gold: [5, 12] },
-      { name: 'Troll Cinzento', sprite: 'troll', x: 25, y: 23, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
-      { name: 'Troll Cinzento', sprite: 'troll', x: 18, y: 25, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
-      { name: 'Orc Saqueador', sprite: 'orc', x: 23, y: 27, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
-      { name: 'Orc Saqueador', sprite: 'orc', x: 16, y: 29, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
-      { name: 'Orc Saqueador', sprite: 'orc', x: 27, y: 28, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
-      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 20, y: 33, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
-      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 27, y: 34, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
+      { name: 'Rato das Cinzas', sprite: 'rat', x: 21, y: 26, hp: 35, atk: 7, xp: 20, gold: [5, 12] },
+      { name: 'Troll Cinzento', sprite: 'troll', x: 25, y: 27, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
+      { name: 'Troll Cinzento', sprite: 'troll', x: 18, y: 28, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 23, y: 30, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 16, y: 32, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 27, y: 32, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 20, y: 35, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
+      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 27, y: 36, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
       { name: 'Dragão das Cinzas', sprite: 'dragon', x: 22, y: 38, hp: 320, atk: 34, xp: 280, gold: [100, 220] }
     ];
 
@@ -2016,7 +2109,7 @@
   }
 
   function isProtectionZone(floor, x, y) {
-    if (floor===0) return x>=11&&x<=33&&y>=5&&y<=18;
+    if (floor===0) return x>=5&&x<=38&&y>=5&&y<=24;
     if (floor===1) return x>=10&&x<=34&&y>=6&&y<=17;
     return false;
   }
@@ -2056,7 +2149,10 @@
   // Atlas: cada região é explorável separadamente; clicar traça rota real no mesmo andar.
   const WORLD_LANDMARKS={
     0:[
-      {x:22,y:14,label:'Bastião das Cinzas'},
+      {x:22,y:14,label:'Praça das Cinzas'},
+      {x:15,y:7,label:'Templo e Arquivo'},
+      {x:35,y:7,label:'Forja e Quartel'},
+      {x:22,y:24,label:'Portão Sul'},
       {x:8,y:32,label:'Lago de Pedra Clara'},
       {x:22,y:40,label:'Passagem para o Vale'}
     ],
@@ -2764,7 +2860,7 @@
   function openCorpseWindow(corpse) {
     openedCorpse = corpse;
     const panel = document.getElementById('corpseLootPanel');
-    const count=corpse?.items?.length||0;
+    const count=corpse?.items?.reduce((total,it)=>total+Math.max(1,Math.floor(Number(it.qty)||1)),0)||0;
     const indicator=document.getElementById('lootCount');
     const empty=document.getElementById('lootEmpty');
     const details=document.getElementById('sidebar-loot');
@@ -2787,6 +2883,7 @@
       <div onclick="window.takeCorpseItem(${idx})" class="equip-slot !w-9 !h-9 flex-shrink-0 text-sm relative" title="Clique para coletar: ${it.name}">
         <span>${it.icon}</span>
         ${it.type === 'gold' ? `<span class="absolute bottom-0 right-0.5 text-[8px] font-bold text-yellow-300 text-shadow-black">${it.value}</span>` : ''}
+        ${Number(it.qty)>1 ? `<span class="absolute top-0 right-0.5 text-[8px] font-bold text-white text-shadow-black">×${it.qty}</span>` : ''}
       </div>
     `).join('');
   }
@@ -2794,26 +2891,29 @@
   window.takeCorpseItem = function(idx) {
     if (!openedCorpse || !openedCorpse.items[idx]) return;
     const it = openedCorpse.items[idx];
+    const quantity=Math.max(1,Math.floor(Number(it.qty)||1));
     if (it.type === 'gold') {
-      player.gold += it.value;
-      addLog(`Você coletou ${it.value} moedas de ouro.`, '#ffd700');
+      player.gold += it.value*quantity;
+      addLog(`Você coletou ${it.value*quantity} moedas de ouro.`, '#ffd700');
     } else if (it.type === 'hppot') {
-      player.hpPots += it.value;
-      addLog('Você coletou 1x Health Potion.', '#55ff55');
+      player.hpPots += it.value*quantity;
+      addLog(`Você coletou ${quantity} Health Potion(s).`, '#55ff55');
     } else {
-      player.lootBag.push(it);
-      addLog(`Você guardou ${it.name} na Backpack.`, '#66ff66');
+      addItemToBag(it,quantity);
+      addLog(`Você guardou ${quantity>1?quantity+'x ':''}${it.name} na Backpack.`, '#66ff66');
     }
     openedCorpse.items.splice(idx, 1);
     openCorpseWindow(openedCorpse);
     updateHUD();
     renderBackpack();
+    saveProgress();
+    return true;
   };
 
   window.lootAllCorpse = function() {
     if (!openedCorpse) return;
-    while (openedCorpse.items.length > 0) {
-      window.takeCorpseItem(0);
+    while (openedCorpse && openedCorpse.items.length > 0) {
+      if(!window.takeCorpseItem(0))break;
     }
   };
 
@@ -2860,7 +2960,7 @@
     player.gold += 500;
     player.blessing += 1;
     player.xp += 250;
-    player.lootBag.push({
+    addItemToBag({
       id:'relic_echoes',icon:'🔮',name:'Emblema dos Ecos (Relíquia)',
       type:'relic',value:0
     });
@@ -2877,7 +2977,7 @@
     player.gold+=350;
     player.blessing+=1;
     player.xp+=200;
-    player.lootBag.push({
+    addItemToBag({
       id:'relic_city_seal',icon:'🏅',name:'Selo dos Exploradores do Bastião',
       type:'relic',value:0
     });
@@ -2894,7 +2994,7 @@
     player.gold+=650;
     player.xp+=425;
     player.blessing+=1;
-    player.lootBag.push({
+    addItemToBag({
       id:'vale_lantern_emblem',icon:'🏮',name:'Emblema das Lanternas',
       type:'relic',value:0
     });
@@ -2911,7 +3011,7 @@
     player.xp+=1200;
     player.blessing+=2;
     player.atk+=8;
-    player.lootBag.push({
+    addItemToBag({
       id:'bruma_crown',icon:'👑',name:'Coroa Partida da Bruma (Relíquia)',
       type:'relic',value:0
     });
@@ -3045,7 +3145,7 @@
     player.gold+=chest.gold;
     if(chest.hp)player.hpPots+=chest.hp;
     if(chest.mp)player.mpPots+=chest.mp;
-    if(chest.food)player.lootBag.push({
+    if(chest.food)addItemToBag({
       id:'food_chest_'+chest.id,icon:'🍖',name:'Provisão da Estalagem (+35 HP)',
       type:'food',value:35
     });
@@ -3097,16 +3197,16 @@
     // Resposta breve sobre a cabeça; diálogo completo aparece no chat.
     addFloatingText(npc.floor, npc.x, npc.y - 0.5, 'Olá, aventureiro!', '#55ffff', true);
     addLog(npc.name + ': "' + npc.dialog + '"', '#55ffff', 'default');
-    if (npc.id === 'npc_healer' && (player.hp < player.maxHp || player.mp < player.maxMp)) {
+    if ((npc.id === 'npc_healer' || npc.id === 'npc_elira') && (player.hp < player.maxHp || player.mp < player.maxMp)) {
       player.hp = player.maxHp;
       player.mp = player.maxMp;
       addSpark(player.floor, player.x, player.y, 'magic');
       addFloatingText(player.floor, player.x, player.y, 'Curado!', '#33ff33');
       addLog('Sacerdotisa Lyra restaurou sua vida e mana.', '#66ff66');
       updateHUD();
-    } else if (npc.id === 'doran') {
+    } else if (npc.id === 'doran' || npc.id === 'npc_odran') {
       window.openForge();
-    } else if (npc.id === 'npc_breno' || npc.id === 'npc_eron') {
+    } else if (npc.id === 'npc_breno' || npc.id === 'npc_eron' || npc.shop) {
       window.openMerchantShop(npc.id);
     }
   };
@@ -3121,7 +3221,7 @@
     activeMerchantId=merchantId;
     const modal=document.getElementById('merchantModal');
     modal.classList.remove('hidden'); modal.classList.add('flex');
-    document.getElementById('merchantName').textContent=merchantId==='npc_eron' ? 'Mercado das Lanternas' : 'Mercado das Cinzas';
+    document.getElementById('merchantName').textContent=npc.floor===1 ? 'Mercado das Lanternas' : 'Mercado do Bastião';
     document.getElementById('merchantGold').textContent=player.gold;
     document.getElementById('merchantFeedback').textContent='Clique em um item para comprar.';
   };
@@ -3143,13 +3243,14 @@
     player.gold-=price;
     if(kind==='hp')player.hpPots++;
     if(kind==='mp')player.mpPots++;
-    if(kind==='food')player.lootBag.push({
+    if(kind==='food')addItemToBag({
       id:'food_'+Date.now()+'_'+Math.floor(Math.random()*10000),
       icon:'🍖',name:'Provisões de Viagem (+35 HP)',type:'food',value:35
     });
     feedback.textContent='Compra realizada! Boa viagem, cavaleiro.';
     document.getElementById('merchantGold').textContent=player.gold;
-    addLog((activeMerchantId==='npc_eron'?'Eron':'Breno')+': Negócio fechado! -'+price+' moedas de ouro.', '#fbbf24');
+    const merchant=entities.find(e=>e.id===activeMerchantId);
+    addLog((merchant?.name?.split(' (')[0]||'Mercador')+': Negócio fechado! -'+price+' moedas de ouro.', '#fbbf24');
     updateHUD(); renderBackpack(); saveProgress();
   };
 
@@ -3157,7 +3258,7 @@
     const descriptions = {
       amulet: 'You see um Amuleto de Cinza Ancestral (Arm: 1).',
       helmet: 'You see um Elmo Cruzado das Cinzas (Arm: 6).',
-      backpack: `You see uma Mochila de Couro Cinzento (${player.lootBag.length} itens).`,
+      backpack: `You see uma Mochila de Couro Cinzento (${backpackUnitCount()} itens em ${player.lootBag.length} pilhas).`,
       weapon: `You see ${player.weaponName}.`,
       armor: 'You see uma Armadura de Placas Forjada em Brasa (Arm: 11).',
       shield: 'You see um Escudo Torre do Bastião (Def: 26).',
@@ -3241,12 +3342,18 @@
   function renderBackpack() {
     const grid=document.getElementById('backpackGrid');
     const counter=document.getElementById('backpackCount');
-    if(counter)counter.textContent='('+player.lootBag.length+')';
-    grid.innerHTML = player.lootBag.map((item, idx) => `
-      <div onclick="window.useBackpackItem(${idx})" class="equip-slot !w-8 !h-8 text-sm" title="${item.name}">
-        ${item.icon}
-      </div>
-    `).join('');
+    const slots=document.getElementById('backpackSlots');
+    if(counter)counter.textContent='('+backpackUnitCount()+')';
+    if(slots)slots.textContent=player.lootBag.length+' pilhas';
+    grid.innerHTML = player.lootBag.map((item, idx) => {
+      const qty=Math.max(1,Math.floor(Number(item.qty)||1));
+      return `
+        <div onclick="window.useBackpackItem(${idx})" class="equip-slot !w-8 !h-8 text-sm relative" title="${item.name}${qty>1?' ×'+qty:''}">
+          ${item.icon}
+          ${qty>1?`<span class="absolute bottom-0 right-0.5 text-[8px] font-bold text-white text-shadow-black">×${qty}</span>`:''}
+        </div>
+      `;
+    }).join('');
   }
 
   window.useBackpackItem = function(idx) {
@@ -3256,10 +3363,12 @@
       player.hp = Math.min(player.maxHp, player.hp + item.value);
       addFloatingText(player.floor, player.x, player.y - 0.4, 'Munch...', '#ff9933', true);
       addLog(`Você comeu ${item.name} e recuperou ${item.value} hitpoints.`, '#66ff66');
-      player.lootBag.splice(idx, 1);
+      if((item.qty||1)>1)item.qty--;else player.lootBag.splice(idx,1);
     } else if (item.type === 'treasure') {
-      player.gold += item.value;
-      addLog(`Você converteu ${item.name} em ${item.value} moedas de ouro!`, '#ffd700');
+      const quantity=Math.max(1,Math.floor(Number(item.qty)||1));
+      const total=item.value*quantity;
+      player.gold += total;
+      addLog(`Você converteu ${quantity}x ${item.name} em ${total} moedas de ouro!`, '#ffd700');
       player.lootBag.splice(idx, 1);
     } else if (item.type === 'tool') {
       checkFloorTransition();
@@ -3269,6 +3378,7 @@
     }
     updateHUD();
     renderBackpack();
+    saveProgress();
   };
 
   function updateHUD() {
@@ -3804,7 +3914,7 @@
         } else if (t === TILE.HOUSE_WALL) {
           const h=houseAt(gx,gy);
           ctx.globalAlpha=h&&houseRevealed(h)?0.30:1;
-          ctx.drawImage(spriteCache['house_wall'], px, py - 16);
+          ctx.drawImage(spriteCache['house_wall_'+(h?.style||'brick')]||spriteCache['house_wall'],px,py-16);
           ctx.globalAlpha=1;
         } else if (t === TILE.HOUSE_DOOR) {
           const opened=openDoors.has(doorKey(gx,gy));
@@ -4522,7 +4632,9 @@
     initWorldMap();
     initEntities();
     const restored = restoreProgress();
+    normalizeLootBag();
     syncTalentPoints();
+    saveProgress();
     fitGameViewport();
     updateLightingButton();
     if (cityChestCount() >= player.cityQuestGoal && !player.cityQuestCompleted) {
@@ -4536,8 +4648,8 @@
 
     addLog('Bem-vindo ao REINOS DAS CINZAS (MMORPG Clássico 7.6 • O Bastião de Cinza).', '#ffd700');
     addLog(restored ? 'Progresso local recuperado! Boa aventura, Ivo.' : 'Ivo (Cavaleiro das Cinzas) entra no Bastião das Cinzas.', '#ffffff');
-    addLog('Dica: Pise no bueiro [26,14] para descer às Catacumbas (-1), depois na escada [28,21] para explorar a Cripta dos Ecos (-2).', '#66e0ff');
-    addLog('Novidade: entre nas quatro casas do Bastião! Clique nas portas e baús ou pressione E perto deles.','#ffd166');
+    addLog('Dica: Pise no bueiro [24,14] para descer às Catacumbas (-1), depois na escada [28,21] para explorar a Cripta dos Ecos (-2).', '#66e0ff');
+    addLog('O Bastião agora tem 12 edifícios, três quarteirões, praça comercial e oito baús para descobrir. Explore as portas com E!','#ffd166');
     addLog('Novo mundo: siga pela estrada sul até [22,40] para visitar a Vila das Lanternas!','#bef264');
 
     requestAnimationFrame(gameLoop);
