@@ -271,6 +271,11 @@
       <div class="tibia-inset p-0.5 relative">
         <canvas id="minimapCanvas" width="112" height="96" class="block cursor-pointer" title="Clique no minimapa para navegar"></canvas>
         <button onclick="window.openWorldMap()" class="tibia-btn w-full py-0.5 text-[9px] text-amber-200" title="Abrir mapa de todas as regiões">🗺️ Mapa-múndi</button>
+        <div class="flex items-center justify-between mt-0.5 gap-0.5">
+          <button onclick="window.changeZoom(1)" class="tibia-btn px-1.5 py-0.5 text-[9px]" title="Aproximar câmera">＋</button>
+          <span id="zoomLabel" class="text-[9px] text-amber-200 font-bold">100%</span>
+          <button onclick="window.changeZoom(-1)" class="tibia-btn px-1.5 py-0.5 text-[9px]" title="Afastar câmera">－</button>
+        </div>
       </div>
       <div class="flex-1 flex flex-col gap-1">
         <!-- Rosa dos Ventos Estilo Tibia -->
@@ -571,7 +576,7 @@
 (function() {
   // Grade 15x11 SQMs renderizados a 48x48 pixels por SQM para riqueza máxima de detalhes pixel-art
   let VIEW_COLS = 15; // Ajustado à proporção do espaço disponível
-  const VIEW_ROWS = 11;
+  let VIEW_ROWS = 11;
   const TILE_SIZE = 48; // 15 * 48 = 720px | 11 * 48 = 528px
   const MAP_SIZE = 44;
 
@@ -590,15 +595,25 @@
     if (!r.width || !r.height) return;
     const availableW = Math.max(1, r.width - 16);
     const availableH = Math.max(1, r.height - 16);
-    const desiredCols = Math.max(9, Math.min(MAP_SIZE, Math.round((availableW / availableH) * VIEW_ROWS)));
-    if (desiredCols !== VIEW_COLS) {
+    const desiredRows=Math.max(8,Math.min(14,Number.isInteger(player.cameraRows)?player.cameraRows:11));
+    const desiredCols = Math.max(9, Math.min(MAP_SIZE, Math.round((availableW / availableH) * desiredRows)));
+    if (desiredCols !== VIEW_COLS || desiredRows !== VIEW_ROWS) {
       VIEW_COLS = desiredCols;
+      VIEW_ROWS = desiredRows;
       canvas.width = VIEW_COLS * TILE_SIZE;
       canvas.height = VIEW_ROWS * TILE_SIZE;
       ctx.imageSmoothingEnabled = false;
     }
+    const label=document.getElementById('zoomLabel');
+    if(label)label.textContent=Math.round(11/VIEW_ROWS*100)+'%';
   }
   window.addEventListener('resize', fitGameViewport);
+  window.changeZoom=function(direction){
+    const current=Math.max(8,Math.min(14,Number.isInteger(player.cameraRows)?player.cameraRows:11));
+    player.cameraRows=Math.max(8,Math.min(14,current-Math.sign(direction)));
+    fitGameViewport();
+    saveProgress();
+  };
 
   const minimapCanvas = document.getElementById('minimapCanvas');
   const mctx = minimapCanvas.getContext('2d');
@@ -681,6 +696,7 @@
     valeKills: 0, valeGoal: 5, valeCompleted: false,
     brumaDefeated: false,
     dynamicLight: true,
+    cameraRows: 11,
     contract: null, contractsCompleted: 0,
     weaponTier: 0,
     talentPoints: 0,
@@ -4328,7 +4344,7 @@
     'cryptKills','cryptGoal','cryptCompleted','openedChests',
     'cityQuestGoal','cityQuestCompleted','valeKills','valeGoal','valeCompleted','brumaDefeated',
     'lootBag','outfit','stance','chase','weaponTier','talentRanks','talentPoints','dynamicLight',
-    'contract','contractsCompleted'
+    'contract','contractsCompleted','cameraRows'
   ];
   function saveProgress() {
     try {
@@ -4402,6 +4418,7 @@
     initEntities();
     const restored = restoreProgress();
     syncTalentPoints();
+    fitGameViewport();
     updateLightingButton();
     if (cityChestCount() >= player.cityQuestGoal && !player.cityQuestCompleted) {
       completeCityQuest();
