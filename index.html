@@ -287,8 +287,13 @@
         <button id="ashToggleBtn" onclick="window.toggleAshParticles()" class="tibia-btn active py-0.5 px-1 text-[8px] font-bold text-center text-orange-300" title="Alternar chuva de cinzas e brasas">
           🌨️ Cinzas: ON
         </button>
+        <button id="lightToggleBtn" onclick="window.toggleLighting()" class="tibia-btn active py-0.5 px-1 text-[8px] font-bold text-amber-200" title="Ativar ou desativar o ciclo de luz">
+          🌗 Dia / Noite
+        </button>
       </div>
     </div>
+
+    <div class="tibia-inset px-1.5 py-0.5 text-center text-[9px] font-bold text-amber-200" id="worldTimeLabel">☀ Dia • céu limpo</div>
 
     <!-- Barras Compactas de Status (HP, Mana, XP, Nível, Ouro, Bênção) -->
     <div class="tibia-inset p-1.5 flex flex-col gap-1">
@@ -616,6 +621,7 @@
     cityQuestCompleted: false,
     valeKills: 0, valeGoal: 5, valeCompleted: false,
     brumaDefeated: false,
+    dynamicLight: true,
     weaponTier: 0,
     talentPoints: 0,
     talentRanks: { fury:0, bulwark:0, vigor:0, stride:0 },
@@ -693,6 +699,85 @@
     isEmber: Math.random() < 0.18,
     alpha: 0.35 + Math.random() * 0.45
   }));
+
+  // Ciclo de seis minutos. O relógio é visual e não interfere no salvamento.
+  const DAY_LENGTH = 360000;
+  const lightCanvas=document.createElement('canvas');
+  const lightCtx=lightCanvas.getContext('2d');
+  function worldLight(now){
+    const phase=((now+115000)%DAY_LENGTH)/DAY_LENGTH;
+    let amount=phase<.55?0:phase<.7?(phase-.55)/.15*.5:
+      phase<.87?.5:.5*(1-(phase-.87)/.13);
+    if(player.floor<0)amount=.58;
+    if(!player.dynamicLight)amount=0;
+    return Math.max(0,Math.min(.58,amount));
+  }
+  window.toggleLighting=function(){
+    player.dynamicLight=!player.dynamicLight;
+    updateLightingButton();saveProgress();
+  };
+  function updateLightingButton(){
+    const btn=document.getElementById('lightToggleBtn');
+    if(btn){
+      btn.textContent='🌗 Dia / Noite: '+(player.dynamicLight?'ON':'OFF');
+      btn.classList.toggle('active',player.dynamicLight);
+    }
+  }
+  function renderLighting(now,camX,camY,startCol,endCol,startRow,endRow){
+    const dark=worldLight(now);
+    const phase=((now+115000)%DAY_LENGTH)/DAY_LENGTH;
+    const worldHour=Math.floor(phase*24);
+    const worldMinute=Math.floor((phase*24-worldHour)*60);
+    const label=document.getElementById('worldTimeLabel');
+    if(label){
+      const icon=dark>.32?'🌙':phase>.5?'🌆':'☀';
+      label.textContent=player.floor<0?'🕯 Subsolo • Luz de tochas':
+        icon+' '+(worldHour<10?'0':'')+worldHour+':'+(worldMinute<10?'0':'')+worldMinute+
+        (dark>.25?' • Noite':phase>.50?' • Crepúsculo':' • Dia');
+    }
+    if(dark<=.003)return;
+    if(lightCanvas.width!==canvas.width||lightCanvas.height!==canvas.height){
+      lightCanvas.width=canvas.width;lightCanvas.height=canvas.height;
+    }
+    lightCtx.clearRect(0,0,lightCanvas.width,lightCanvas.height);
+    lightCtx.fillStyle='rgba(8,14,34,'+dark+')';
+    lightCtx.fillRect(0,0,lightCanvas.width,lightCanvas.height);
+    lightCtx.globalCompositeOperation='destination-out';
+    const punch=(gx,gy,radius,strength=1)=>{
+      const sx=(gx-camX)*TILE_SIZE+24,sy=(gy-camY)*TILE_SIZE+24;
+      if(sx< -radius||sy< -radius||sx>canvas.width+radius||sy>canvas.height+radius)return;
+      const gr=lightCtx.createRadialGradient(sx,sy,4,sx,sy,radius);
+      gr.addColorStop(0,'rgba(0,0,0,'+strength+')');
+      gr.addColorStop(.38,'rgba(0,0,0,'+(strength*.85)+')');
+      gr.addColorStop(1,'rgba(0,0,0,0)');
+      lightCtx.fillStyle=gr;
+      lightCtx.fillRect(sx-radius,sy-radius,radius*2,radius*2);
+    };
+    for(let y=Math.max(0,startRow);y<=Math.min(MAP_SIZE-1,endRow);y++)
+      for(let x=Math.max(0,startCol);x<=Math.min(MAP_SIZE-1,endCol);x++){
+        const tile=maps[player.floor][y][x];
+        if(tile===TILE.LANTERN || tile===TILE.TORCH_WALL)punch(x,y,132);
+        else if(tile===TILE.CAMP_FIRE)punch(x,y,160);
+        else if(tile===TILE.PORTAL_EXIT || tile===TILE.PORTAL_RETURN)punch(x,y,105);
+      }
+    punch(player.renderX,player.renderY,player.floor<0?145:110,1);
+    lightCtx.globalCompositeOperation='source-over';
+    ctx.drawImage(lightCanvas,0,0);
+    // Pontos cintilantes no bosque à noite, sempre estáveis por SQM.
+    if(player.floor>=0 && dark>.15){
+      const glow=dark/.5;
+      for(let i=0;i<23;i++){
+        const gx=(i*13+7)%43+1,gy=(i*17+5)%35+9;
+        const tile=maps[player.floor][gy]?.[gx];
+        if(tile!==TILE.GRASS&&tile!==TILE.WILD_FLOWERS&&tile!==TILE.PINE)continue;
+        const sx=(gx-camX)*TILE_SIZE+(i*9)%40,sy=(gy-camY)*TILE_SIZE+
+          (i*7)%35+Math.sin(now*.002+i)*5;
+        if(sx<0||sy<0||sx>canvas.width||sy>canvas.height)continue;
+        const a=(.26+.28*(1+Math.sin(now*.003+i*2.1))*.5)*glow;
+        ctx.fillStyle='rgba(213,252,130,'+a+')';ctx.fillRect(sx,sy,3,3);
+      }
+    }
+  }
 
   window.toggleAshParticles = function() {
     ashEnabled = !ashEnabled;
@@ -3633,6 +3718,17 @@
     }
 
     // 6. ATMOSFERA DE "REINOS DAS CINZAS" (Flocos de Cinza e Brasas Flutuando no Viewport 15x11)
+    // Névoa em movimento: os Ermos ficam diferentes da praça de pedra.
+    if(player.floor>=0&&!isProtectionZone(player.floor,player.x,player.y)){
+      for(let k=0;k<7;k++){
+        const wave=(now*.012+k*211)%Math.max(1,canvas.width);
+        const y=(k*101+Math.sin(now*.00055+k)*26)%canvas.height;
+        const fog=isProtectionZone(player.floor,player.x,player.y)?0:.07;
+        ctx.fillStyle='rgba(176,198,189,'+fog+')';
+        ctx.fillRect((wave+canvas.width)%canvas.width,y,150,5);
+      }
+    }
+    renderLighting(now,camX,camY,startCol,endCol,startRow,endRow);
     if (ashEnabled) {
       for (let i = 0; i < ashParticles.length; i++) {
         const p = ashParticles[i];
@@ -3849,7 +3945,7 @@
     'hpPots','mpPots','questKills','questCompleted',
     'cryptKills','cryptGoal','cryptCompleted','openedChests',
     'cityQuestGoal','cityQuestCompleted','valeKills','valeGoal','valeCompleted','brumaDefeated',
-    'lootBag','outfit','stance','chase','weaponTier','talentRanks','talentPoints'
+    'lootBag','outfit','stance','chase','weaponTier','talentRanks','talentPoints','dynamicLight'
   ];
   function saveProgress() {
     try {
@@ -3921,6 +4017,7 @@
     initEntities();
     const restored = restoreProgress();
     syncTalentPoints();
+    updateLightingButton();
     if (cityChestCount() >= player.cityQuestGoal && !player.cityQuestCompleted) {
       completeCityQuest();
     }
