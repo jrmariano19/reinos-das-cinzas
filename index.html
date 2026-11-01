@@ -157,6 +157,9 @@
   <!-- ÁREA CENTRAL/ESQUERDA SUPERIOR: VIEWPORT ADAPTÁVEL -->
   <div class="viewport-container tibia-panel">
     <canvas id="gameCanvas" width="720" height="528"></canvas>
+    <div id="contextHint" class="absolute bottom-3 right-3 pointer-events-none tibia-panel px-2 py-1 text-[10px] text-amber-200 shadow-lg max-w-[320px]">
+      Explore casas • Clique nas portas e baús • [E] Interagir
+    </div>
 
     <!-- Indicador de Zona Segura (Protection Zone) e Dicas Rápidas -->
     <div id="pzBadge" class="absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-emerald-300 font-bold shadow-lg">
@@ -2043,6 +2046,107 @@
     renderOutfitModalPalettes();
   };
 
+  // Interações das casas: portas, tesouros de coleta única e tecla E.
+  function clearPendingInteractions() {
+    pendingNpcId=null; pendingChestId=null; pendingDoorKey=null;
+  }
+  function updateContextHint() {
+    const hint=document.getElementById('contextHint');
+    if(!hint)return;
+    if(player.floor!==0){
+      hint.textContent='Explore o subsolo • E para interagir';
+      return;
+    }
+    const chest=chests.find(c=>nearTile(c.x,c.y,1));
+    if(chest){
+      hint.textContent='[E] '+(player.openedChests.includes(chest.id)?'Examinar':'Abrir')+' '+chest.name;
+      return;
+    }
+    const door=houses.find(h=>nearTile(h.door,h.y+h.h-1,1));
+    if(door) {
+      hint.textContent='[E] '+(openDoors.has(doorKey(door.door,door.y+door.h-1))?'Fechar':'Abrir')+' porta • '+door.name;
+      return;
+    }
+    const npc=entities.filter(e=>e.type==='npc'&&e.floor===0)
+      .sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y))[0];
+    if(npc && Math.hypot(npc.x-player.x,npc.y-player.y)<=2.5){
+      hint.textContent='[E] Conversar com '+npc.name;
+      return;
+    }
+    hint.textContent='Explore casas • Clique nas portas e baús • [E] Interagir';
+  }
+
+  window.toggleHouseDoor = function(x,y) {
+    if(player.floor!==0 || maps[0]?.[y]?.[x]!==TILE.HOUSE_DOOR)return false;
+    if(!nearTile(x,y,1)) {
+      const path=findPathTo(x,y);
+      if(!path.length){addLog('Não há caminho até essa porta.','#ff9999');return false;}
+      clearPendingInteractions();
+      pendingDoorKey=doorKey(x,y); player.path=path;
+      addLog('Ivo caminha até a porta da casa.','#facc15');
+      return false;
+    }
+    const id=doorKey(x,y),currentlyOpen=openDoors.has(id);
+    if(currentlyOpen) {
+      if((player.x===x&&player.y===y)||
+          entities.some(e=>!e.dead&&e.floor===0&&e.x===x&&e.y===y)) {
+        addLog('Não é possível fechar a porta enquanto alguém está na passagem.','#fbbf24');
+        return false;
+      }
+      openDoors.delete(id);addLog('Você fechou a porta de madeira.','#e9c89a');
+    } else {
+      openDoors.add(id);addLog('Você abriu a porta de madeira.','#e9c89a');
+    }
+    updateContextHint();
+    return true;
+  };
+
+  window.openHouseChest = function(id) {
+    const chest=chests.find(c=>c.id===id);
+    if(!chest || player.floor!==0) return false;
+    if(!nearTile(chest.x,chest.y,1)) {
+      const path=findPathTo(chest.x,chest.y);
+      if(!path.length){addLog('O baú está inacessível.','#ff9999');return false;}
+      clearPendingInteractions();
+      pendingChestId=chest.id;player.path=path;
+      addLog('Caminhando até '+chest.name+'.','#e5c18a');
+      return false;
+    }
+    if(player.openedChests.includes(chest.id)){
+      addLog(chest.name+' está vazio. Você já recolheu seu tesouro.','#cbd5e1');
+      updateContextHint();return true;
+    }
+    player.openedChests.push(chest.id);
+    player.gold+=chest.gold;
+    if(chest.hp)player.hpPots+=chest.hp;
+    if(chest.mp)player.mpPots+=chest.mp;
+    if(chest.food)player.lootBag.push({
+      id:'food_chest_'+chest.id,icon:'🍖',name:'Provisão da Estalagem (+35 HP)',
+      type:'food',value:35
+    });
+    addSpark(0,chest.x,chest.y,'magic');
+    addFloatingText(0,chest.x,chest.y,'TESOURO!','#fde68a',true);
+    const extras=[chest.hp?chest.hp+' poção de vida':'',
+      chest.mp?chest.mp+' poção de mana':'',chest.food?'provisões':'']
+      .filter(Boolean).join(', ');
+    addLog('Você abriu '+chest.name+'! +'+chest.gold+' ouro'+(extras?', '+extras:'')+'.','#facc15');
+    renderBackpack();updateHUD();updateContextHint();saveProgress();
+    return true;
+  };
+
+  window.interactNearby = function() {
+    if(player.floor!==0)return;
+    const chest=chests.find(c=>nearTile(c.x,c.y,1));
+    if(chest){window.openHouseChest(chest.id);return;}
+    const h=houses.find(h=>nearTile(h.door,h.y+h.h-1,1));
+    if(h){window.toggleHouseDoor(h.door,h.y+h.h-1);return;}
+    const npcs=entities.filter(e=>e.type==='npc'&&e.floor===0)
+      .sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y));
+    if(npcs[0] && Math.hypot(npcs[0].x-player.x,npcs[0].y-player.y)<=3.5)
+      window.talkToNearestNPC(npcs[0].id);
+    else addLog('Nenhum objeto interativo por perto.','#a3a3a3');
+  };
+
   // Conversas e loja: o clique seleciona o NPC correto, em vez de outro vizinho.
   window.talkToNearestNPC = function(npcId = null) {
     const nearby = entities.filter(e => e.type === 'npc' && e.floor === player.floor);
@@ -2053,12 +2157,13 @@
       return;
     }
     if (Math.hypot(npc.x - player.x, npc.y - player.y) > 3.5) {
+      clearPendingInteractions();
       player.path = findPathTo(npc.x, npc.y);
       pendingNpcId = player.path.length ? npc.id : null;
       addLog(pendingNpcId ? 'Caminhando até ' + npc.name + ' para conversar.' : 'Caminho até o NPC bloqueado.', '#fbbf24');
       return;
     }
-    pendingNpcId = null;
+    clearPendingInteractions();
     player.path = [];
     addFloatingText(player.floor, player.x, player.y - 0.5, 'Ivo diz: olá', '#ff9933', true);
     // Resposta breve sobre a cabeça; diálogo completo aparece no chat.
@@ -2150,11 +2255,12 @@
 
     if (ent.type === 'npc') {
       player.targetId = null;
+      clearPendingInteractions();
       window.talkToNearestNPC(ent.id);
       return;
     }
 
-    pendingNpcId = null;
+    clearPendingInteractions();
     if (player.targetId === id) {
       player.targetId = null;
     } else {
@@ -2987,16 +3093,17 @@
     if (key === 'escape') {
       window.closeMerchantShop();
       window.closeOutfitModal();
-      pendingNpcId = null;
+      clearPendingInteractions();
       return;
     }
     if (document.getElementById('merchantModal').classList.contains('flex') ||
         document.getElementById('outfitModal').classList.contains('flex')) return;
-    if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','1','2','3','4','5','6'].includes(key)) e.preventDefault();
-    if (key === 'w' || key === 'arrowup') { pendingNpcId = null; player.path = []; window.movePlayer(0, -1); }
-    else if (key === 's' || key === 'arrowdown') { pendingNpcId = null; player.path = []; window.movePlayer(0, 1); }
-    else if (key === 'a' || key === 'arrowleft') { pendingNpcId = null; player.path = []; window.movePlayer(-1, 0); }
-    else if (key === 'd' || key === 'arrowright') { pendingNpcId = null; player.path = []; window.movePlayer(1, 0); }
+    if (['w','a','s','d','e','arrowup','arrowdown','arrowleft','arrowright','1','2','3','4','5','6'].includes(key)) e.preventDefault();
+    if (key === 'e') { window.interactNearby(); }
+    else if (key === 'w' || key === 'arrowup') { clearPendingInteractions(); player.path = []; window.movePlayer(0, -1); }
+    else if (key === 's' || key === 'arrowdown') { clearPendingInteractions(); player.path = []; window.movePlayer(0, 1); }
+    else if (key === 'a' || key === 'arrowleft') { clearPendingInteractions(); player.path = []; window.movePlayer(-1, 0); }
+    else if (key === 'd' || key === 'arrowright') { clearPendingInteractions(); player.path = []; window.movePlayer(1, 0); }
     else if (['1', '2', '3', '4', '5', '6'].includes(key)) {
       window.triggerHotkey(parseInt(key, 10));
     }
@@ -3017,6 +3124,15 @@
     const tileX = Math.floor(camX + clickX / TILE_SIZE);
     const tileY = Math.floor(camY + clickY / TILE_SIZE);
 
+    // 0. Portas e baús interativos (antes de mirar NPCs ou caminhar).
+    if(player.floor===0){
+      if(maps[0]?.[tileY]?.[tileX]===TILE.HOUSE_DOOR){
+        window.toggleHouseDoor(tileX,tileY);return;
+      }
+      const chest=chests.find(c=>c.x===tileX&&c.y===tileY);
+      if(chest){window.openHouseChest(chest.id);return;}
+    }
+
     // 1. Verifica se clicou em uma criatura viva ou NPC
     const clickedEnt = entities.find(ent => !ent.dead && ent.floor === player.floor && ent.x === tileX && ent.y === tileY);
     if (clickedEnt) {
@@ -3032,7 +3148,7 @@
     }
 
     // 3. Rota A*: contorna construcoes e obstaculos.
-    pendingNpcId = null;
+    clearPendingInteractions();
     player.path = findPathTo(tileX, tileY);
   });
 
@@ -3040,7 +3156,7 @@
     const rect = minimapCanvas.getBoundingClientRect();
     const tx = Math.floor(((e.clientX - rect.left) / rect.width) * MAP_SIZE);
     const ty = Math.floor(((e.clientY - rect.top) / rect.height) * MAP_SIZE);
-    pendingNpcId = null;
+    clearPendingInteractions();
     player.path = findPathTo(tx, ty);
   });
 
@@ -3129,6 +3245,7 @@
     addLog('Bem-vindo ao REINOS DAS CINZAS (MMORPG Clássico 7.6 • O Bastião de Cinza).', '#ffd700');
     addLog(restored ? 'Progresso local recuperado! Boa aventura, Ivo.' : 'Ivo (Cavaleiro das Cinzas) entra no Bastião das Cinzas.', '#ffffff');
     addLog('Dica: Pise no bueiro [26,14] para descer às Catacumbas (-1), depois na escada [28,21] para explorar a Cripta dos Ecos (-2).', '#66e0ff');
+    addLog('Novidade: entre nas quatro casas do Bastião! Clique nas portas e baús ou pressione E perto deles.','#ffd166');
 
     requestAnimationFrame(gameLoop);
   };
