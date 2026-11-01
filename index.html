@@ -572,6 +572,7 @@
     openedChests: [],
     cityQuestGoal: 4,
     cityQuestCompleted: false,
+    valeKills: 0, valeGoal: 5, valeCompleted: false,
     outfit: {
       head: '#d97706',      // Pluma / Detalhe dourado no elmo
       primary: '#991b1b',   // Tabardo & Capa Vermelho Brasa
@@ -1543,6 +1544,39 @@
       ...n,type:'npc',floor:0,renderX:n.x,renderY:n.y,dir:'down',hp:100,maxHp:100
     }));
 
+    // Vila das Lanternas: habitantes com profissões, comerciantes e diálogos únicos.
+    [
+      {id:'npc_ayla',name:'Ayla (Guardiã do Vale)',sprite:'guard',x:24,y:12,
+        dialog:'Ao sul da ponte, os saqueadores tomaram nosso acampamento. Derrote cinco bandidos do Vale e devolva a paz às Lanternas!'},
+      {id:'npc_olmo',name:'Olmo (Cartógrafo)',sprite:'scribe',x:15,y:12,
+        dialog:'O Rio Largo corta o Vale das Lanternas. Cruze a ponte no centro e siga a estrada ao sul para encontrar o acampamento inimigo.'},
+      {id:'npc_iris',name:'Íris (Herborista)',sprite:'alchemist',x:30,y:12,
+        dialog:'A mata é bonita, mas perigosa. Há suprimentos no baú da casa; guarde poções para a travessia.'},
+      {id:'npc_taro',name:'Taro (Batedor)',sprite:'smith',x:18,y:16,
+        dialog:'Vi os bandidos junto às tendas no sudeste, depois da ponte. Cuidado com os lobos dos bosques!'},
+      {id:'npc_eron',name:'Eron (Mercador do Vale)',sprite:'merchant',x:26,y:16,
+        dialog:'Bem-vindo à Vila das Lanternas! Tenho poções e comida para sua próxima expedição.'}
+    ].forEach(n=>entities.push({...n,type:'npc',floor:1,renderX:n.x,renderY:n.y,
+      dir:'down',hp:100,maxHp:100}));
+
+    // Monstros do Vale: seis bandidos garantem a missão mesmo antes do respawn.
+    const valeSpawns=[
+      {name:'Bandido da Estrada',sprite:'bandit',x:30,y:35,hp:120,atk:22,xp:85,gold:[22,45]},
+      {name:'Batedor Saqueador',sprite:'bandit',x:34,y:35,hp:140,atk:25,xp:105,gold:[28,57]},
+      {name:'Bandido da Floresta',sprite:'bandit',x:39,y:36,hp:125,atk:24,xp:90,gold:[24,50]},
+      {name:'Chefe Saqueador',sprite:'bandit',x:32,y:38,hp:225,atk:31,xp:180,gold:[70,115]},
+      {name:'Bandido da Estrada',sprite:'bandit',x:38,y:40,hp:145,atk:25,xp:115,gold:[30,60]},
+      {name:'Sentinela do Acampamento',sprite:'bandit',x:35,y:41,hp:165,atk:27,xp:125,gold:[45,80]},
+      {name:'Lobo Cinzento',sprite:'wolf',x:12,y:24,hp:105,atk:19,xp:75,gold:[8,18]},
+      {name:'Lobo do Bosque',sprite:'wolf',x:12,y:35,hp:110,atk:20,xp:78,gold:[9,19]}
+    ];
+    valeSpawns.forEach((m,idx)=>entities.push({
+      id:'mob_vale_'+idx,type:'monster',name:m.name,sprite:m.sprite,
+      floor:1,x:m.x,y:m.y,spawnX:m.x,spawnY:m.y,renderX:m.x,renderY:m.y,
+      dir:'down',walkFrame:0,hp:m.hp,maxHp:m.hp,atk:m.atk,xp:m.xp,
+      goldRange:m.gold,lastMove:0,lastAtk:0,dead:false,respawnAt:0
+    }));
+
     // Monstros dos Ermos Cinzentos (Floor 0 - Sul do Portão)
     const surfaceSpawns = [
       { name: 'Rato das Cinzas', sprite: 'rat', x: 21, y: 22, hp: 35, atk: 7, xp: 20, gold: [5, 12] },
@@ -2025,6 +2059,11 @@
         addLog('[Missão] Ecos da Cripta: ' + player.cryptKills + '/' + player.cryptGoal + ' guardiões derrotados.', '#ddb5ff', 'quest');
         if (player.cryptKills >= player.cryptGoal) completeCryptQuest();
       }
+      if(mob.floor===1 && mob.sprite==='bandit' && !player.valeCompleted){
+        player.valeKills=Math.min(player.valeGoal,player.valeKills+1);
+        addLog('[Missão] Paz no Vale: '+player.valeKills+'/'+player.valeGoal+' bandidos derrotados.','#bef264','quest');
+        if(player.valeKills>=player.valeGoal)completeValeQuest();
+      }
 
       checkLevelUp();
       updateHUD();
@@ -2149,6 +2188,22 @@
     addLog('★ Tesouros do Bastião concluída! +350 ouro, +200 XP, +1 bênção e Selo dos Exploradores.','#ffe29a','quest');
     checkLevelUp();
     saveProgress();
+  }
+
+  // Quarta missão: libertar a região externa além do Rio Largo.
+  function completeValeQuest(){
+    if(player.valeCompleted)return;
+    player.valeCompleted=true;
+    player.gold+=650;
+    player.xp+=425;
+    player.blessing+=1;
+    player.lootBag.push({
+      id:'vale_lantern_emblem',icon:'🏮',name:'Emblema das Lanternas',
+      type:'relic',value:0
+    });
+    addFloatingText(player.floor,player.x,player.y-.6,'PAZ NO VALE!','#fef08a',true);
+    addLog('★ Paz no Vale concluída! +650 ouro, +425 XP, +1 bênção e Emblema das Lanternas.','#fde68a','quest');
+    renderBackpack();updateHUD();saveProgress();
   }
 
   // Modal de Customização de Outfit ("Set Outfit" do Tibia 7.6)
@@ -2527,10 +2582,15 @@
       questCounter.textContent = player.openedChests.length + '/' + player.cityQuestGoal;
       questDesc.textContent = 'Entre nas quatro casas, converse com os moradores e abra um baú em cada interior.';
       questDesc.className = 'text-amber-200 leading-tight';
+    } else if(!player.valeCompleted){
+      questTitle.textContent='📜 Missão: Paz no Vale';
+      questCounter.textContent=player.valeKills+'/'+player.valeGoal;
+      questDesc.textContent='Siga ao sul (SQM 22,40), visite a Vila das Lanternas e derrote 5 bandidos além do Rio Largo.';
+      questDesc.className='text-lime-200 leading-tight';
     } else {
-      questTitle.textContent = '🏆 Explorador dos Reinos';
-      questCounter.textContent = player.cityQuestGoal + '/' + player.cityQuestGoal;
-      questDesc.textContent = 'Três missões concluídas! Explore, lute e descubra os segredos das Cinzas.';
+      questTitle.textContent = '🏆 Herói dos Reinos';
+      questCounter.textContent = player.valeGoal + '/' + player.valeGoal;
+      questDesc.textContent = 'Quatro missões concluídas! Continue explorando as duas regiões.';
       questDesc.className = 'text-emerald-400 font-bold leading-tight';
     }
   }
@@ -3394,7 +3454,7 @@
     'gold','blessing','cap','atk','def','weaponName','legendarySword',
     'hpPots','mpPots','questKills','questCompleted',
     'cryptKills','cryptGoal','cryptCompleted','openedChests',
-    'cityQuestGoal','cityQuestCompleted',
+    'cityQuestGoal','cityQuestCompleted','valeKills','valeGoal','valeCompleted',
     'lootBag','outfit','stance','chase'
   ];
   function saveProgress() {
@@ -3476,6 +3536,7 @@
     addLog(restored ? 'Progresso local recuperado! Boa aventura, Ivo.' : 'Ivo (Cavaleiro das Cinzas) entra no Bastião das Cinzas.', '#ffffff');
     addLog('Dica: Pise no bueiro [26,14] para descer às Catacumbas (-1), depois na escada [28,21] para explorar a Cripta dos Ecos (-2).', '#66e0ff');
     addLog('Novidade: entre nas quatro casas do Bastião! Clique nas portas e baús ou pressione E perto deles.','#ffd166');
+    addLog('Novo mundo: siga pela estrada sul até [22,40] para visitar a Vila das Lanternas!','#bef264');
 
     requestAnimationFrame(gameLoop);
   };
