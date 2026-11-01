@@ -521,7 +521,9 @@
     WOOD_FLOOR: 18, HOUSE_WALL: 19, HOUSE_DOOR: 20,
     FURNITURE: 21, LANTERN: 22, FOUNTAIN: 23, MARKET_STALL: 24,
     CRYPT_FLOOR: 25, CRYPT_WALL: 26, STAIR_DOWN: 27,
-    STAIR_UP: 28, MOSS_FLOOR: 29, BRIDGE: 30, CHEST: 31
+    STAIR_UP: 28, MOSS_FLOOR: 29, BRIDGE: 30, CHEST: 31,
+    PORTAL_EXIT: 32, PORTAL_RETURN: 33, CAMP_FIRE: 34, TENT: 35,
+    SIGNPOST: 36, FARM: 37, WILD_FLOWERS: 38
   };
 
   // Estado do Jogador (Ivo - Cavaleiro das Cinzas)
@@ -585,30 +587,38 @@
 
   const cooldowns = { 1: 0, 2: 0, 3: 0, 4: 0 };
 
-  // Mapas por Andar (0 e -1)
-  const maps = { 0: [], '-1': [], '-2': [] };
+  // Dois mapas de superfície interligados e dois níveis subterrâneos.
+  const maps = { 0: [], 1: [], '-1': [], '-2': [] };
 
   // Construções autorais. A porta fica sempre na parede sul de cada casa.
   const houses = [
     {id:'arquivo',name:'Arquivo das Cinzas',x:12,y:6,w:5,h:5,door:14},
     {id:'forja',name:'Forja do Bastião',x:27,y:6,w:6,h:5,door:29},
     {id:'estalagem',name:'Estalagem da Brasa',x:12,y:13,w:5,h:5,door:14},
-    {id:'laboratorio',name:'Laboratório da Névoa',x:28,y:13,w:5,h:5,door:30}
+    {id:'laboratorio',name:'Laboratório da Névoa',x:28,y:13,w:5,h:5,door:30},
+    {id:'arquivo_vale',name:'Casa do Cartógrafo',floor:1,x:11,y:10,w:6,h:5,door:14},
+    {id:'alquimia_vale',name:'Armazém das Lanternas',floor:1,x:28,y:10,w:6,h:5,door:30}
   ];
   const chests = [
     {id:'arquivo',name:'Baú dos Registros',x:13,y:9,gold:80,mp:1},
     {id:'forja',name:'Baú do Ferreiro',x:31,y:9,gold:110,hp:1},
     {id:'estalagem',name:'Baú de Provisões',x:13,y:16,gold:65,food:true},
-    {id:'laboratorio',name:'Baú Alquímico',x:31,y:16,gold:90,mp:2}
+    {id:'laboratorio',name:'Baú Alquímico',x:31,y:16,gold:90,mp:2},
+    {id:'cartas_vale',name:'Baú das Cartas do Vale',floor:1,x:12,y:13,gold:140,mp:1},
+    {id:'suprimentos_vale',name:'Baú dos Exploradores',floor:1,x:32,y:13,gold:180,hp:2}
   ];
   const openDoors = new Set();
-  const doorKey=(x,y)=>x+':'+y;
-  const nearTile=(x,y,range=1.5)=>player.floor===0 && Math.max(Math.abs(player.x-x),Math.abs(player.y-y))<=range;
-  function houseAt(x,y){
-    return houses.find(h=>x>=h.x && x<h.x+h.w && y>=h.y && y<h.y+h.h);
+  const doorKey=(x,y,floor=player.floor)=>floor+':'+x+':'+y;
+  const nearTile=(x,y,range=1.5,floor=player.floor)=>player.floor===floor &&
+    Math.max(Math.abs(player.x-x),Math.abs(player.y-y))<=range;
+  const cityChestCount=()=>chests.filter(c=>(c.floor??0)===0 &&
+      player.openedChests.includes(c.id)).length;
+  function houseAt(x,y,floor=player.floor){
+    return houses.find(h=>(h.floor??0)===floor &&
+      x>=h.x && x<h.x+h.w && y>=h.y && y<h.y+h.h);
   }
   function houseRevealed(h){
-    return player.floor===0 && player.x>=h.x-1 && player.x<h.x+h.w+1
+    return player.floor===(h.floor??0) && player.x>=h.x-1 && player.x<h.x+h.w+1
        && player.y>=h.y-1 && player.y<h.y+h.h+1;
   }
   const corpses = [];
@@ -1261,9 +1271,14 @@
   function initWorldMap() {
     for (let y = 0; y < MAP_SIZE; y++) {
       maps[0][y] = [];
+      maps[1][y] = [];
       maps['-1'][y] = [];
       maps['-2'][y] = [];
       for (let x = 0; x < MAP_SIZE; x++) {
+        // Vale das Lanternas (mapa 1): superfície autônoma conectada pelo caminho sul.
+        const border = x===0 || y===0 || x===MAP_SIZE-1 || y===MAP_SIZE-1;
+        maps[1][y][x] = border ? TILE.TREE : TILE.GRASS;
+
         // Subsolo (-1): Catacumbas de Valdoria (x: 14..30, y: 8..24)
         if (x >= 14 && x <= 30 && y >= 8 && y <= 24) {
           const isDWall = (x === 14 || x === 30 || y === 8 || y === 24);
@@ -1339,20 +1354,20 @@
     const ruins = [[15,28],[17,28],[15,31],[28,29],[30,29],[29,33]];
     ruins.forEach(([rx, ry]) => { if (maps[0][ry]) maps[0][ry][rx] = TILE.RUIN_PILLAR; });
 
-    // Quatro casas com paredes, assoalho e portas acessiveis.
-    houses.forEach(({x,y,w,h,door}) => {
+    // Construções com portas e interiores em ambas as regiões.
+    houses.forEach(({x,y,w,h,door,floor=0}) => {
       for (let yy = y; yy < y + h; yy++) {
         for (let xx = x; xx < x + w; xx++) {
           const edge = yy === y || yy === y + h - 1 || xx === x || xx === x + w - 1;
-          maps[0][yy][xx] = edge ? TILE.HOUSE_WALL : TILE.WOOD_FLOOR;
+          maps[floor][yy][xx] = edge ? TILE.HOUSE_WALL : TILE.WOOD_FLOOR;
         }
       }
-      maps[0][y + h - 1][door] = TILE.HOUSE_DOOR;
-      maps[0][y + 1][x + 1] = TILE.FURNITURE;
-      maps[0][y + 1][x + w - 2] = TILE.FURNITURE;
+      maps[floor][y + h - 1][door] = TILE.HOUSE_DOOR;
+      maps[floor][y + 1][x + 1] = TILE.FURNITURE;
+      maps[floor][y + 1][x + w - 2] = TILE.FURNITURE;
     });
     // Objetos interativos colocados em locais livres e alcançáveis do interior.
-    chests.forEach(ch => { maps[0][ch.y][ch.x] = TILE.CHEST; });
+    chests.forEach(ch => { maps[ch.floor??0][ch.y][ch.x] = TILE.CHEST; });
     [[20,7],[25,7],[20,16],[25,16]].forEach(([x,y]) => { maps[0][y][x] = TILE.LANTERN; });
     maps[0][12][17] = TILE.FOUNTAIN;
     maps[0][12][29] = TILE.MARKET_STALL;
@@ -1386,6 +1401,71 @@
     [[8,37],[10,37],[9,36],[9,38],[8,39],[10,39]].forEach(([x,y]) => {
       if (maps[0][y][x] !== TILE.PINE) maps[0][y][x] = TILE.ANCIENT_STONE;
     });
+
+    // Estrada da antiga cidadela até a passagem do Vale das Lanternas.
+    for(let y=39;y<=41;y++) for(let x=21;x<=23;x++) maps[0][y][x]=TILE.DIRT_ROAD;
+    maps[0][40][22]=TILE.PORTAL_EXIT;
+    maps[0][39][20]=TILE.SIGNPOST;
+
+    // Vila das Lanternas: ruas de pedra e praças com iluminação quente.
+    for(let y=5;y<=18;y++) for(let x=9;x<=35;x++){
+      if(x===9 || x===35) maps[1][y][x]=TILE.CASTLE_WALL;
+      else if(y===5) maps[1][y][x]=TILE.CASTLE_WALL;
+      else if(y===18 && (x<20 || x>24)) maps[1][y][x]=TILE.CASTLE_WALL;
+      else maps[1][y][x]=TILE.STONE_FLOOR;
+    }
+    for(let y=6;y<=42;y++)for(let x=21;x<=23;x++)maps[1][y][x]=TILE.DIRT_ROAD;
+    // Casa do Cartógrafo e Armazém: reaplica os interiores sobre a praça.
+    houses.filter(h=>h.floor===1).forEach(({x,y,w,h,door})=>{
+      for(let yy=y;yy<y+h;yy++) for(let xx=x;xx<x+w;xx++)
+        maps[1][yy][xx]=(xx===x||yy===y||xx===x+w-1||yy===y+h-1)
+          ?TILE.HOUSE_WALL:TILE.WOOD_FLOOR;
+      maps[1][y+h-1][door]=TILE.HOUSE_DOOR;
+      maps[1][y+1][x+1]=TILE.FURNITURE;
+      maps[1][y+1][x+w-2]=TILE.FURNITURE;
+    });
+    chests.filter(c=>c.floor===1).forEach(c=>maps[1][c.y][c.x]=TILE.CHEST);
+    [[19,9],[26,9],[19,16],[26,16]].forEach(([x,y])=>maps[1][y][x]=TILE.LANTERN);
+    maps[1][12][18]=TILE.FOUNTAIN;
+    maps[1][12][26]=TILE.MARKET_STALL;
+    maps[1][6][22]=TILE.PORTAL_RETURN;
+    maps[1][18][20]=TILE.GATE_ARCH;
+    maps[1][18][24]=TILE.GATE_ARCH;
+    maps[1][20][18]=TILE.SIGNPOST;
+
+    // Rio Largo: divide a região de leste a oeste com ponte atravessável.
+    for(let x=1;x<=42;x++) {
+      const middle=27+Math.round(Math.sin(x*0.34)*1.2);
+      for(let dy=-2;dy<=2;dy++){
+        const yy=middle+dy;
+        if(yy>18&&yy<42)maps[1][yy][x]=TILE.WATER;
+      }
+    }
+    // A passarela atravessa toda a correnteza e encontra terra nas duas margens.
+    for(let yy=23;yy<=32;yy++) for(let xx=21;xx<=23;xx++)
+      maps[1][yy][xx]=yy>=24&&yy<=31?TILE.BRIDGE:TILE.DIRT_ROAD;
+    for(let yy=20;yy<=42;yy++)for(let xx=21;xx<=23;xx++)
+      if(maps[1][yy][xx]!==TILE.BRIDGE)maps[1][yy][xx]=TILE.DIRT_ROAD;
+
+    // Bosques, pradarias floridas, ruínas e acampamento de saqueadores.
+    for(let y=19;y<=42;y++)for(let x=1;x<=42;x++){
+      const t=maps[1][y][x],n=(x*19+y*31+x*y*3)%23;
+      if(t!==TILE.GRASS)continue;
+      if((x<=12||x>=33)&&n<5)maps[1][y][x]=TILE.PINE;
+      else if(n===8||n===13)maps[1][y][x]=TILE.WILD_FLOWERS;
+      else if(n===16)maps[1][y][x]=TILE.FLOWERS;
+    }
+    [[7,21],[9,21],[6,23],[9,25],[35,20],[37,20],[37,22],[35,23]]
+      .forEach(([x,y])=>maps[1][y][x]=TILE.ANCIENT_STONE);
+    // Acampamento à margem sul do rio: clareira, tendas e fogueira.
+    for(let y=34;y<=41;y++)for(let x=28;x<=40;x++){
+      maps[1][y][x]=(x+y)%7===0?TILE.DIRT_ROAD:TILE.GRASS;
+    }
+    [[31,36],[37,36],[33,40]].forEach(([x,y])=>maps[1][y][x]=TILE.TENT);
+    maps[1][38][34]=TILE.CAMP_FIRE;
+    maps[1][33][27]=TILE.SIGNPOST;
+    for(let y=34;y<=41;y++)for(let x=22;x<=29;x++)
+      if(maps[1][y][x]!==TILE.CAMP_FIRE)maps[1][y][x]=TILE.DIRT_ROAD;
   }
 
   // Inicializa NPCs e Criaturas Clássicas do Tibia no Térreo (0) e Subsolo (-1)
@@ -1557,8 +1637,9 @@
   }
 
   function isProtectionZone(floor, x, y) {
-    if (floor !== 0) return false;
-    return (x >= 11 && x <= 33 && y >= 5 && y <= 18);
+    if (floor===0) return x>=11&&x<=33&&y>=5&&y<=18;
+    if (floor===1) return x>=10&&x<=34&&y>=6&&y<=17;
+    return false;
   }
 
   function isTileBlocked(floor, x, y, ignoreEntityId = null) {
@@ -1575,6 +1656,7 @@
       (t === TILE.HOUSE_DOOR && !openDoors.has(doorKey(x,y))) ||
       t === TILE.LANTERN || t === TILE.FOUNTAIN ||
       t === TILE.MARKET_STALL || t === TILE.CRYPT_WALL ||
+      t === TILE.TENT || t === TILE.CAMP_FIRE ||
       t === TILE.WATER ||
       t === TILE.ALTAR ||
       t === TILE.RUIN_PILLAR ||
@@ -1644,7 +1726,17 @@
   // Verifica se o jogador pisou no Bueiro (Descer) ou Escada/Corda (Subir)
   function checkFloorTransition() {
     const currentTile = maps[player.floor][player.y][player.x];
-    if (player.floor === 0 && currentTile === TILE.SEWER_GRATE) {
+    if(player.floor===0 && currentTile===TILE.PORTAL_EXIT){
+      player.floor=1;player.x=22;player.y=8;player.renderX=22;player.renderY=8;
+      player.path=[];player.targetId=null;
+      addLog('Você chegou à Vila das Lanternas, além dos Ermos Cinzentos!', '#fbbf24');
+      updateZoneUI();renderBattleList();saveProgress();
+    } else if(player.floor===1 && currentTile===TILE.PORTAL_RETURN){
+      player.floor=0;player.x=22;player.y=39;player.renderX=22;player.renderY=39;
+      player.path=[];player.targetId=null;
+      addLog('Você voltou ao caminho sul do Bastião das Cinzas.', '#fbbf24');
+      updateZoneUI();renderBattleList();saveProgress();
+    } else if (player.floor === 0 && currentTile === TILE.SEWER_GRATE) {
       player.floor = -1;
       player.targetId = null;
       player.path = [];
@@ -3328,9 +3420,9 @@
         if (k === 'outfit' && (!data[k] || typeof data[k] !== 'object' || Array.isArray(data[k]))) continue;
         player[k] = data[k];
       }
-      if (![0,-1,-2].includes(player.floor)) player.floor = 0;
+      if (![0,1,-1,-2].includes(player.floor)) player.floor = 0;
       // Porta pode ter ficado aberta na sessão anterior: não expulsar o herói do vão.
-      if (player.floor===0 && maps[0]?.[player.y]?.[player.x]===TILE.HOUSE_DOOR) {
+      if ((player.floor===0||player.floor===1) && maps[player.floor]?.[player.y]?.[player.x]===TILE.HOUSE_DOOR) {
         openDoors.add(doorKey(player.x,player.y));
       }
       if (!Number.isInteger(player.x) || !Number.isInteger(player.y) ||
