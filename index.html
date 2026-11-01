@@ -270,6 +270,7 @@
     <div class="flex gap-1.5 items-center">
       <div class="tibia-inset p-0.5 relative">
         <canvas id="minimapCanvas" width="112" height="96" class="block cursor-pointer" title="Clique no minimapa para navegar"></canvas>
+        <button onclick="window.openWorldMap()" class="tibia-btn w-full py-0.5 text-[9px] text-amber-200" title="Abrir mapa de todas as regiões">🗺️ Mapa-múndi</button>
       </div>
       <div class="flex-1 flex flex-col gap-1">
         <!-- Rosa dos Ventos Estilo Tibia -->
@@ -418,6 +419,38 @@
       <div id="backpackGrid" class="p-1.5 grid grid-cols-5 gap-1 overflow-y-auto"></div>
     </div>
 
+  </div>
+</div>
+
+<!-- MAPA-MÚNDI DO JOGO (exploração, sem teletransporte) -->
+<div id="worldMapModal" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-50 p-3">
+  <div class="tibia-panel w-full max-w-2xl p-3 shadow-2xl flex flex-col gap-2 max-h-[94vh] overflow-y-auto">
+    <div class="flex justify-between items-center border-b border-amber-800 pb-1.5">
+      <div><div class="text-amber-300 font-bold text-sm">🗺️ Atlas dos Reinos das Cinzas</div>
+        <div class="text-[10px] text-gray-400">Clique para definir um destino • nenhum teletransporte</div></div>
+      <button onclick="window.closeWorldMap()" class="tibia-btn px-2 py-1">✕</button>
+    </div>
+    <div class="grid grid-cols-4 gap-1">
+      <button id="maptab0" class="tibia-btn text-[10px] py-1" onclick="window.selectWorldMap(0)">Bastião</button>
+      <button id="maptab1" class="tibia-btn text-[10px] py-1" onclick="window.selectWorldMap(1)">Vale</button>
+      <button id="maptab-1" class="tibia-btn text-[10px] py-1" onclick="window.selectWorldMap(-1)">Catacumbas</button>
+      <button id="maptab-2" class="tibia-btn text-[10px] py-1" onclick="window.selectWorldMap(-2)">Cripta</button>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-3 items-start">
+      <canvas id="worldMapCanvas" width="440" height="440" class="block w-full sm:w-[65%] max-w-[440px] border-2 border-neutral-600 cursor-crosshair" title="Clique para caminhar até o destino"></canvas>
+      <div class="tibia-inset p-2 flex-1 w-full flex flex-col gap-2">
+        <div id="worldMapName" class="text-sm text-amber-200 font-bold">Região</div>
+        <p id="worldMapPosition" class="text-[11px] text-gray-300">Posição do herói</p>
+        <div class="text-xs text-neutral-200 font-bold">Pontos de interesse</div>
+        <div id="worldMapLandmarks" class="flex flex-col gap-1 text-[10px]"></div>
+        <p id="worldMapMessage" class="text-[11px] text-emerald-300 mt-2">Selecione um destino no mapa.</p>
+        <button onclick="window.closeWorldMap()" class="tibia-btn text-[10px] py-1">Voltar ao jogo</button>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-3 text-[10px] text-gray-300">
+      <span>🟢 Vegetação</span><span>🟦 Água</span><span>🟫 Caminho</span>
+      <span>🟠 Construções</span><span>🔴 Inimigos</span><span>⚪ Ivo</span>
+    </div>
   </div>
 </div>
 
@@ -1929,6 +1962,148 @@
     }
     return false;
   }
+
+  // Atlas: cada região é explorável separadamente; clicar traça rota real no mesmo andar.
+  const WORLD_LANDMARKS={
+    0:[
+      {x:22,y:14,label:'Bastião das Cinzas'},
+      {x:8,y:32,label:'Lago de Pedra Clara'},
+      {x:22,y:40,label:'Passagem para o Vale'}
+    ],
+    1:[
+      {x:22,y:12,label:'Vila das Lanternas'},
+      {x:22,y:28,label:'Ponte do Rio Largo'},
+      {x:34,y:38,label:'Acampamento dos Saqueadores'},
+      {x:22,y:6,label:'Voltar ao Bastião'}
+    ],
+    '-1':[
+      {x:26,y:14,label:'Entrada das Catacumbas'},
+      {x:28,y:21,label:'Escada para a Cripta'}
+    ],
+    '-2':[
+      {x:23,y:16,label:'Cripta dos Ecos'},
+      {x:28,y:21,label:'Escada de retorno'}
+    ]
+  };
+  const WORLD_NAMES={
+    0:'Bastião e Ermos Cinzentos',1:'Vale das Lanternas',
+    '-1':'Catacumbas de Brasa','-2':'Cripta dos Ecos'
+  };
+  let selectedMap=0,worldWaypoint=null;
+  const worldMapCanvas=document.getElementById('worldMapCanvas');
+  const worldMapCtx=worldMapCanvas.getContext('2d');
+  function colorOnWorldMap(t){
+    if(t===TILE.WATER)return '#316b86';
+    if(t===TILE.BRIDGE)return '#c79b5c';
+    if(t===TILE.GRASS)return '#477434';
+    if(t===TILE.PINE||t===TILE.TREE)return '#1d4e31';
+    if(t===TILE.FARM||t===TILE.WILD_FLOWERS||t===TILE.FLOWERS)return '#86a451';
+    if(t===TILE.MARSH)return '#365856';
+    if(t===TILE.DIRT_ROAD||t===TILE.PORTAL_EXIT||t===TILE.PORTAL_RETURN)return '#a58357';
+    if(t===TILE.STONE_FLOOR)return '#73716a';
+    if(t===TILE.HOUSE_WALL||t===TILE.WOOD_FLOOR||t===TILE.HOUSE_DOOR)return '#bd7e53';
+    if(t===TILE.CASTLE_WALL||t===TILE.DUNGEON_WALL||t===TILE.CRYPT_WALL)return '#343537';
+    if(t===TILE.DUNGEON_FLOOR||t===TILE.CRYPT_FLOOR)return '#555458';
+    if(t===TILE.MOSS_FLOOR)return '#48664e';
+    if(t===TILE.LANTERN||t===TILE.CAMP_FIRE)return '#e6a647';
+    if(t===TILE.CHEST)return '#fbbf24';
+    if(t===TILE.TENT)return '#a6815c';
+    return '#426b36';
+  }
+  function renderWorldMap(){
+    const c=worldMapCtx,step=worldMapCanvas.width/MAP_SIZE,terrain=maps[selectedMap];
+    if(!terrain)return;
+    c.fillStyle='#101214';c.fillRect(0,0,worldMapCanvas.width,worldMapCanvas.height);
+    for(let y=0;y<MAP_SIZE;y++)for(let x=0;x<MAP_SIZE;x++){
+      c.fillStyle=colorOnWorldMap(terrain[y][x]);
+      c.fillRect(x*step,y*step,Math.ceil(step),Math.ceil(step));
+    }
+    // Rota disponível apenas para o mesmo mapa.
+    if(worldWaypoint&&worldWaypoint.floor===selectedMap&&player.floor===selectedMap){
+      const path=findPathTo(worldWaypoint.x,worldWaypoint.y);
+      c.fillStyle='rgba(255,230,145,.65)';
+      for(const p of path)c.fillRect(p.x*step+step*.25,p.y*step+step*.25,step*.5,step*.5);
+    }
+    const landmarks=WORLD_LANDMARKS[selectedMap]||[];
+    landmarks.forEach((p,i)=>{
+      c.fillStyle='#fbbf24';c.fillRect(p.x*step-2,p.y*step-2,step+3,step+3);
+      c.fillStyle='#23180f';c.font='bold 10px monospace';
+      const label=p.label;
+      const lx=Math.min(worldMapCanvas.width-5-label.length*5.8,Math.max(4,p.x*step+12));
+      const ly=Math.min(worldMapCanvas.height-8,Math.max(12,p.y*step-4));
+      c.fillStyle='rgba(0,0,0,.78)';c.fillRect(lx-2,ly-10,label.length*6+5,14);
+      c.fillStyle='#ffe2a0';c.fillText(label,lx,ly);
+    });
+    entities.forEach(e=>{
+      if(e.floor!==selectedMap||e.dead)return;
+      c.fillStyle=e.type==='npc'?'#61e6ef':'#e55255';
+      c.fillRect(e.x*step+2,e.y*step+2,Math.max(3,step-4),Math.max(3,step-4));
+    });
+    if(player.floor===selectedMap){
+      c.strokeStyle='#ffffff';c.lineWidth=2;
+      c.strokeRect(player.x*step,player.y*step,step+1,step+1);
+      c.fillStyle='#ffffff';c.fillRect(player.x*step+step*.3,player.y*step+step*.3,step*.4,step*.4);
+    }
+    if(worldWaypoint?.floor===selectedMap){
+      c.strokeStyle='#fb923c';c.lineWidth=3;c.strokeRect(worldWaypoint.x*step-2,worldWaypoint.y*step-2,step+4,step+4);
+    }
+    document.getElementById('worldMapName').textContent=WORLD_NAMES[selectedMap];
+    document.getElementById('worldMapPosition').textContent='Ivo: '+WORLD_NAMES[player.floor]+
+      ' • SQM ['+player.x+','+player.y+']';
+    document.getElementById('worldMapLandmarks').innerHTML=landmarks.map((p,i)=>
+      '<button onclick="window.chooseMapPoint('+p.x+','+p.y+')" class="tibia-btn p-1 text-left text-[10px]">'+
+      '📍 '+p.label+' ['+p.x+','+p.y+']</button>'
+    ).join('');
+    [0,1,-1,-2].forEach(z=>{
+      const b=document.getElementById('maptab'+z);
+      b.classList.toggle('active',z===selectedMap);
+    });
+  }
+  window.openWorldMap=function(){
+    selectedMap=player.floor;worldWaypoint=null;
+    const m=document.getElementById('worldMapModal');
+    m.classList.remove('hidden');m.classList.add('flex');
+    renderWorldMap();
+  };
+  window.closeWorldMap=function(){
+    const m=document.getElementById('worldMapModal');
+    m.classList.add('hidden');m.classList.remove('flex');
+  };
+  window.selectWorldMap=function(floor){
+    if(!Object.hasOwn(WORLD_NAMES,floor))return;
+    selectedMap=Number(floor);worldWaypoint=null;
+    document.getElementById('worldMapMessage').textContent=
+      selectedMap===player.floor?'Clique em um destino para caminhar.':
+      'Mapa de outra região: use uma passagem no mundo para chegar lá.';
+    renderWorldMap();
+  };
+  window.chooseMapPoint=function(x,y){
+    x=Math.floor(x);y=Math.floor(y);
+    if(x<0||y<0||x>=MAP_SIZE||y>=MAP_SIZE)return;
+    worldWaypoint={floor:selectedMap,x,y};
+    const msg=document.getElementById('worldMapMessage');
+    if(selectedMap!==player.floor){
+      msg.textContent='Você está em outra região. Atravesse a passagem para chegar a '+WORLD_NAMES[selectedMap]+'.';
+      renderWorldMap();return;
+    }
+    const path=findPathTo(x,y);
+    if(path.length){
+      clearPendingInteractions();player.path=path;
+      msg.textContent='Rota marcada: '+path.length+' passos até ['+x+','+y+'].';
+      addLog('🗺️ Atlas: caminhando até ['+x+','+y+'].','#fcd34d');
+      window.closeWorldMap();
+    }else{
+      msg.textContent='Não há rota livre até esse SQM. Tente um ponto próximo.';
+    }
+    renderWorldMap();
+  };
+  worldMapCanvas.addEventListener('mousedown',e=>{
+    const rect=worldMapCanvas.getBoundingClientRect();
+    if(!rect.width||!rect.height)return;
+    const x=Math.floor(((e.clientX-rect.left)/rect.width)*MAP_SIZE);
+    const y=Math.floor(((e.clientY-rect.top)/rect.height)*MAP_SIZE);
+    window.chooseMapPoint(x,y);
+  });
 
   // Contratos de caça: objetivos repetíveis, contados por monstro e região.
   const CONTRACTS=[
@@ -3972,6 +4147,7 @@
       window.closeTalents();
       window.closeForge();
       window.closeContracts();
+      window.closeWorldMap();
       clearPendingInteractions();
       return;
     }
@@ -3979,7 +4155,8 @@
         document.getElementById('outfitModal').classList.contains('flex') ||
         document.getElementById('talentModal').classList.contains('flex') ||
         document.getElementById('forgeModal').classList.contains('flex') ||
-        document.getElementById('contractModal').classList.contains('flex')) return;
+        document.getElementById('contractModal').classList.contains('flex') ||
+        document.getElementById('worldMapModal').classList.contains('flex')) return;
     if (['w','a','s','d','e','arrowup','arrowdown','arrowleft','arrowright','1','2','3','4','5','6'].includes(key)) e.preventDefault();
     if (key === 'e') { window.interactNearby(); }
     else if (key === 'w' || key === 'arrowup') { clearPendingInteractions(); player.path = []; window.movePlayer(0, -1); }
