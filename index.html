@@ -615,6 +615,7 @@
     cityQuestGoal: 4,
     cityQuestCompleted: false,
     valeKills: 0, valeGoal: 5, valeCompleted: false,
+    brumaDefeated: false,
     weaponTier: 0,
     talentPoints: 0,
     talentRanks: { fury:0, bulwark:0, vigor:0, stride:0 },
@@ -1654,7 +1655,7 @@
       {name:'Bandido da Estrada',sprite:'bandit',x:30,y:35,hp:120,atk:22,xp:85,gold:[22,45]},
       {name:'Batedor Saqueador',sprite:'bandit',x:34,y:35,hp:140,atk:25,xp:105,gold:[28,57]},
       {name:'Bandido da Floresta',sprite:'bandit',x:39,y:36,hp:125,atk:24,xp:90,gold:[24,50]},
-      {name:'Chefe Saqueador',sprite:'bandit',x:32,y:38,hp:225,atk:31,xp:180,gold:[70,115]},
+      {name:'Senhor da Bruma',sprite:'warlord',boss:true,x:32,y:38,hp:1150,atk:49,xp:1100,gold:[250,440]},
       {name:'Bandido da Estrada',sprite:'bandit',x:38,y:40,hp:145,atk:25,xp:115,gold:[30,60]},
       {name:'Sentinela do Acampamento',sprite:'bandit',x:35,y:41,hp:165,atk:27,xp:125,gold:[45,80]},
       {name:'Lobo Cinzento',sprite:'wolf',x:16,y:22,hp:105,atk:19,xp:75,gold:[8,18]},
@@ -1664,7 +1665,8 @@
       id:'mob_vale_'+idx,type:'monster',name:m.name,sprite:m.sprite,
       floor:1,x:m.x,y:m.y,spawnX:m.x,spawnY:m.y,renderX:m.x,renderY:m.y,
       dir:'down',walkFrame:0,hp:m.hp,maxHp:m.hp,atk:m.atk,xp:m.xp,
-      goldRange:m.gold,lastMove:0,lastAtk:0,dead:false,respawnAt:0
+      goldRange:m.gold,lastMove:0,lastAtk:0,dead:false,respawnAt:0,
+      isBoss:!!m.boss,specialAt:0,warning:null
     }));
 
     // Monstros dos Ermos Cinzentos (Floor 0 - Sul do Portão)
@@ -1879,14 +1881,16 @@
       ' • Defesa efetiva: <b class="text-sky-300">'+effectiveDefense()+'</b></div>'+
       (tier>=4?'<div class="mt-2 text-green-300">Nível máximo de aprimoramento atingido.</div>':
       '<div class="mt-2 text-neutral-300">Próximo nível: +6 ataque, +2 defesa</div>'+
-      '<div class="mt-1 text-amber-300">Custo: '+cost+' ouro • Nível mínimo '+req+'</div>')+
+      '<div class="mt-1 text-amber-300">Custo: '+cost+' ouro • Nível mínimo '+req+'</div>'+ 
+      (tier===3&&!player.brumaDefeated?'<div class="text-purple-200">Requer derrotar Senhor da Bruma.</div>':''))+
       '<div class="mt-1 text-gray-400">Seu ouro: '+player.gold+'</div>';
     document.getElementById('forgeUpgradeBtn').disabled=
-      tier>=4||!nearForge()||player.gold<(cost||0)||player.level<(req||99);
+      tier>=4||!nearForge()||player.gold<(cost||0)||player.level<(req||99)||
+      (tier===3&&!player.brumaDefeated);
   }
   window.upgradeWeapon=function(){
     const tier=player.weaponTier||0,cost=FORGE_COSTS[tier],req=FORGE_MIN_LEVEL[tier];
-    if(tier>=4||!nearForge()||player.gold<cost||player.level<req){
+    if(tier>=4||!nearForge()||player.gold<cost||player.level<req || (tier===3&&!player.brumaDefeated)){
       document.getElementById('forgeMessage').textContent='Aprimoramento indisponível: confira ouro, nível e proximidade da forja.';
       return false;
     }
@@ -2212,7 +2216,7 @@
 
     if (mob.hp <= 0) {
       mob.dead = true;
-      mob.respawnAt = performance.now() + 16000;
+      mob.respawnAt = performance.now() + (mob.isBoss ? 150000 : 16000);
       if (player.targetId === mob.id) player.targetId = null;
 
       const goldDrop = mob.goldRange[0] + Math.floor(Math.random() * (mob.goldRange[1] - mob.goldRange[0] + 1));
@@ -2227,6 +2231,10 @@
       }
       if (Math.random() < 0.4) {
         corpseItems.push({ icon: '🧪', name: 'Health Potion', type: 'hppot', value: 1 });
+      }
+      if(mob.isBoss){
+        corpseItems.push({icon:'💠',name:'Orbe do Senhor da Bruma (+600 Gold)',type:'treasure',value:600});
+        if(!player.brumaDefeated) completeBrumaQuest();
       }
       if (mob.sprite === 'dragon' || mob.sprite === 'cyclops') {
         corpseItems.push({ icon: '💎', name: 'Rubi de Brasa Ancestral (+120 Gold)', type: 'treasure', value: 120 });
@@ -2407,6 +2415,23 @@
     addFloatingText(player.floor,player.x,player.y-.6,'PAZ NO VALE!','#fef08a',true);
     addLog('★ Paz no Vale concluída! +650 ouro, +425 XP, +1 bênção e Emblema das Lanternas.','#fde68a','quest');
     renderBackpack();updateHUD();saveProgress();
+  }
+
+  // Chefe de mundo: recompensa de campanha ganha uma única vez.
+  function completeBrumaQuest(){
+    if(player.brumaDefeated)return;
+    player.brumaDefeated=true;
+    player.gold+=1800;
+    player.xp+=1200;
+    player.blessing+=2;
+    player.atk+=8;
+    player.lootBag.push({
+      id:'bruma_crown',icon:'👑',name:'Coroa Partida da Bruma (Relíquia)',
+      type:'relic',value:0
+    });
+    addFloatingText(player.floor,player.x,player.y-1,'A BRUMA FOI VENCIDA!','#e9d5ff',true);
+    addLog('★ O Senhor da Bruma caiu! +1.800 ouro, +1.200 XP, +8 ataque, +2 bênçãos e Coroa Partida.','#d8b4fe','quest');
+    checkLevelUp();renderBackpack();updateHUD();saveProgress();
   }
 
   // Modal de Customização de Outfit ("Set Outfit" do Tibia 7.6)
@@ -2711,7 +2736,7 @@
       const pct = Math.max(0, Math.round((e.hp / e.maxHp) * 100));
       const isTarget = player.targetId === e.id;
       const barCol = e.type === 'npc' ? '#38bdf8' : (pct > 60 ? '#00c000' : pct > 30 ? '#c0c000' : '#c00000');
-      const icon = e.type === 'npc' ? (e.sprite === 'merchant' ? '🪙' : e.sprite === 'healer' ? '✨' : '🧙‍♂️') : (e.sprite === 'rat' ? '🐀' : e.sprite === 'troll' ? '🧌' : e.sprite === 'orc' ? '👹' : e.sprite === 'cyclops' ? '👁️' : '🐉');
+      const icon = e.isBoss ? '☠️' : e.type === 'npc' ? (e.sprite === 'merchant' ? '🪙' : e.sprite === 'healer' ? '✨' : '🧙‍♂️') : (e.sprite === 'rat' ? '🐀' : e.sprite === 'troll' ? '🧌' : e.sprite === 'orc' ? '👹' : e.sprite === 'cyclops' ? '👁️' : '🐉');
 
       return `
         <div onclick="window.selectTarget('${e.id}')" class="p-1 rounded cursor-pointer border ${isTarget ? 'border-red-500 bg-red-950/40' : 'border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800'} flex flex-col gap-0.5">
@@ -2801,10 +2826,15 @@
       questCounter.textContent=player.valeKills+'/'+player.valeGoal;
       questDesc.textContent='Siga ao sul (SQM 22,40), visite a Vila das Lanternas e derrote 5 bandidos além do Rio Largo.';
       questDesc.className='text-lime-200 leading-tight';
+    } else if(!player.brumaDefeated){
+      questTitle.textContent='⚔️ Missão: Senhor da Bruma';
+      questCounter.textContent='0/1';
+      questDesc.textContent='Enfrente o chefe no acampamento a sudeste do Vale (SQM 32,38). Desvie dos círculos roxos!';
+      questDesc.className='text-purple-200 leading-tight';
     } else {
       questTitle.textContent = '🏆 Herói dos Reinos';
-      questCounter.textContent = player.valeGoal + '/' + player.valeGoal;
-      questDesc.textContent = 'Quatro missões concluídas! Continue explorando as duas regiões.';
+      questCounter.textContent = '5/5';
+      questDesc.textContent = 'Cinco missões concluídas! A Bruma foi vencida e os Reinos aguardam novas expedições.';
       questDesc.className = 'text-emerald-400 font-bold leading-tight';
     }
   }
@@ -3740,7 +3770,7 @@
     'gold','blessing','cap','atk','def','weaponName','legendarySword',
     'hpPots','mpPots','questKills','questCompleted',
     'cryptKills','cryptGoal','cryptCompleted','openedChests',
-    'cityQuestGoal','cityQuestCompleted','valeKills','valeGoal','valeCompleted',
+    'cityQuestGoal','cityQuestCompleted','valeKills','valeGoal','valeCompleted','brumaDefeated',
     'lootBag','outfit','stance','chase','weaponTier','talentRanks','talentPoints'
   ];
   function saveProgress() {
