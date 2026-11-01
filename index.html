@@ -1065,7 +1065,7 @@
     trees.forEach(([tx, ty]) => { if (maps[0][ty]) maps[0][ty][tx] = TILE.TREE; });
 
     const ruins = [[15,28],[17,28],[15,31],[28,29],[30,29],[29,33]];
-    ruins.forEach(([rx, ry]) => { if (maps[0][ty]) maps[0][ry][rx] = TILE.RUIN_PILLAR; });
+    ruins.forEach(([rx, ry]) => { if (maps[0][ry]) maps[0][ry][rx] = TILE.RUIN_PILLAR; });
   }
 
   // Inicializa NPCs e Criaturas Clássicas do Tibia no Térreo (0) e Subsolo (-1)
