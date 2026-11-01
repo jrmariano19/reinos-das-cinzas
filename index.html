@@ -630,7 +630,7 @@
   let VIEW_COLS = 15; // Ajustado à proporção do espaço disponível
   let VIEW_ROWS = 11;
   const TILE_SIZE = 48; // 15 * 48 = 720px | 11 * 48 = 528px
-  const MAP_SIZE = 44;
+  const MAP_SIZE = 56;
 
   const canvas = document.getElementById('gameCanvas');
   canvas.width = VIEW_COLS * TILE_SIZE;
@@ -743,7 +743,7 @@
     cryptGoal: 4,
     cryptCompleted: false,
     openedChests: [],
-    cityQuestGoal: 4,
+    cityQuestGoal: 6,
     cityQuestCompleted: false,
     valeKills: 0, valeGoal: 5, valeCompleted: false,
     brumaDefeated: false,
@@ -818,7 +818,7 @@
   // Dois mapas de superfície interligados e dois níveis subterrâneos.
   const maps = { 0: [], 1: [], '-1': [], '-2': [] };
 
-  // Bastião redesenhado: doze edifícios em três quarteirões, além da Vila das Lanternas.
+  // Bastião ampliado: dezesseis edifícios em quatro quarteirões, além da Vila das Lanternas.
   const houses = [
     {id:'arquivo',name:'Arquivo dos Reinos',x:6,y:5,w:5,h:5,door:8,style:'stone'},
     {id:'templo',name:'Templo da Chama Serena',x:13,y:5,w:5,h:5,door:15,style:'slate'},
@@ -828,10 +828,14 @@
     {id:'banco',name:'Banco do Bastião',x:13,y:12,w:5,h:5,door:15,style:'plaster'},
     {id:'deposito',name:'Depósito dos Aventureiros',x:26,y:12,w:5,h:5,door:28,style:'timber'},
     {id:'laboratorio',name:'Laboratório da Névoa',x:33,y:12,w:5,h:5,door:35,style:'slate'},
-    {id:'residencial',name:'Morada dos Artífices',x:6,y:19,w:5,h:4,door:8,style:'plaster'},
-    {id:'taverna',name:'Taverna do Corvo',x:13,y:19,w:5,h:4,door:15,style:'timber'},
-    {id:'arsenal',name:'Arsenal da Muralha',x:26,y:19,w:5,h:4,door:28,style:'stone'},
-    {id:'guilda',name:'Guilda dos Mercadores',x:33,y:19,w:5,h:4,door:35,style:'brick'},
+    {id:'residencial',name:'Morada dos Artífices',x:6,y:19,w:5,h:5,door:8,style:'plaster'},
+    {id:'taverna',name:'Taverna do Corvo',x:13,y:19,w:5,h:5,door:15,style:'timber'},
+    {id:'arsenal',name:'Arsenal da Muralha',x:26,y:19,w:5,h:5,door:28,style:'stone'},
+    {id:'guilda',name:'Guilda dos Mercadores',x:33,y:19,w:5,h:5,door:35,style:'brick'},
+    {id:'cartografia',name:'Casa dos Cartógrafos',x:6,y:26,w:5,h:5,door:8,style:'slate'},
+    {id:'contratos',name:'Salão dos Contratos',x:13,y:26,w:5,h:5,door:15,style:'stone'},
+    {id:'reliquias',name:'Oficina de Relíquias',x:26,y:26,w:5,h:5,door:28,style:'moss'},
+    {id:'caravanas',name:'Entreposto das Caravanas',x:33,y:26,w:5,h:5,door:35,style:'timber'},
     {id:'arquivo_vale',name:'Casa do Cartógrafo',floor:1,x:11,y:10,w:6,h:5,door:14,style:'brick'},
     {id:'alquimia_vale',name:'Armazém das Lanternas',floor:1,x:28,y:10,w:6,h:5,door:30,style:'moss'}
   ];
@@ -842,8 +846,12 @@
     {id:'laboratorio',name:'Baú Alquímico',x:34,y:15,gold:90,mp:2},
     {id:'banco',name:'Cofre de Reserva',x:14,y:15,gold:130,hp:1},
     {id:'deposito',name:'Baú dos Aventureiros',x:27,y:15,gold:150,mp:1},
-    {id:'arsenal',name:'Arca do Arsenal',x:27,y:21,gold:180,hp:2},
-    {id:'guilda',name:'Cofre da Guilda',x:34,y:21,gold:190,mp:2},
+    {id:'arsenal',name:'Arca do Arsenal',x:27,y:22,gold:180,hp:2},
+    {id:'guilda',name:'Cofre da Guilda',x:34,y:22,gold:190,mp:2},
+    {id:'cartografia',name:'Baú dos Mapas Antigos',x:7,y:29,gold:210,mp:2},
+    {id:'contratos',name:'Cofre dos Caçadores',x:14,y:29,gold:220,hp:2},
+    {id:'reliquias',name:'Arca das Relíquias',x:27,y:29,gold:260,mp:2},
+    {id:'caravanas',name:'Cofre das Caravanas',x:34,y:29,gold:280,hp:2},
     {id:'cartas_vale',name:'Baú das Cartas do Vale',floor:1,x:12,y:13,gold:140,mp:1},
     {id:'suprimentos_vale',name:'Baú dos Exploradores',floor:1,x:32,y:13,gold:180,hp:2}
   ];
@@ -1698,21 +1706,21 @@
           continue;
         }
 
-        // Bastião das Cinzas: muralhas amplas, dois portões e ruas que ligam três quarteirões.
-        if (x >= 4 && x <= 39 && y >= 4 && y <= 24) {
-          const isBorder = x===4 || x===39 || y===4 || y===24;
+        // Bastião das Cinzas: muralhas amplas, portões norte/sul e quatro quarteirões conectados.
+        if (x >= 4 && x <= 39 && y >= 4 && y <= 33) {
+          const isBorder = x===4 || x===39 || y===4 || y===33;
           const northGate = y===4 && x>=20 && x<=24;
-          const southGate = y===24 && x>=20 && x<=24;
+          const southGate = y===33 && x>=20 && x<=24;
           if (northGate || southGate) {
             maps[0][y][x] = (x===20 || x===24) ? TILE.GATE_ARCH : TILE.DIRT_ROAD;
           } else if (isBorder) {
             maps[0][y][x] = ((x+y)%7===0) ? TILE.TORCH_WALL : TILE.CASTLE_WALL;
-          } else if ((x>=21 && x<=23) || y===10 || y===11 || y===17 || y===18 || y===23) {
+          } else if ((x>=21 && x<=23) || [10,11,17,18,24,25,32].includes(y)) {
             maps[0][y][x] = TILE.DIRT_ROAD;
           } else {
             maps[0][y][x] = TILE.STONE_FLOOR;
           }
-        } else if (x >= 21 && x <= 23 && y > 24 && y < 40) {
+        } else if (x >= 21 && x <= 23 && y > 33 && y < 50) {
           maps[0][y][x] = TILE.DIRT_ROAD;
         } else {
           maps[0][y][x] = TILE.GRASS;
@@ -1733,13 +1741,13 @@
       maps['-1'][py][px] = TILE.RUIN_PILLAR;
     });
 
-    // Ruínas e árvores ficam fora das ruas e dos quarteirões da cidade.
+    // Ruínas e árvores ficam fora das ruas e dos quatro quarteirões.
     const trees = [
-      [2,25],[8,26],[16,27],[28,26],[37,26],[3,30],[18,33],[27,31],
-      [41,34],[14,37],[29,37],[25,34],[19,36]
+      [2,35],[8,36],[16,37],[28,35],[37,36],[3,40],[18,43],[27,41],
+      [41,44],[14,49],[29,49],[25,46],[19,48]
     ];
     trees.forEach(([tx, ty]) => { if (maps[0][ty]) maps[0][ty][tx] = TILE.TREE; });
-    const ruins = [[15,28],[17,28],[15,31],[28,29],[30,29],[29,33]];
+    const ruins = [[15,38],[17,38],[15,41],[28,39],[30,39],[29,43]];
     ruins.forEach(([rx, ry]) => { if (maps[0][ry]) maps[0][ry][rx] = TILE.RUIN_PILLAR; });
 
     // Todas as moradias recebem interiores, portas e fachadas com identidade visual própria.
@@ -1767,39 +1775,40 @@
     maps[0][16][24] = TILE.LANTERN;
     maps[0][18][20] = TILE.SIGNPOST;
     maps[0][18][24] = TILE.SIGNPOST;
-    [[11,10],[18,10],[25,10],[32,10],[11,17],[18,17],[25,17],[32,17]]
+    [[11,10],[18,10],[25,10],[32,10],[11,17],[18,17],[25,17],[32,17],
+      [11,24],[18,24],[25,24],[32,24],[11,32],[18,32],[25,32],[32,32]]
       .forEach(([x,y]) => { if (maps[0][y][x]===TILE.DIRT_ROAD) maps[0][y][x]=TILE.LANTERN; });
 
     // Lago de Pedra Clara e passarela de madeira ao sudoeste.
-    for (let y=28;y<=36;y++) for(let x=3;x<=14;x++){
-      const dx=(x-8.5)/5.8,dy=(y-32)/4.5;
+    for (let y=37;y<=45;y++) for(let x=3;x<=14;x++){
+      const dx=(x-8.5)/5.8,dy=(y-41)/4.5;
       if(dx*dx+dy*dy<0.88 && maps[0][y][x]===TILE.GRASS)maps[0][y][x]=TILE.WATER;
     }
-    for(let y=28;y<=36;y++) {
+    for(let y=37;y<=45;y++) {
       if(maps[0][y][7]===TILE.WATER) maps[0][y][7]=TILE.BRIDGE;
     }
     // Entradas secas para que a passarela seja realmente alcançável.
-    maps[0][27][7]=TILE.DIRT_ROAD;
-    maps[0][37][7]=TILE.DIRT_ROAD;
+    maps[0][36][7]=TILE.DIRT_ROAD;
+    maps[0][46][7]=TILE.DIRT_ROAD;
 
     // Biomas originais: Bosque das Sombras, Pantano da Nevoa e Circulo dos Antigos.
-    for (let y = 21; y < 43; y++) {
+    for (let y = 34; y < 55; y++) {
       for (let x = 1; x < 12; x++) {
         const v = (x * 47 + y * 31 + x * y * 7) % 19;
         if (v < 5 && maps[0][y][x] === TILE.GRASS) maps[0][y][x] = TILE.PINE;
         else if (v === 8 && maps[0][y][x] === TILE.GRASS) maps[0][y][x] = TILE.FLOWERS;
       }
-      for (let x = 34; x < 43; x++) {
+      for (let x = 34; x < 55; x++) {
         const v = (x * 17 + y * 23 + x * y) % 13;
         if (v < 3 && maps[0][y][x] === TILE.GRASS) maps[0][y][x] = TILE.MARSH;
         else if (v === 4 && maps[0][y][x] === TILE.GRASS) maps[0][y][x] = TILE.TREE;
       }
     }
-    [[8,37],[10,37],[9,36],[9,38],[8,39],[10,39]].forEach(([x,y]) => {
+    [[8,49],[10,49],[9,48],[9,50],[8,51],[10,51]].forEach(([x,y]) => {
       if (maps[0][y][x] !== TILE.PINE) maps[0][y][x] = TILE.ANCIENT_STONE;
     });
     // Vegetação miúda e pedras, sempre em SQMs antes livres e sem bloquear caminhos.
-    for(let y=20;y<=42;y++)for(let x=2;x<=41;x++){
+    for(let y=34;y<=54;y++)for(let x=2;x<=53;x++){
       if(maps[0][y][x]!==TILE.GRASS)continue;
       const n=(x*29+y*17+x*y*3)%37;
       if(n===3||n===16)maps[0][y][x]=TILE.FERN;
@@ -1807,10 +1816,10 @@
       else if(n===23)maps[0][y][x]=TILE.ROCK;
     }
 
-    // Estrada da antiga cidadela até a passagem do Vale das Lanternas.
-    for(let y=39;y<=41;y++) for(let x=21;x<=23;x++) maps[0][y][x]=TILE.DIRT_ROAD;
-    maps[0][40][22]=TILE.PORTAL_EXIT;
-    maps[0][39][20]=TILE.SIGNPOST;
+    // Estrada longa ao sul até a passagem do Vale das Lanternas.
+    for(let y=50;y<=53;y++) for(let x=21;x<=23;x++) maps[0][y][x]=TILE.DIRT_ROAD;
+    maps[0][52][22]=TILE.PORTAL_EXIT;
+    maps[0][50][20]=TILE.SIGNPOST;
 
     // Vila das Lanternas: ruas de pedra e praças com iluminação quente.
     for(let y=5;y<=18;y++) for(let x=9;x<=35;x++){
@@ -1977,7 +1986,15 @@
       {id:'npc_odran',name:'Odran (Mestre do Arsenal)',sprite:'smith',x:28,y:21,
        dialog:'O arsenal guarda armas de reserva. Doran, na forja ao norte, pode aperfeiçoar seu equipamento.'},
       {id:'npc_lysa',name:'Lysa (Mercadora da Guilda)',sprite:'merchant',x:35,y:21,shop:true,
-       dialog:'A Guilda dos Mercadores abastece os aventureiros. Posso vender provisões antes de sua próxima jornada.'}
+       dialog:'A Guilda dos Mercadores abastece os aventureiros. Posso vender provisões antes de sua próxima jornada.'},
+      {id:'npc_helga',name:'Helga (Cartógrafa)',sprite:'scribe',x:8,y:29,
+       dialog:'Meus mapas mostram caminhos antigos além das muralhas. O atlas registra cada região que você já pode explorar.'},
+      {id:'npc_karst',name:'Karst (Mestre dos Contratos)',sprite:'guard',x:15,y:29,
+       dialog:'Os caçadores publicam contratos para quem deseja ganhar ouro e experiência. Consulte o quadro e escolha seu alvo.'},
+      {id:'npc_solan',name:'Solan (Alquimista de Relíquias)',sprite:'alchemist',x:28,y:29,
+       dialog:'As relíquias antigas reagem às cinzas. Traga materiais raros quando descobrir novas ruínas.'},
+      {id:'npc_marek',name:'Marek (Mercador das Caravanas)',sprite:'merchant',x:35,y:29,shop:true,
+       dialog:'Minha caravana atravessa os reinos. Posso vender comida e poções para sua jornada.'}
     ].forEach(n=>entities.push({...n,type:'npc',floor:0,renderX:n.x,renderY:n.y,
       dir:'down',hp:100,maxHp:100}));
 
@@ -2017,14 +2034,14 @@
 
     // Monstros dos Ermos Cinzentos (Floor 0 - Sul do Portão)
     const surfaceSpawns = [
-      { name: 'Rato das Cinzas', sprite: 'rat', x: 21, y: 26, hp: 35, atk: 7, xp: 20, gold: [5, 12] },
-      { name: 'Troll Cinzento', sprite: 'troll', x: 25, y: 27, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
-      { name: 'Troll Cinzento', sprite: 'troll', x: 18, y: 28, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
-      { name: 'Orc Saqueador', sprite: 'orc', x: 23, y: 30, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
-      { name: 'Orc Saqueador', sprite: 'orc', x: 16, y: 32, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
-      { name: 'Orc Saqueador', sprite: 'orc', x: 27, y: 32, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
-      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 20, y: 35, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
-      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 27, y: 36, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
+      { name: 'Rato das Cinzas', sprite: 'rat', x: 21, y: 35, hp: 35, atk: 7, xp: 20, gold: [5, 12] },
+      { name: 'Troll Cinzento', sprite: 'troll', x: 25, y: 36, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
+      { name: 'Troll Cinzento', sprite: 'troll', x: 18, y: 37, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 23, y: 39, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 16, y: 41, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 27, y: 41, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 20, y: 45, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
+      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 27, y: 46, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
       { name: 'Dragão das Cinzas', sprite: 'dragon', x: 22, y: 38, hp: 320, atk: 34, xp: 280, gold: [100, 220] }
     ];
 
@@ -2109,7 +2126,7 @@
   }
 
   function isProtectionZone(floor, x, y) {
-    if (floor===0) return x>=5&&x<=38&&y>=5&&y<=24;
+    if (floor===0) return x>=5&&x<=38&&y>=5&&y<=33;
     if (floor===1) return x>=10&&x<=34&&y>=6&&y<=17;
     return false;
   }
@@ -2153,9 +2170,10 @@
       {x:24,y:14,label:'Entrada das Catacumbas'},
       {x:15,y:7,label:'Templo e Arquivo'},
       {x:35,y:7,label:'Forja e Quartel'},
-      {x:22,y:24,label:'Portão Sul'},
-      {x:8,y:32,label:'Lago de Pedra Clara'},
-      {x:22,y:40,label:'Passagem para o Vale'}
+      {x:22,y:28,label:'Bairro dos Artesãos'},
+      {x:22,y:33,label:'Portão Sul'},
+      {x:8,y:41,label:'Lago de Pedra Clara'},
+      {x:22,y:52,label:'Passagem para o Vale'}
     ],
     1:[
       {x:22,y:12,label:'Vila das Lanternas'},
@@ -3207,6 +3225,8 @@
       updateHUD();
     } else if (npc.id === 'doran' || npc.id === 'npc_odran') {
       window.openForge();
+    } else if (npc.id === 'npc_karst') {
+      window.openContracts();
     } else if (npc.id === 'npc_breno' || npc.id === 'npc_eron' || npc.shop) {
       window.openMerchantShop(npc.id);
     }
@@ -3420,12 +3440,12 @@
     } else if (!player.cityQuestCompleted) {
       questTitle.textContent = '📜 Missão: Tesouros do Bastião';
       questCounter.textContent = cityChestCount() + '/' + player.cityQuestGoal;
-      questDesc.textContent = 'Explore os bairros e abra 4 dos 8 baús espalhados pelo Bastião.';
+      questDesc.textContent = 'Explore os quatro quarteirões e abra '+player.cityQuestGoal+' dos '+chests.filter(c=>(c.floor??0)===0).length+' baús do Bastião.';
       questDesc.className = 'text-amber-200 leading-tight';
     } else if(!player.valeCompleted){
       questTitle.textContent='📜 Missão: Paz no Vale';
       questCounter.textContent=player.valeKills+'/'+player.valeGoal;
-      questDesc.textContent='Siga ao sul (SQM 22,40), visite a Vila das Lanternas e derrote 5 bandidos além do Rio Largo.';
+      questDesc.textContent='Siga ao sul (SQM 22,52), visite a Vila das Lanternas e derrote 5 bandidos além do Rio Largo.';
       questDesc.className='text-lime-200 leading-tight';
     } else if(!player.brumaDefeated){
       questTitle.textContent='⚔️ Missão: Senhor da Bruma';
@@ -4650,8 +4670,8 @@
     addLog('Bem-vindo ao REINOS DAS CINZAS (MMORPG Clássico 7.6 • O Bastião de Cinza).', '#ffd700');
     addLog(restored ? 'Progresso local recuperado! Boa aventura, Ivo.' : 'Ivo (Cavaleiro das Cinzas) entra no Bastião das Cinzas.', '#ffffff');
     addLog('Dica: Pise no bueiro [24,14] para descer às Catacumbas (-1), depois na escada [28,21] para explorar a Cripta dos Ecos (-2).', '#66e0ff');
-    addLog('O Bastião agora tem 12 edifícios, três quarteirões, praça comercial e oito baús para descobrir. Explore as portas com E!','#ffd166');
-    addLog('Novo mundo: siga pela estrada sul até [22,40] para visitar a Vila das Lanternas!','#bef264');
+    addLog('O Bastião agora tem 16 edifícios em quatro quarteirões, praça comercial e 12 baús para descobrir. Explore as portas com E!','#ffd166');
+    addLog('Novo mundo: siga pela estrada sul até [22,52] para visitar a Vila das Lanternas!','#bef264');
 
     requestAnimationFrame(gameLoop);
   };
