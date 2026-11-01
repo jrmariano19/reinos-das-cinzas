@@ -477,7 +477,7 @@
     WOOD_FLOOR: 18, HOUSE_WALL: 19, HOUSE_DOOR: 20,
     FURNITURE: 21, LANTERN: 22, FOUNTAIN: 23, MARKET_STALL: 24,
     CRYPT_FLOOR: 25, CRYPT_WALL: 26, STAIR_DOWN: 27,
-    STAIR_UP: 28, MOSS_FLOOR: 29
+    STAIR_UP: 28, MOSS_FLOOR: 29, BRIDGE: 30
   };
 
   // Estado do Jogador (Ivo - Cavaleiro das Cinzas)
@@ -742,6 +742,18 @@
       }
       spriteCache['crypt_' + v] = c;
     }
+    // Lago: agua profunda em camadas com ondas finas e pedras de margem.
+    for(let v=0;v<4;v++){
+      const c=createOffscreen(48,48),g=c.getContext('2d');
+      g.fillStyle='#21465b';g.fillRect(0,0,48,48);
+      for(let p=0;p<7;p++){
+        const x=(p*13+v*9)%43,y=(p*17+v*11)%43;
+        g.fillStyle=p%2?'#346e83':'#2b5875';g.fillRect(x,y,13,3);
+        g.fillStyle='#6fa8b1';g.fillRect(x+2,y,5,1);
+      }
+      spriteCache['water_'+v]=c;
+    }
+
     // Parede frontal das moradias, telha de barro e colunas de madeira.
     const houseWall = createOffscreen(48, 64), hw = houseWall.getContext('2d');
     hw.fillStyle = 'rgba(0,0,0,.25)'; hw.fillRect(3,18,44,46);
@@ -1208,6 +1220,15 @@
     maps[0][12][29] = TILE.MARKET_STALL;
     maps[0][16][26] = TILE.FOUNTAIN;
 
+    // Lago de Pedra Clara e passarela de madeira ao sudoeste.
+    for (let y=28;y<=36;y++) for(let x=3;x<=14;x++){
+      const dx=(x-8.5)/5.8,dy=(y-32)/4.5;
+      if(dx*dx+dy*dy<0.88 && maps[0][y][x]===TILE.GRASS)maps[0][y][x]=TILE.WATER;
+    }
+    for(let y=29;y<=35;y++) {
+      if(maps[0][y][7]===TILE.WATER) maps[0][y][7]=TILE.BRIDGE;
+    }
+
     // Biomas originais: Bosque das Sombras, Pantano da Nevoa e Circulo dos Antigos.
     for (let y = 21; y < 43; y++) {
       for (let x = 1; x < 12; x++) {
@@ -1535,7 +1556,13 @@
       label.textContent = 'Bastião das Cinzas (Zona Segura)';
     } else {
       badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-red-400 font-bold shadow-lg';
-      label.textContent = 'Ermos Cinzentos (Zona de Combate)';
+      label.textContent = player.x <= 14 && player.y >= 28
+        ? 'Bosque do Lago de Pedra Clara'
+        : player.x <= 13 && player.y >= 20
+        ? 'Bosque das Sombras (Ermos)'
+        : player.x >= 34 && player.y >= 20
+        ? 'Pantano da Nevoa (Ermos)'
+        : 'Ermos Cinzentos (Zona de Combate)';
     }
   }
 
@@ -2231,7 +2258,18 @@
         const t = activeMap[gy][gx];
         const variant = (gx * 7 + gy * 13) % 4;
 
-        if (t === TILE.WOOD_FLOOR || t === TILE.HOUSE_DOOR || t === TILE.FURNITURE) {
+        if (t === TILE.WATER) {
+          ctx.drawImage(spriteCache['water_' + variant],px,py);
+        } else if (t === TILE.BRIDGE) {
+          ctx.drawImage(spriteCache['water_' + variant],px,py);
+          ctx.fillStyle='#513920';ctx.fillRect(px+5,py,38,48);
+          for(let py2=2;py2<48;py2+=10) {
+            ctx.fillStyle='#a57b48';ctx.fillRect(px+7,py+py2,34,8);
+            ctx.fillStyle='#d2aa64';ctx.fillRect(px+9,py+py2+1,29,2);
+          }
+          ctx.fillStyle='#321e14';ctx.fillRect(px+4,py,3,48);
+          ctx.fillRect(px+41,py,3,48);
+        } else if (t === TILE.WOOD_FLOOR || t === TILE.HOUSE_DOOR || t === TILE.FURNITURE) {
           ctx.drawImage(spriteCache['wood_' + variant], px, py);
         } else if (t === TILE.CRYPT_FLOOR || t === TILE.CRYPT_WALL || t === TILE.MOSS_FLOOR || t === TILE.STAIR_UP) {
           ctx.drawImage(spriteCache['crypt_' + variant], px, py);
@@ -2623,6 +2661,8 @@
       for (let x = 0; x < MAP_SIZE; x++) {
         const t = activeMap[y][x];
         if (t === TILE.STONE_FLOOR) mctx.fillStyle = '#787878';
+        else if (t === TILE.WATER) mctx.fillStyle = '#2c698b';
+        else if (t === TILE.BRIDGE) mctx.fillStyle = '#c89b5c';
         else if (t === TILE.DIRT_ROAD || t === TILE.GATE_ARCH) mctx.fillStyle = '#b08954';
         else if (t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.DUNGEON_WALL) mctx.fillStyle = '#52525b';
         else if (t === TILE.DUNGEON_FLOOR || t === TILE.CRYPT_FLOOR) mctx.fillStyle = '#3f3f46';
