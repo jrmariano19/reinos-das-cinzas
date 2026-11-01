@@ -2150,6 +2150,7 @@
   const WORLD_LANDMARKS={
     0:[
       {x:22,y:14,label:'Praça das Cinzas'},
+      {x:24,y:14,label:'Entrada das Catacumbas'},
       {x:15,y:7,label:'Templo e Arquivo'},
       {x:35,y:7,label:'Forja e Quartel'},
       {x:22,y:24,label:'Portão Sul'},
@@ -3414,12 +3415,12 @@
     } else if (!player.cryptCompleted) {
       questTitle.textContent = '📜 Missão: Ecos da Cripta';
       questCounter.textContent = player.cryptKills + '/' + player.cryptGoal;
-      questDesc.textContent = 'Desça pelo bueiro [26,14] e escada [28,21]. Derrote 4 criaturas na Cripta (-2).';
+      questDesc.textContent = 'Desça pelo bueiro [24,14] e escada [28,21]. Derrote 4 criaturas na Cripta (-2).';
       questDesc.className = 'text-purple-200 leading-tight';
     } else if (!player.cityQuestCompleted) {
       questTitle.textContent = '📜 Missão: Tesouros do Bastião';
       questCounter.textContent = cityChestCount() + '/' + player.cityQuestGoal;
-      questDesc.textContent = 'Entre nas quatro casas, converse com os moradores e abra um baú em cada interior.';
+      questDesc.textContent = 'Explore os bairros e abra 4 dos 8 baús espalhados pelo Bastião.';
       questDesc.className = 'text-amber-200 leading-tight';
     } else if(!player.valeCompleted){
       questTitle.textContent='📜 Missão: Paz no Vale';
