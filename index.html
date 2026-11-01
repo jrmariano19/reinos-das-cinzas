@@ -568,6 +568,8 @@
     cryptGoal: 4,
     cryptCompleted: false,
     openedChests: [],
+    cityQuestGoal: 4,
+    cityQuestCompleted: false,
     outfit: {
       head: '#d97706',      // Pluma / Detalhe dourado no elmo
       primary: '#991b1b',   // Tabardo & Capa Vermelho Brasa
@@ -1006,6 +1008,51 @@
       ctxTarget.fillStyle='#ffd05c';ctxTarget.fillRect(33,26,4,3);
     }
 
+    // Quatro habitantes da cidade com roupas e acessórios próprios.
+    else if (entityType === 'scribe' || entityType === 'smith' ||
+             entityType === 'innkeeper' || entityType === 'alchemist') {
+      const sw=frame===1?2:frame===2?-2:0;
+      const palette={
+        scribe: {coat:'#5d4739',light:'#c6a276',dark:'#29201d',head:'#ddd0a8'},
+        smith: {coat:'#63656c',light:'#bfc2c8',dark:'#303037',head:'#c69773'},
+        innkeeper: {coat:'#8a485c',light:'#d8968a',dark:'#4b2937',head:'#edbf91'},
+        alchemist: {coat:'#366d70',light:'#83bac0',dark:'#1e434b',head:'#bd977f'}
+      };
+      const c=palette[entityType];
+      pixelPart(15,31+sw,7,8,c.dark,c.light,'#1a1717');
+      pixelPart(26,31-sw,7,8,c.dark,c.light,'#1a1717');
+      pixelPart(12,17,23,17,c.coat,c.light,c.dark);
+      pixelPart(14,21,19,12,entityType==='smith'?'#7d858a':'#987653',
+        entityType==='smith'?'#d6d8d9':'#cfa97d','#4b342a');
+      pixelPart(9,18+sw,7,14,c.coat,c.light,c.dark);
+      pixelPart(32,18-sw,7,14,c.coat,c.light,c.dark);
+      pixelPart(17,6,14,12,c.head,'#f4d9b0','#775b4f');
+      ctxTarget.fillStyle='#30221d';
+      if(dir!=='up'){
+        ctxTarget.fillRect(dir==='right'?24:19,12,2,2);
+        ctxTarget.fillRect(dir==='left'?24:27,12,2,2);
+      }
+      if(entityType==='scribe'){
+        pixelPart(14,3,19,5,'#67462d','#d2a06e','#33231e');
+        pixelPart(7,22,12,10,'#d9c5a0','#f8ead2','#977954');
+        ctxTarget.fillStyle='#6e4b34';ctxTarget.fillRect(10,25,7,2);
+      }else if(entityType==='smith'){
+        pixelPart(14,3,20,6,'#41464f','#b6bdc6','#20232b');
+        pixelPart(34,14,6,20,'#684c35','#bf925f','#38291d');
+        pixelPart(31,9,13,9,'#84868d','#d2d3d6','#49494e');
+        ctxTarget.fillStyle='#ffd58b';ctxTarget.fillRect(22,23,3,3);
+      }else if(entityType==='innkeeper'){
+        pixelPart(15,3,18,7,'#6d3546','#cc7584','#341e26');
+        pixelPart(16,22,16,11,'#d8b99b','#f0dfbf','#85665b');
+        ctxTarget.fillStyle='#ebaf72';ctxTarget.fillRect(21,23,5,5);
+      }else{
+        pixelPart(15,1,19,8,'#295458','#73afb4','#172e3a');
+        pixelPart(32,23,9,12,'#2c4a58','#7790a0','#172932');
+        ctxTarget.fillStyle='#83e0e1';ctxTarget.fillRect(34,20,5,7);
+        ctxTarget.fillStyle='#d4fff3';ctxTarget.fillRect(35,19,3,2);
+      }
+    }
+
     // =========================================================================
     // 2. ANCIÃO KAELEN / SACERDOTISA (Mage / Noble Robe com Barba e Cajado)
     // =========================================================================
@@ -1404,13 +1451,13 @@
 
     // Moradores locais, cada um com seu próprio diálogo e estabelecimento.
     [
-      {id:'mira',name:'Mira (Cronista)',sprite:'healer',x:15,y:8,
+      {id:'mira',name:'Mira (Cronista)',sprite:'scribe',x:15,y:8,
        dialog:'Bem-vindo ao Arquivo. Os registros dos Reinos estão guardados aqui. Procure o baú ao fundo para descobrir suprimentos antigos.'},
-      {id:'doran',name:'Doran (Ferreiro)',sprite:'guard',x:30,y:8,
+      {id:'doran',name:'Doran (Ferreiro)',sprite:'smith',x:30,y:8,
        dialog:'Uma boa espada é feita na forja e aperfeiçoada no campo de batalha. As minhas provisões estão no baú da oficina.'},
-      {id:'seris',name:'Seris (Estalajadeira)',sprite:'healer',x:15,y:15,
+      {id:'seris',name:'Seris (Estalajadeira)',sprite:'innkeeper',x:15,y:15,
        dialog:'Entre, guerreiro! A Estalagem da Brasa é um lugar seguro. Há provisões guardadas junto à parede de madeira.'},
-      {id:'veyra',name:'Veyra (Alquimista)',sprite:'mage',x:30,y:15,
+      {id:'veyra',name:'Veyra (Alquimista)',sprite:'alchemist',x:30,y:15,
        dialog:'A névoa esconde segredos nas Catacumbas. Meu baú contém frascos úteis para sua próxima expedição.'}
     ].forEach(n=>entities.push({
       ...n,type:'npc',floor:0,renderX:n.x,renderY:n.y,dir:'down',hp:100,maxHp:100
@@ -1995,6 +2042,23 @@
     saveProgress();
   }
 
+  // Missão de exploração das quatro casas do Bastião.
+  function completeCityQuest(){
+    if(player.cityQuestCompleted)return;
+    player.cityQuestCompleted=true;
+    player.gold+=350;
+    player.blessing+=1;
+    player.xp+=200;
+    player.lootBag.push({
+      id:'relic_city_seal',icon:'🏅',name:'Selo dos Exploradores do Bastião',
+      type:'relic',value:0
+    });
+    addFloatingText(player.floor,player.x,player.y-0.6,'EXPLORADOR DO BASTIÃO!','#ffe9a3',true);
+    addLog('★ Tesouros do Bastião concluída! +350 ouro, +200 XP, +1 bênção e Selo dos Exploradores.','#ffe29a','quest');
+    checkLevelUp();
+    saveProgress();
+  }
+
   // Modal de Customização de Outfit ("Set Outfit" do Tibia 7.6)
   const OUTFIT_COLORS = [
     '#991b1b', '#dc2626', '#d97706', '#facc15', '#15803d',
@@ -2130,6 +2194,9 @@
       chest.mp?chest.mp+' poção de mana':'',chest.food?'provisões':'']
       .filter(Boolean).join(', ');
     addLog('Você abriu '+chest.name+'! +'+chest.gold+' ouro'+(extras?', '+extras:'')+'.','#facc15');
+    if (player.openedChests.length >= player.cityQuestGoal && !player.cityQuestCompleted) {
+      completeCityQuest();
+    }
     renderBackpack();updateHUD();updateContextHint();saveProgress();
     return true;
   };
@@ -2363,10 +2430,15 @@
       questCounter.textContent = player.cryptKills + '/' + player.cryptGoal;
       questDesc.textContent = 'Desça pelo bueiro [26,14] e escada [28,21]. Derrote 4 criaturas na Cripta (-2).';
       questDesc.className = 'text-purple-200 leading-tight';
+    } else if (!player.cityQuestCompleted) {
+      questTitle.textContent = '📜 Missão: Tesouros do Bastião';
+      questCounter.textContent = player.openedChests.length + '/' + player.cityQuestGoal;
+      questDesc.textContent = 'Entre nas quatro casas, converse com os moradores e abra um baú em cada interior.';
+      questDesc.className = 'text-amber-200 leading-tight';
     } else {
-      questTitle.textContent = '🏆 Cripta dos Ecos Purificada';
-      questCounter.textContent = player.cryptGoal + '/' + player.cryptGoal;
-      questDesc.textContent = 'Ambas as missões concluídas! Continue explorando os Reinos das Cinzas.';
+      questTitle.textContent = '🏆 Explorador dos Reinos';
+      questCounter.textContent = player.cityQuestGoal + '/' + player.cityQuestGoal;
+      questDesc.textContent = 'Três missões concluídas! Explore, lute e descubra os segredos das Cinzas.';
       questDesc.className = 'text-emerald-400 font-bold leading-tight';
     }
   }
@@ -3230,6 +3302,7 @@
     'gold','blessing','cap','atk','def','weaponName','legendarySword',
     'hpPots','mpPots','questKills','questCompleted',
     'cryptKills','cryptGoal','cryptCompleted','openedChests',
+    'cityQuestGoal','cityQuestCompleted',
     'lootBag','outfit','stance','chase'
   ];
   function saveProgress() {
@@ -3299,6 +3372,9 @@
     initWorldMap();
     initEntities();
     const restored = restoreProgress();
+    if (player.openedChests.length >= player.cityQuestGoal && !player.cityQuestCompleted) {
+      completeCityQuest();
+    }
     updateHUD();
     updateZoneUI();
     renderBackpack();
