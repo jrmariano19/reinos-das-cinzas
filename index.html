@@ -2200,6 +2200,25 @@
           ctx.fillRect(px + 12, py - 10, 24, 52);
           ctx.fillStyle = '#d6d3d1';
           ctx.fillRect(px + 9, py - 13, 30, 8);
+        } else if (t === TILE.PINE) {
+          // Pinheiro alto de floresta sombria, em blocos pixel-art.
+          ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(px + 10, py + 36, 30, 7);
+          ctx.fillStyle = '#4b301d'; ctx.fillRect(px + 21, py + 12, 8, 31);
+          for (let layer = 0; layer < 4; layer++) {
+            const w = 36 - layer * 6;
+            const yy = py + 23 - layer * 11;
+            ctx.fillStyle = layer % 2 ? '#174c35' : '#1d6340';
+            ctx.fillRect(px + 24 - w / 2, yy, w, 12);
+            ctx.fillStyle = '#2b8251';
+            ctx.fillRect(px + 24 - w / 2 + 3, yy + 2, Math.max(4,w - 12), 3);
+          }
+        } else if (t === TILE.ANCIENT_STONE) {
+          ctx.fillStyle = '#252521'; ctx.fillRect(px + 9, py + 29, 34, 11);
+          ctx.fillStyle = '#77766d'; ctx.fillRect(px + 13, py - 12, 23, 47);
+          ctx.fillStyle = '#b6afa1'; ctx.fillRect(px + 13, py - 12, 5, 42);
+          ctx.fillStyle = '#474940'; ctx.fillRect(px + 30, py - 7, 6, 39);
+          ctx.fillStyle = '#c59e55'; ctx.fillRect(px + 21, py + 2, 6, 3);
+          ctx.fillRect(px + 23, py + 5, 2, 12);
         } else if (t === TILE.TREE) {
           // Árvore Frondosa em Camadas Oblíqua 45°
           ctx.fillStyle = 'rgba(0,0,0,0.42)';
