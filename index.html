@@ -928,6 +928,42 @@
       pixelPart(bx + 19, by - 2, 7, 6, '#38bdf8', '#e0f2fe', '#0284c7');
     }
 
+    // Criaturas originais da Cripta dos Ecos.
+    else if (entityType === 'specter') {
+      const shift = frame === 1 ? -3 : frame === 2 ? 2 : 0;
+      ctxTarget.globalAlpha = .84;
+      ctxTarget.fillStyle = '#36415e'; ctxTarget.fillRect(12,18+shift,25,18);
+      ctxTarget.fillStyle = '#64799e'; ctxTarget.fillRect(15,21+shift,18,15);
+      ctxTarget.fillStyle = '#a9dbe5'; ctxTarget.fillRect(18,30+shift,5,6);
+      ctxTarget.fillRect(29,29+shift,5,8);
+      pixelPart(15,8+shift,18,17,'#222b48','#64759b','#151a32');
+      ctxTarget.fillStyle = '#0b1529'; ctxTarget.fillRect(19,14+shift,10,7);
+      ctxTarget.fillStyle = '#77f0f4'; ctxTarget.fillRect(dir === 'left' ? 20 : 22,17+shift,3,2);
+      ctxTarget.fillRect(dir === 'right' ? 27 : 26,17+shift,3,2);
+      pixelPart(10,20+shift,6,13,'#52647d','#b0c3ca','#202b3e');
+      pixelPart(33,20+shift,6,13,'#52647d','#b0c3ca','#202b3e');
+      ctxTarget.fillStyle='#a5f3fc'; ctxTarget.fillRect(15,38,8,2);ctxTarget.fillRect(28,36,9,2);
+      ctxTarget.globalAlpha=1;
+    }
+    else if (entityType === 'skeleton') {
+      const bx=11,by=5;
+      pixelPart(bx+6,by+26+legSwing,5,10,'#c7c0a7','#fff9e7','#6e6b60');
+      pixelPart(bx+15,by+26-legSwing,5,10,'#bcb49c','#fff9e7','#625b4d');
+      pixelPart(bx+8,by+15,10,14,'#ddd5b7','#fff5d6','#777263');
+      ctxTarget.fillStyle='#363330';
+      for(let rib=0;rib<3;rib++)ctxTarget.fillRect(bx+4,by+16+rib*4,18,2);
+      pixelPart(bx+5,by+1,16,13,'#e4dcc8','#fffaf0','#8a8471');
+      ctxTarget.fillStyle='#202024';
+      if(dir!=='up') {
+        ctxTarget.fillRect(bx+8,by+5,4,4);ctxTarget.fillRect(bx+15,by+5,4,4);
+        ctxTarget.fillRect(bx+12,by+10,2,3);
+      }
+      pixelPart(bx-1,by+16+armSwing*.3,6,16,'#d5cdb8','#fff5df','#777263');
+      pixelPart(bx+21,by+16-armSwing*.3,5,15,'#d5cdb8','#fff5df','#777263');
+      pixelPart(bx+26,by-2+armSwing*.3,4,22,'#8c969f','#fff','#484b53');
+      pixelPart(bx+23,by+17+armSwing*.3,11,3,'#8e6a43','#caa46a','#4d341f');
+    }
+
     // =========================================================================
     // 3. RATO DE ESGOTO (Cave Rat - Pelagem sombreada, orelhas, bigodes e cauda)
     // =========================================================================
@@ -1293,8 +1329,8 @@
     ];
 
     const cryptSpawns = [
-      { name: 'Espectro das Cinzas', sprite: 'mage', x: 16, y: 14, hp: 115, atk: 18, xp: 90, gold: [28,55] },
-      { name: 'Guardiao Esquecido', sprite: 'guard', x: 23, y: 14, hp: 140, atk: 23, xp: 110, gold: [40,70] },
+      { name: 'Espectro das Cinzas', sprite: 'specter', x: 16, y: 14, hp: 115, atk: 18, xp: 90, gold: [28,55] },
+      { name: 'Guardiao Esquecido', sprite: 'skeleton', x: 23, y: 14, hp: 140, atk: 23, xp: 110, gold: [40,70] },
       { name: 'Orc Profanador', sprite: 'orc', x: 21, y: 23, hp: 150, atk: 26, xp: 125, gold: [45,85] },
       { name: 'Sentinela Antiga', sprite: 'cyclops', x: 27, y: 18, hp: 240, atk: 30, xp: 195, gold: [70,115] }
     ];
@@ -1644,6 +1680,9 @@
         corpseItems.push({ icon: '💎', name: 'Rubi de Brasa Ancestral (+120 Gold)', type: 'treasure', value: 120 });
       }
 
+      if (mob.floor === -2 && Math.random() < 0.55) {
+        corpseItems.push({ icon: '🔮', name: 'Essencia Ecoante (+90 Gold)', type: 'treasure', value: 90 });
+      }
       const newCorpse = {
         id: 'corpse_' + Date.now() + Math.random(),
         floor: mob.floor,
@@ -2415,25 +2454,24 @@
           ctx.fillStyle = '#c59e55'; ctx.fillRect(px + 21, py + 2, 6, 3);
           ctx.fillRect(px + 23, py + 5, 2, 12);
         } else if (t === TILE.TREE) {
-          // Árvore Frondosa em Camadas Oblíqua 45°
-          ctx.fillStyle = 'rgba(0,0,0,0.42)';
-          ctx.beginPath();
-          ctx.ellipse(px + 28, py + 38, 20, 10, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#5c3a21';
-          ctx.fillRect(px + 18, py + 18, 12, 24);
-          ctx.fillStyle = '#14532d';
-          ctx.beginPath();
-          ctx.arc(px + 22, py + 6, 23, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#15803d';
-          ctx.beginPath();
-          ctx.arc(px + 18, py + 2, 19, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#22c55e';
-          ctx.beginPath();
-          ctx.arc(px + 14, py - 3, 11, 0, Math.PI * 2);
-          ctx.fill();
+          // Copa pixel-art irregular de grande volume.
+          ctx.fillStyle='rgba(0,0,0,.32)'; ctx.fillRect(px+10,py+34,35,8);
+          ctx.fillStyle='#39271b'; ctx.fillRect(px+19,py+9,12,34);
+          ctx.fillStyle='#715038'; ctx.fillRect(px+21,py+11,4,27);
+          ctx.fillStyle='#1a4325'; ctx.fillRect(px+2,py-13,44,37);
+          ctx.fillStyle='#236139'; ctx.fillRect(px+5,py-22,33,29);
+          ctx.fillStyle='#2d7741'; ctx.fillRect(px+12,py-28,27,27);
+          ctx.fillStyle='#195632'; ctx.fillRect(px-3,py-8,19,22);
+          ctx.fillStyle='#338d4d'; ctx.fillRect(px+11,py-25,16,7);
+          ctx.fillRect(px+1,py-10,11,7);
+          ctx.fillRect(px+33,py-14,9,7);
+          ctx.fillStyle='#54a55a'; ctx.fillRect(px+15,py-25,8,3);
+          ctx.fillRect(px+6,py-10,6,3);
+          ctx.fillRect(px+34,py-12,5,3);
+          if((gx*7+gy*11)%3===0) {
+            ctx.fillStyle='#b5c46e';ctx.fillRect(px+32,py+2,3,3);
+          }
+
         }
       }
 
