@@ -1225,9 +1225,12 @@
       const dx=(x-8.5)/5.8,dy=(y-32)/4.5;
       if(dx*dx+dy*dy<0.88 && maps[0][y][x]===TILE.GRASS)maps[0][y][x]=TILE.WATER;
     }
-    for(let y=29;y<=35;y++) {
+    for(let y=28;y<=36;y++) {
       if(maps[0][y][7]===TILE.WATER) maps[0][y][7]=TILE.BRIDGE;
     }
+    // Entradas secas para que a passarela seja realmente alcançável.
+    maps[0][27][7]=TILE.DIRT_ROAD;
+    maps[0][37][7]=TILE.DIRT_ROAD;
 
     // Biomas originais: Bosque das Sombras, Pantano da Nevoa e Circulo dos Antigos.
     for (let y = 21; y < 43; y++) {
