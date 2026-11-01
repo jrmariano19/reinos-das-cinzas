@@ -383,6 +383,14 @@
       </div>
     </div>
 
+    <div class="tibia-inset px-1.5 py-1 flex items-center gap-2 justify-between">
+      <div class="flex flex-col min-w-0">
+        <span class="text-[9px] font-bold text-amber-300">📜 Quadro de Caçadas</span>
+        <span id="contractStatus" class="text-[9px] text-neutral-300 truncate">Nenhum contrato ativo</span>
+      </div>
+      <button onclick="window.openContracts()" class="tibia-btn px-2 py-1 text-[9px] text-amber-200 whitespace-nowrap">Contratos</button>
+    </div>
+
     <!-- JANELA BATTLE LIST (CLIQUE PARA DAR TARGET NO MONSTRO) -->
     <div class="tibia-inset flex flex-col flex-1 min-h-[105px] overflow-hidden">
       <div class="bg-neutral-800 px-2 py-0.5 border-b border-neutral-700 flex justify-between items-center text-[10px] font-bold text-gray-300">
@@ -410,6 +418,23 @@
       <div id="backpackGrid" class="p-1.5 grid grid-cols-5 gap-1 overflow-y-auto"></div>
     </div>
 
+  </div>
+</div>
+
+<!-- CONTRATOS REGIONAIS REPETÍVEIS -->
+<div id="contractModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-3">
+  <div class="tibia-panel w-full max-w-md p-4 shadow-2xl flex flex-col gap-3">
+    <div class="flex items-center justify-between border-b border-amber-800 pb-2">
+      <div><div class="text-amber-300 font-bold text-sm">📜 Quadro de Caçadas</div>
+        <div class="text-gray-400 text-[10px]">Contratos repetíveis de exploração e combate</div></div>
+      <button onclick="window.closeContracts()" class="tibia-btn px-2 py-1">✕</button>
+    </div>
+    <div id="contractCurrent" class="text-xs text-neutral-200"></div>
+    <div id="contractRows" class="grid gap-2"></div>
+    <button id="contractAbandon" onclick="window.abandonContract()" class="tibia-btn text-red-300 py-1 text-xs">Abandonar contrato atual</button>
+    <div class="text-[10px] text-gray-400">Uma caçada por vez. Você pode abandoná-la sem perder seu nível.</div>
+    <p id="contractMessage" class="text-[10px] text-amber-200 min-h-4" aria-live="polite"></p>
+    <button onclick="window.closeContracts()" class="tibia-btn py-1">Continuar aventura</button>
   </div>
 </div>
 
@@ -622,6 +647,7 @@
     valeKills: 0, valeGoal: 5, valeCompleted: false,
     brumaDefeated: false,
     dynamicLight: true,
+    contract: null, contractsCompleted: 0,
     weaponTier: 0,
     talentPoints: 0,
     talentRanks: { fury:0, bulwark:0, vigor:0, stride:0 },
@@ -1904,6 +1930,81 @@
     return false;
   }
 
+  // Contratos de caça: objetivos repetíveis, contados por monstro e região.
+  const CONTRACTS=[
+    {id:'ashes',name:'Limpeza dos Ermos',icon:'🪓',where:'Ermos Cinzentos (Bastião)',
+      goal:8,rewardGold:340,rewardXp:300,accept:e=>e.floor===0&&e.type==='monster'},
+    {id:'wolves',name:'Uivos do Bosque',icon:'🐺',where:'Bosque das Lanternas',
+      goal:5,rewardGold:560,rewardXp:430,accept:e=>e.floor===1&&e.sprite==='wolf'},
+    {id:'raiders',name:'Saqueadores da Passarela',icon:'⚔️',where:'Acampamento do Vale',
+      goal:6,rewardGold:780,rewardXp:650,accept:e=>e.floor===1&&e.sprite==='bandit'},
+    {id:'ghosts',name:'Eco das Catacumbas',icon:'🔮',where:'Cripta dos Ecos (-2)',
+      goal:4,rewardGold:680,rewardXp:520,accept:e=>e.floor===-2}
+  ];
+  function activeContract(){return CONTRACTS.find(c=>c.id===player.contract?.id);}
+  function renderContracts(){
+    const contract=activeContract();
+    const status=document.getElementById('contractStatus');
+    if(status)status.textContent=contract?
+      contract.name+' • '+player.contract.count+'/'+contract.goal:
+      'Escolha uma caça • '+(player.contractsCompleted||0)+' concluídas';
+    const current=document.getElementById('contractCurrent');
+    if(current)current.textContent=contract?
+      'Ativo: '+contract.name+' ('+player.contract.count+'/'+contract.goal+')':
+      'Nenhum contrato em andamento. Escolha sua próxima expedição.';
+    const rows=document.getElementById('contractRows');
+    if(rows)rows.innerHTML=CONTRACTS.map(c=>{
+      const selected=contract?.id===c.id,disabled=!!contract;
+      return '<button '+(disabled?'disabled ':'')+'onclick="window.acceptContract(\''+c.id+'\')"'+
+        'class="tibia-btn flex items-center gap-3 justify-between p-2 text-left '+(disabled?'opacity-60':'')+'">'+
+        '<span class="flex flex-col"><strong class="text-amber-200 text-xs">'+c.icon+' '+c.name+'</strong>'+
+        '<span class="text-[10px] text-neutral-300">'+c.where+' • '+c.goal+' criaturas</span></span>'+
+        '<span class="text-[10px] text-green-300 whitespace-nowrap">'+c.rewardGold+' 🪙<br>'+c.rewardXp+' XP</span></button>';
+    }).join('');
+    const abandon=document.getElementById('contractAbandon');
+    if(abandon)abandon.disabled=!contract;
+  }
+  window.openContracts=function(){
+    renderContracts();
+    const el=document.getElementById('contractModal');
+    el.classList.remove('hidden');el.classList.add('flex');
+  };
+  window.closeContracts=function(){
+    const el=document.getElementById('contractModal');
+    el.classList.add('hidden');el.classList.remove('flex');
+  };
+  window.acceptContract=function(id){
+    if(player.contract)return false;
+    const c=CONTRACTS.find(c=>c.id===id);
+    if(!c)return false;
+    player.contract={id,count:0};
+    document.getElementById('contractMessage').textContent='Contrato aceito: '+c.name;
+    addLog('📜 Contrato aceito: '+c.name+'.','#fde68a','quest');
+    renderContracts();saveProgress();return true;
+  };
+  window.abandonContract=function(){
+    if(!player.contract)return;
+    player.contract=null;
+    addLog('Contrato abandonado. Você pode escolher outra caçada.','#aaa','quest');
+    renderContracts();saveProgress();
+  };
+  function recordContractKill(mob){
+    const c=activeContract();
+    if(!c||!c.accept(mob))return;
+    player.contract.count=Math.min(c.goal,player.contract.count+1);
+    addLog('[Caçada] '+c.name+': '+player.contract.count+'/'+c.goal+'.','#fbd38d','quest');
+    if(player.contract.count>=c.goal){
+      player.contract=null;
+      player.contractsCompleted=(player.contractsCompleted||0)+1;
+      player.gold+=c.rewardGold;
+      player.xp+=c.rewardXp;
+      addFloatingText(player.floor,player.x,player.y-.6,'CAÇADA COMPLETA!','#fcd34d',true);
+      addLog('★ '+c.name+' concluído: +'+c.rewardGold+' ouro e +'+c.rewardXp+' XP.','#fcd34d','quest');
+      checkLevelUp();
+    }
+    renderContracts();updateHUD();saveProgress();
+  }
+
   // Progressão persistente: atributos derivados dos talentos e da arma.
   const TALENTS = [
     {id:'fury',label:'Fúria das Cinzas',icon:'⚔️',effect:'+6% de dano por nível'},
@@ -2380,6 +2481,7 @@
         if(player.valeKills>=player.valeGoal)completeValeQuest();
       }
 
+      recordContractKill(mob);
       checkLevelUp();
       updateHUD();
       renderBattleList();
@@ -3867,13 +3969,15 @@
       window.closeOutfitModal();
       window.closeTalents();
       window.closeForge();
+      window.closeContracts();
       clearPendingInteractions();
       return;
     }
     if (document.getElementById('merchantModal').classList.contains('flex') ||
         document.getElementById('outfitModal').classList.contains('flex') ||
         document.getElementById('talentModal').classList.contains('flex') ||
-        document.getElementById('forgeModal').classList.contains('flex')) return;
+        document.getElementById('forgeModal').classList.contains('flex') ||
+        document.getElementById('contractModal').classList.contains('flex')) return;
     if (['w','a','s','d','e','arrowup','arrowdown','arrowleft','arrowright','1','2','3','4','5','6'].includes(key)) e.preventDefault();
     if (key === 'e') { window.interactNearby(); }
     else if (key === 'w' || key === 'arrowup') { clearPendingInteractions(); player.path = []; window.movePlayer(0, -1); }
@@ -3945,7 +4049,8 @@
     'hpPots','mpPots','questKills','questCompleted',
     'cryptKills','cryptGoal','cryptCompleted','openedChests',
     'cityQuestGoal','cityQuestCompleted','valeKills','valeGoal','valeCompleted','brumaDefeated',
-    'lootBag','outfit','stance','chase','weaponTier','talentRanks','talentPoints','dynamicLight'
+    'lootBag','outfit','stance','chase','weaponTier','talentRanks','talentPoints','dynamicLight',
+    'contract','contractsCompleted'
   ];
   function saveProgress() {
     try {
@@ -3968,6 +4073,7 @@
         if (typeof player[k] === 'string' && typeof data[k] !== 'string') continue;
         if ((k === 'lootBag' || k === 'openedChests') && !Array.isArray(data[k])) continue;
         if ((k === 'outfit'||k==='talentRanks') && (!data[k] || typeof data[k] !== 'object' || Array.isArray(data[k]))) continue;
+        if (k==='contract' && data[k]!==null && (!data[k] || typeof data[k]!=='object' || !CONTRACTS.some(c=>c.id===data[k].id)))continue;
         player[k] = data[k];
       }
       if (![0,1,-1,-2].includes(player.floor)) player.floor = 0;
@@ -3980,6 +4086,7 @@
           isTileBlocked(player.floor,player.x,player.y,'player')) {
         player.x = 22; player.y = 14; player.floor = 0;
       }
+      if(player.contract){const c=activeContract();player.contract.count=Math.max(0,Math.min(c.goal,Number.isInteger(player.contract.count)?player.contract.count:0));}
       syncTalentPoints();
       player.weaponTier=Math.max(0,Math.min(4,Number.isInteger(player.weaponTier)?player.weaponTier:0));
       player.renderX=player.x; player.renderY=player.y;
@@ -4023,6 +4130,7 @@
     }
     updateHUD();
     updateZoneUI();
+    renderContracts();
     renderBackpack();
     renderBattleList();
 
