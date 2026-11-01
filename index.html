@@ -1065,6 +1065,26 @@
       ctxTarget.fillStyle='#ffd05c';ctxTarget.fillRect(33,26,4,3);
     }
 
+    // Senhor da Bruma: chefe original com armadura sombria e lâmina encantada.
+    else if(entityType==='warlord'){
+      const swing=frame===1?2:frame===2?-2:0;
+      pixelPart(13,32+swing,10,9,'#24243b','#747696','#0f1525');
+      pixelPart(26,32-swing,10,9,'#29263b','#75758f','#101425');
+      pixelPart(10,16,31,22,'#27243f','#77698a','#151426');
+      pixelPart(13,19,23,17,'#46395c','#9c7aad','#241d35');
+      pixelPart(7,14+swing,9,21,'#2d2944','#716281','#131727');
+      pixelPart(37,13-swing,9,22,'#29253e','#78618a','#141325');
+      pixelPart(13,5,27,17,'#22223b','#585b73','#111322');
+      ctxTarget.fillStyle='#aa86f7';ctxTarget.fillRect(16,11,5,3);ctxTarget.fillRect(31,11,5,3);
+      ctxTarget.fillStyle='#b5a1d3';ctxTarget.fillRect(12,1,4,7);
+      ctxTarget.fillRect(37,1,4,7);ctxTarget.fillRect(24,-3,5,10);
+      ctxTarget.fillStyle='#4b335d';ctxTarget.fillRect(16,16,22,4);
+      ctxTarget.fillStyle='#d0adee';ctxTarget.fillRect(24,25,5,6);
+      pixelPart(41,-4-swing,5,39,'#765d88','#d7d0ee','#35314a');
+      pixelPart(37,24-swing,14,5,'#5b485e','#bdb1d1','#2e283f');
+      ctxTarget.fillStyle='#eab9ff';ctxTarget.fillRect(42,-3-swing,2,21);
+    }
+
     // Saqueador original do Vale: capuz escuro, lenço vermelho e lâmina curta.
     else if (entityType === 'bandit') {
       const step=frame===1?2:frame===2?-2:0;
@@ -2905,6 +2925,7 @@
 
       if (e.dead) {
         if (now >= e.respawnAt) {
+          e.warning=null;
           e.dead = false;
           e.hp = e.maxHp;
           e.x = e.spawnX;
@@ -2945,6 +2966,34 @@
             e.y = ny;
             e.walkFrame = e.walkFrame === 1 ? 2 : 1;
           }
+        }
+      }
+
+      // Chefe: explosão em 3x3 indicada previamente no solo.
+      // Ao sair da área no intervalo de 1,2 segundo o jogador evita o dano.
+      if(e.isBoss && !playerInPZ){
+        if(e.warning && now>=e.warning.detonate){
+          const attack=e.warning;
+          e.warning=null;e.specialAt=now+5200;
+          for(let i=0;i<9;i++)addSpark(e.floor,attack.x+(i%3)-1,attack.y+Math.floor(i/3)-1,'magic');
+          if(Math.max(Math.abs(player.x-attack.x),Math.abs(player.y-attack.y))<=1){
+            let burst=52+Math.floor(Math.random()*21);
+            if(now<player.shieldWallUntil)burst=Math.floor(burst*.5);
+            burst=Math.max(8,burst-(player.talentRanks?.bulwark||0)*4);
+            player.hp=Math.max(0,player.hp-burst);
+            addFloatingText(player.floor,player.x,player.y,'BRUMA -'+burst,'#e9a8ff',true);
+            addLog('Você sofreu '+burst+' de dano da explosão da Bruma!','#f5a8e4');
+            checkPlayerDeath();updateHUD();
+          }else{
+            addFloatingText(e.floor,attack.x,attack.y,'DESVIOU!','#9fe8e0',true);
+            addLog('Ivo escapou da explosão da Bruma!','#a7f3d0');
+          }
+        }
+        if(!e.warning && distToPlayer<=5 && now>=e.specialAt && !e.dead){
+          e.warning={x:player.x,y:player.y,detonate:now+1200};
+          e.specialAt=now+7200;
+          addFloatingText(e.floor,e.x,e.y-.8,'BRUMA! ESQUIVE!','#f6a8ff',true);
+          addLog('⚠️ Senhor da Bruma prepara ataque: SAIA DA ÁREA ROXA!','#f0abfc');
         }
       }
 
@@ -3429,6 +3478,11 @@
         }
 
         const isMoving = Math.abs(e.x - e.renderX) > 0.04 || Math.abs(e.y - e.renderY) > 0.04;
+        if(e.isBoss){
+          ctx.fillStyle='rgba(168,85,247,.25)';ctx.fillRect(px-8,py+17,60,25);
+          ctx.strokeStyle='#df8fff';ctx.lineWidth=2;ctx.strokeRect(px-4,py-4,54,51);
+          ctx.fillStyle='#fbbf24';ctx.fillRect(px+19,py-8,14,4);
+        }
         drawTibiaRealisticSprite(ctx, px, py, e.sprite, {
           dir: e.dir || 'down',
           frame: isMoving ? e.walkFrame : 0
@@ -3481,6 +3535,30 @@
         ctx.fillStyle='#34201c';ctx.fillRect(rx-9,ry+rh-10,rw+18,13);
         ctx.fillStyle='#e5ad6c';ctx.fillRect(rx-8,ry+rh-10,rw+16,3);
       }
+    }
+
+    // Sinais no chão e barra própria de vida do chefe.
+    const boss=entities.find(e=>e.isBoss&&e.floor===player.floor&&!e.dead);
+    if(boss && boss.warning){
+      const warning=boss.warning,phase=Math.max(0,(warning.detonate-now)/1200);
+      for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){
+        const rx=Math.round((warning.x+dx-camX)*TILE_SIZE);
+        const ry=Math.round((warning.y+dy-camY)*TILE_SIZE);
+        ctx.fillStyle='rgba(175,46,197,'+(0.16+.25*(1-phase))+')';
+        ctx.fillRect(rx+1,ry+1,TILE_SIZE-2,TILE_SIZE-2);
+        ctx.strokeStyle='#ff6be7';ctx.lineWidth=2;
+        ctx.strokeRect(rx+3,ry+3,TILE_SIZE-6,TILE_SIZE-6);
+      }
+    }
+    if(boss&&Math.abs(boss.x-player.x)<10&&Math.abs(boss.y-player.y)<8){
+      const bw=Math.min(350,canvas.width-48),bx=(canvas.width-bw)/2;
+      ctx.fillStyle='rgba(9,7,19,.94)';ctx.fillRect(bx,36,bw,35);
+      ctx.strokeStyle='#b58add';ctx.lineWidth=2;ctx.strokeRect(bx,36,bw,35);
+      ctx.fillStyle='#f4e9ff';ctx.font='bold 12px monospace';
+      ctx.textAlign='center';ctx.fillText('SENHOR DA BRUMA • CHEFE',canvas.width/2,49);
+      ctx.fillStyle='#22202e';ctx.fillRect(bx+9,55,bw-18,8);
+      ctx.fillStyle='#a855f7';ctx.fillRect(bx+9,55,Math.max(0,(bw-18)*(boss.hp/boss.maxHp)),8);
+      ctx.textAlign='left';
     }
 
     // 4. ONDAS DE FOGO DO DRAGÃO E FAÍSCAS DE COMBATE
