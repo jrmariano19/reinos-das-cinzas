@@ -2612,9 +2612,66 @@
     mctx.fillRect(player.x * scaleX - 1, player.y * scaleY - 1, 4, 4);
   }
 
+  // Busca A*: contorna portas, casas, paredes, criaturas e obstaculos.
+  // O caminho usa os 8 sentidos de movimento da perspectiva classica.
+  function findPathTo(targetX, targetY) {
+    const floor = player.floor, key = (x,y) => y * MAP_SIZE + x;
+    if (targetX < 0 || targetY < 0 || targetX >= MAP_SIZE || targetY >= MAP_SIZE) return [];
+    const dirs = [[0,-1],[1,0],[0,1],[-1,0],[1,-1],[1,1],[-1,1],[-1,-1]];
+    const canStep = (x,y) => !isTileBlocked(floor,x,y,'player');
+    if (!canStep(targetX,targetY)) {
+      let alt = null, best = Infinity;
+      for (let radius = 1; radius <= 3 && !alt; radius++) {
+        for (let dy=-radius;dy<=radius;dy++) for (let dx=-radius;dx<=radius;dx++) {
+          const x=targetX+dx, y=targetY+dy;
+          if (!canStep(x,y)) continue;
+          const score = Math.hypot(dx,dy)*10 + Math.hypot(x-player.x,y-player.y)*0.01;
+          if (score<best) {best=score; alt={x,y};}
+        }
+      }
+      if (!alt) return [];
+      targetX=alt.x;targetY=alt.y;
+    }
+    const heuristic=(x,y)=> {
+      const dx=Math.abs(targetX-x),dy=Math.abs(targetY-y);
+      return Math.max(dx,dy)+0.41421356237*Math.min(dx,dy);
+    };
+    const start=key(player.x,player.y),goal=key(targetX,targetY);
+    if(start===goal)return [];
+    const open=[{x:player.x,y:player.y,g:0,f:heuristic(player.x,player.y)}];
+    const bestG=new Map([[start,0]]), came=new Map(),closed=new Set();
+    let iterations=0;
+    while(open.length && iterations++<3500){
+      let best=0;
+      for(let i=1;i<open.length;i++)if(open[i].f<open[best].f)best=i;
+      const cur=open.splice(best,1)[0],curKey=key(cur.x,cur.y);
+      if(closed.has(curKey))continue;
+      if(curKey===goal){
+        const path=[]; let k=goal;
+        while(k!==start && came.has(k)){
+          path.push({x:k%MAP_SIZE,y:Math.floor(k/MAP_SIZE)});k=came.get(k);
+        }
+        return k===start?path.reverse():[];
+      }
+      closed.add(curKey);
+      for(const [dx,dy] of dirs){
+        const nx=cur.x+dx,ny=cur.y+dy,nk=key(nx,ny);
+        if(closed.has(nk)||!canStep(nx,ny))continue;
+        if(dx&&dy&&(!canStep(cur.x+dx,cur.y)||!canStep(cur.x,cur.y+dy)))continue;
+        const g=cur.g+(dx&&dy?1.41421356237:1);
+        if(g>=(bestG.get(nk)??Infinity))continue;
+        bestG.set(nk,g);came.set(nk,curKey);
+        open.push({x:nx,y:ny,g,f:g+heuristic(nx,ny)});
+      }
+    }
+    return [];
+  }
+
   // Controles de Teclado
   window.addEventListener('keydown', (e) => {
+    if (e.target && ['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
     const key = e.key.toLowerCase();
+    if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','1','2','3','4','5','6'].includes(key)) e.preventDefault();
     if (key === 'w' || key === 'arrowup') { player.path = []; window.movePlayer(0, -1); }
     else if (key === 's' || key === 'arrowdown') { player.path = []; window.movePlayer(0, 1); }
     else if (key === 'a' || key === 'arrowleft') { player.path = []; window.movePlayer(-1, 0); }
@@ -2653,35 +2710,15 @@
       return;
     }
 
-    // 3. Caminha passo a passo até o SQM clicado
-    const steps = [];
-    let cx = player.x;
-    let cy = player.y;
-    for (let i = 0; i < 14; i++) {
-      if (cx === tileX && cy === tileY) break;
-      const dx = Math.sign(tileX - cx);
-      const dy = Math.sign(tileY - cy);
-      cx += dx;
-      cy += dy;
-      steps.push({ x: cx, y: cy });
-    }
-    player.path = steps;
+    // 3. Rota A*: contorna construcoes e obstaculos.
+    player.path = findPathTo(tileX, tileY);
   });
 
   minimapCanvas.addEventListener('mousedown', (e) => {
     const rect = minimapCanvas.getBoundingClientRect();
     const tx = Math.floor(((e.clientX - rect.left) / rect.width) * MAP_SIZE);
     const ty = Math.floor(((e.clientY - rect.top) / rect.height) * MAP_SIZE);
-    const steps = [];
-    let cx = player.x;
-    let cy = player.y;
-    for (let i = 0; i < 16; i++) {
-      if (cx === tx && cy === ty) break;
-      cx += Math.sign(tx - cx);
-      cy += Math.sign(ty - cy);
-      steps.push({ x: cx, y: cy });
-    }
-    player.path = steps;
+    player.path = findPathTo(tx, ty);
   });
 
   let lastBattleRefresh = 0;
