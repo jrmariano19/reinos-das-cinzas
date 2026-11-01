@@ -473,7 +473,11 @@
     DUNGEON_WALL: 14,
     MARSH: 15,
     ANCIENT_STONE: 16,
-    PINE: 17
+    PINE: 17,
+    WOOD_FLOOR: 18, HOUSE_WALL: 19, HOUSE_DOOR: 20,
+    FURNITURE: 21, LANTERN: 22, FOUNTAIN: 23, MARKET_STALL: 24,
+    CRYPT_FLOOR: 25, CRYPT_WALL: 26, STAIR_DOWN: 27,
+    STAIR_UP: 28, MOSS_FLOOR: 29
   };
 
   // Estado do Jogador (Ivo - Cavaleiro das Cinzas)
@@ -532,7 +536,7 @@
   const cooldowns = { 1: 0, 2: 0, 3: 0, 4: 0 };
 
   // Mapas por Andar (0 e -1)
-  const maps = { 0: [], '-1': [] };
+  const maps = { 0: [], '-1': [], '-2': [] };
   const corpses = [];
   const bloodPools = [];
   const floatingTexts = [];
@@ -1007,6 +1011,7 @@
     for (let y = 0; y < MAP_SIZE; y++) {
       maps[0][y] = [];
       maps['-1'][y] = [];
+      maps['-2'][y] = [];
       for (let x = 0; x < MAP_SIZE; x++) {
         // Subsolo (-1): Catacumbas de Valdoria (x: 14..30, y: 8..24)
         if (x >= 14 && x <= 30 && y >= 8 && y <= 24) {
@@ -1015,6 +1020,14 @@
         } else {
           maps['-1'][y][x] = TILE.DUNGEON_WALL;
         }
+
+        // Segundo subsolo: Cripta dos Ecos, area de exploracao original.
+        const cryptRoom = x >= 12 && x <= 32 && y >= 7 && y <= 26;
+        const cryptBorder = x === 12 || x === 32 || y === 7 || y === 26;
+        const cryptPartition = x === 18 && y >= 9 && y <= 21 && y !== 15 && y !== 20;
+        maps['-2'][y][x] = cryptRoom && !cryptBorder && !cryptPartition
+          ? ((x * 19 + y * 7) % 9 === 0 ? TILE.MOSS_FLOOR : TILE.CRYPT_FLOOR)
+          : TILE.CRYPT_WALL;
 
         // Superfície (0)
         if (x === 0 || y === 0 || x === MAP_SIZE - 1 || y === MAP_SIZE - 1) {
@@ -1055,6 +1068,11 @@
     maps[0][14][26] = TILE.SEWER_GRATE; // Bueiro interativo para descer às Catacumbas de Brasa (-1)
     maps['-1'][14][26] = TILE.ROPE_LADDER; // Ponto de corda/escada para subir de volta ao Térreo (0)
 
+    maps['-1'][21][28] = TILE.STAIR_DOWN; // Catacumbas -> Cripta
+    maps['-2'][21][28] = TILE.STAIR_UP;   // Cripta -> Catacumbas
+    [[15,11],[24,10],[16,23],[29,14]].forEach(([x,y]) => { maps['-2'][y][x] = TILE.RUIN_PILLAR; });
+    maps['-2'][12][25] = TILE.FLOWERS;
+
     // Pilares nas Catacumbas (-1)
     [[18,12],[26,12],[18,18],[26,18]].forEach(([px, py]) => {
       maps['-1'][py][px] = TILE.RUIN_PILLAR;
@@ -1069,6 +1087,29 @@
 
     const ruins = [[15,28],[17,28],[15,31],[28,29],[30,29],[29,33]];
     ruins.forEach(([rx, ry]) => { if (maps[0][ry]) maps[0][ry][rx] = TILE.RUIN_PILLAR; });
+
+    // Quatro casas com paredes, assoalho e portas acessiveis.
+    const homes = [
+      { x: 12, y: 6, w: 5, h: 5, door: 14 },
+      { x: 27, y: 6, w: 6, h: 5, door: 29 },
+      { x: 12, y: 13, w: 5, h: 5, door: 14 },
+      { x: 28, y: 13, w: 5, h: 5, door: 30 }
+    ];
+    homes.forEach(({x,y,w,h,door}) => {
+      for (let yy = y; yy < y + h; yy++) {
+        for (let xx = x; xx < x + w; xx++) {
+          const edge = yy === y || yy === y + h - 1 || xx === x || xx === x + w - 1;
+          maps[0][yy][xx] = edge ? TILE.HOUSE_WALL : TILE.WOOD_FLOOR;
+        }
+      }
+      maps[0][y + h - 1][door] = TILE.HOUSE_DOOR;
+      maps[0][y + 1][x + 1] = TILE.FURNITURE;
+      maps[0][y + 1][x + w - 2] = TILE.FURNITURE;
+    });
+    [[20,7],[25,7],[20,16],[25,16]].forEach(([x,y]) => { maps[0][y][x] = TILE.LANTERN; });
+    maps[0][12][17] = TILE.FOUNTAIN;
+    maps[0][12][29] = TILE.MARKET_STALL;
+    maps[0][16][26] = TILE.FOUNTAIN;
 
     // Biomas originais: Bosque das Sombras, Pantano da Nevoa e Circulo dos Antigos.
     for (let y = 21; y < 43; y++) {
@@ -1190,6 +1231,22 @@
       { name: 'Orc de Ferro Negro', sprite: 'orc', x: 25, y: 21, hp: 95, atk: 17, xp: 55, gold: [18, 38] }
     ];
 
+    const cryptSpawns = [
+      { name: 'Espectro das Cinzas', sprite: 'mage', x: 16, y: 14, hp: 115, atk: 18, xp: 90, gold: [28,55] },
+      { name: 'Guardiao Esquecido', sprite: 'guard', x: 23, y: 14, hp: 140, atk: 23, xp: 110, gold: [40,70] },
+      { name: 'Orc Profanador', sprite: 'orc', x: 21, y: 23, hp: 150, atk: 26, xp: 125, gold: [45,85] },
+      { name: 'Sentinela Antiga', sprite: 'cyclops', x: 27, y: 18, hp: 240, atk: 30, xp: 195, gold: [70,115] }
+    ];
+    cryptSpawns.forEach((m, idx) => {
+      entities.push({
+        id: `mob_crypt_${idx}`, name: m.name, type: 'monster', sprite: m.sprite,
+        floor: -2, x: m.x, y: m.y, spawnX: m.x, spawnY: m.y,
+        renderX: m.x, renderY: m.y, dir: 'down', walkFrame: 0,
+        hp: m.hp, maxHp: m.hp, atk: m.atk, xp: m.xp, goldRange: m.gold,
+        lastMove: 0, lastAtk: 0, dead: false, respawnAt: 0
+      });
+    });
+
     sewerSpawns.forEach((m, idx) => {
       entities.push({
         id: `mob_sewer_${idx}`,
@@ -1232,6 +1289,9 @@
       t === TILE.TREE ||
       t === TILE.PINE ||
       t === TILE.ANCIENT_STONE ||
+      t === TILE.HOUSE_WALL || t === TILE.FURNITURE ||
+      t === TILE.LANTERN || t === TILE.FOUNTAIN ||
+      t === TILE.MARKET_STALL || t === TILE.CRYPT_WALL ||
       t === TILE.WATER ||
       t === TILE.ALTAR ||
       t === TILE.RUIN_PILLAR ||
@@ -1308,6 +1368,18 @@
       addLog('Você desceu pelo bueiro para as Catacumbas de Brasa (Andar -1).', '#fbbf24');
       updateZoneUI();
       renderBattleList();
+    } else if (player.floor === -1 && currentTile === TILE.STAIR_DOWN) {
+      player.floor = -2;
+      player.targetId = null;
+      player.path = [];
+      addLog('Voce desceu para a Cripta dos Ecos (Andar -2).', '#d8b4fe');
+      updateZoneUI(); renderBattleList();
+    } else if (player.floor === -2 && currentTile === TILE.STAIR_UP) {
+      player.floor = -1;
+      player.targetId = null;
+      player.path = [];
+      addLog('Voce voltou para as Catacumbas de Brasa (Andar -1).', '#fbbf24');
+      updateZoneUI(); renderBattleList();
     } else if (player.floor === -1 && currentTile === TILE.ROPE_LADDER) {
       player.floor = 0;
       player.targetId = null;
@@ -1353,9 +1425,12 @@
     const floorBadge = document.getElementById('floorBadge');
 
     coords.textContent = `SQM: [${player.x}, ${player.y}, ${player.floor}]`;
-    floorBadge.textContent = player.floor === 0 ? 'Andar: 0 (Térreo)' : 'Andar: -1 (Catacumbas)';
+    floorBadge.textContent = player.floor === 0 ? 'Andar: 0 (Terreo)' : player.floor === -1 ? 'Andar: -1 (Catacumbas)' : 'Andar: -2 (Cripta)';
 
-    if (player.floor === -1) {
+    if (player.floor === -2) {
+      badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-purple-300 font-bold shadow-lg';
+      label.textContent = 'Cripta dos Ecos (Andar -2)';
+    } else if (player.floor === -1) {
       badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-amber-400 font-bold shadow-lg';
       label.textContent = 'Catacumbas de Brasa (Andar -1)';
     } else if (inPZ) {
