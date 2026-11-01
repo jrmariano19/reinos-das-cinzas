@@ -628,7 +628,8 @@
     CRYPT_FLOOR: 25, CRYPT_WALL: 26, STAIR_DOWN: 27,
     STAIR_UP: 28, MOSS_FLOOR: 29, BRIDGE: 30, CHEST: 31,
     PORTAL_EXIT: 32, PORTAL_RETURN: 33, CAMP_FIRE: 34, TENT: 35,
-    SIGNPOST: 36, FARM: 37, WILD_FLOWERS: 38
+    SIGNPOST: 36, FARM: 37, WILD_FLOWERS: 38,
+    FERN: 39, MUSHROOM: 40, CLIFF: 41, ROCK: 42, REEDS: 43
   };
 
   // Estado do Jogador (Ivo - Cavaleiro das Cinzas)
@@ -1653,6 +1654,14 @@
     [[8,37],[10,37],[9,36],[9,38],[8,39],[10,39]].forEach(([x,y]) => {
       if (maps[0][y][x] !== TILE.PINE) maps[0][y][x] = TILE.ANCIENT_STONE;
     });
+    // Vegetação miúda e pedras, sempre em SQMs antes livres e sem bloquear caminhos.
+    for(let y=20;y<=42;y++)for(let x=2;x<=41;x++){
+      if(maps[0][y][x]!==TILE.GRASS)continue;
+      const n=(x*29+y*17+x*y*3)%37;
+      if(n===3||n===16)maps[0][y][x]=TILE.FERN;
+      else if(n===11)maps[0][y][x]=TILE.MUSHROOM;
+      else if(n===23)maps[0][y][x]=TILE.ROCK;
+    }
 
     // Estrada da antiga cidadela até a passagem do Vale das Lanternas.
     for(let y=39;y<=41;y++) for(let x=21;x<=23;x++) maps[0][y][x]=TILE.DIRT_ROAD;
@@ -1710,6 +1719,18 @@
       if((x<=12||x>=33)&&n<5)maps[1][y][x]=TILE.PINE;
       else if(n===8||n===13)maps[1][y][x]=TILE.WILD_FLOWERS;
       else if(n===16)maps[1][y][x]=TILE.FLOWERS;
+      else if(n===3||n===11)maps[1][y][x]=TILE.FERN;
+      else if(n===19)maps[1][y][x]=TILE.MUSHROOM;
+      else if(n===21)maps[1][y][x]=TILE.ROCK;
+    }
+    // Encosta rochosa do extremo nordeste; não bloqueia a ponte nem o acampamento.
+    for(let y=20;y<=26;y++)for(let x=40;x<=42;x++)
+      if(maps[1][y][x]!==TILE.WATER)maps[1][y][x]=TILE.CLIFF;
+    // Junco nas margens do Rio Largo.
+    for(let x=3;x<=41;x++)for(let y=23;y<=32;y++){
+      if(maps[1][y][x]!==TILE.GRASS)continue;
+      if((maps[1][y-1][x]===TILE.WATER||maps[1][y+1][x]===TILE.WATER)&&
+        (x*7+y*3)%4===0)maps[1][y][x]=TILE.REEDS;
     }
     [[7,21],[9,21],[6,23],[9,25],[35,20],[37,20],[37,22],[35,23]]
       .forEach(([x,y])=>maps[1][y][x]=TILE.ANCIENT_STONE);
@@ -1948,6 +1969,7 @@
       t === TILE.MARKET_STALL || t === TILE.CRYPT_WALL ||
       t === TILE.TENT || t === TILE.CAMP_FIRE ||
       t === TILE.SIGNPOST ||
+      t === TILE.CLIFF ||
       t === TILE.WATER ||
       t === TILE.ALTAR ||
       t === TILE.RUIN_PILLAR ||
@@ -1999,6 +2021,11 @@
     if(t===TILE.PINE||t===TILE.TREE)return '#1d4e31';
     if(t===TILE.FARM||t===TILE.WILD_FLOWERS||t===TILE.FLOWERS)return '#86a451';
     if(t===TILE.MARSH)return '#365856';
+    if(t===TILE.CLIFF)return '#818b8a';
+    if(t===TILE.FERN)return '#2b6e3e';
+    if(t===TILE.MUSHROOM)return '#7b6e4b';
+    if(t===TILE.ROCK)return '#697d70';
+    if(t===TILE.REEDS)return '#548d60';
     if(t===TILE.DIRT_ROAD||t===TILE.PORTAL_EXIT||t===TILE.PORTAL_RETURN)return '#a58357';
     if(t===TILE.STONE_FLOOR)return '#73716a';
     if(t===TILE.HOUSE_WALL||t===TILE.WOOD_FLOOR||t===TILE.HOUSE_DOOR)return '#bd7e53';
@@ -3515,7 +3542,7 @@
           }
         } else if (t === TILE.SEWER_GRATE) {
           ctx.drawImage(spriteCache['sewer_grate'], px, py);
-        } else if (t === TILE.STONE_FLOOR || t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.ALTAR || t === TILE.HOUSE_WALL || t === TILE.LANTERN || t === TILE.FOUNTAIN || t === TILE.MARKET_STALL) {
+        } else if (t === TILE.STONE_FLOOR || t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.ALTAR || t === TILE.HOUSE_WALL || t === TILE.LANTERN || t === TILE.FOUNTAIN || t === TILE.MARKET_STALL || t === TILE.CLIFF) {
           ctx.drawImage(spriteCache[`stone_${variant}`], px, py);
         } else if (t === TILE.DIRT_ROAD || t === TILE.GATE_ARCH || t === TILE.PORTAL_EXIT || t === TILE.PORTAL_RETURN || t === TILE.SIGNPOST) {
           ctx.drawImage(spriteCache[`dirt_${variant % 3}`], px, py);
@@ -3563,6 +3590,37 @@
             ctx.fillStyle = '#9d8874';
           }
           ctx.fillStyle = '#f9ba52'; ctx.fillRect(px+22,py+20,4,7);
+        }
+        if(t===TILE.FERN){
+          ctx.fillStyle='#225e33';ctx.fillRect(px+17,py+20,5,22);
+          const ferns=[[8,28,13,6],[27,24,13,6],[10,17,12,6],[28,32,12,5]];
+          ferns.forEach(([fx,fy,w,h],i)=>{
+            ctx.fillStyle=i%2?'#38864a':'#4b9553';
+            ctx.fillRect(px+fx,py+fy,w,h);
+            ctx.fillStyle='#8bc071';ctx.fillRect(px+fx+3,py+fy,w-5,2);
+          });
+          ctx.fillStyle='#1a4a28';ctx.fillRect(px+11,py+34,26,5);
+        }else if(t===TILE.MUSHROOM){
+          ctx.fillStyle='#347d37';ctx.fillRect(px+4,py+30,38,8);
+          [[12,19],[31,24],[24,12]].forEach(([mx,my],i)=>{
+            ctx.fillStyle='#f4e2ba';ctx.fillRect(px+mx+4,py+my+5,4,9);
+            ctx.fillStyle=i===2?'#a64757':'#bf6550';
+            ctx.fillRect(px+mx,py+my,12,7);
+            ctx.fillStyle='#f8d6b1';ctx.fillRect(px+mx+3,py+my+2,3,2);
+          });
+        }else if(t===TILE.ROCK){
+          ctx.fillStyle='#2a332f';ctx.fillRect(px+9,py+32,28,11);
+          ctx.fillStyle='#66746c';ctx.fillRect(px+12,py+24,24,13);
+          ctx.fillStyle='#9fa99a';ctx.fillRect(px+14,py+22,15,5);
+          ctx.fillStyle='#364b41';ctx.fillRect(px+31,py+27,6,9);
+          ctx.fillStyle='#7d8e7e';ctx.fillRect(px+17,py+29,9,2);
+        }else if(t===TILE.REEDS){
+          ctx.fillStyle='#345d3d';ctx.fillRect(px+4,py+38,40,6);
+          for(let k=0;k<7;k++){
+            let ox=(gx*3+k*7)%38+4,dy=(k*11+gy)%15;
+            ctx.fillStyle='#749d54';ctx.fillRect(px+ox,py+14+dy,2,24-dy);
+            ctx.fillStyle='#c7b77b';ctx.fillRect(px+ox-1,py+12+dy,4,6);
+          }
         }
         if (t === TILE.WILD_FLOWERS) {
           const palette=['#eea6e6','#ffe98a','#f7f6cf','#8dcce4'];
@@ -3656,6 +3714,14 @@
             ctx.fillStyle = '#fef08a';
             ctx.fillRect(px + 22, py + 12, 4, 4);
           }
+        } else if (t === TILE.CLIFF) {
+          ctx.fillStyle='#242d33';ctx.fillRect(px+1,py+33,46,14);
+          ctx.fillStyle='#646d72';ctx.fillRect(px+4,py-16,42,50);
+          ctx.fillStyle='#8e9998';ctx.fillRect(px+7,py-16,32,9);
+          ctx.fillStyle='#474e56';ctx.fillRect(px+30,py-4,15,38);
+          ctx.fillStyle='#b3ad9d';ctx.fillRect(px+12,py-6,12,3);
+          ctx.fillStyle='#33473c';ctx.fillRect(px+9,py+28,13,5);
+          ctx.fillStyle='#b5a58d';ctx.fillRect(px+5,py+34,40,3);
         } else if (t === TILE.HOUSE_WALL) {
           const h=houseAt(gx,gy);
           ctx.globalAlpha=h&&houseRevealed(h)?0.30:1;
@@ -3882,22 +3948,50 @@
         const ry=Math.round((h.y-camY)*TILE_SIZE);
         const rw=h.w*TILE_SIZE,rh=h.h*TILE_SIZE;
         if(rx>canvas.width+36 || ry>canvas.height+36 || rx+rw<0 || ry+rh<0)continue;
-        ctx.fillStyle='rgba(0,0,0,.36)';ctx.fillRect(rx+8,ry+10,rw-10,rh+9);
-        ctx.fillStyle='#4c251e';ctx.fillRect(rx-5,ry-21,rw+10,rh+25);
-        // Telhas de cerâmica alternadas, beiral e cumeeira com pixel art original.
+        const vale=(h.floor??0)===1;
+        const palette=vale ?
+          {edge:'#292a47',light:'#a7a2cc',mid:'#545774',dark:'#383852',ridge:'#bcc5dd'}:
+          {edge:'#4c251e',light:'#e6a076',mid:'#ad563c',dark:'#733928',ridge:'#f1c38a'};
+        ctx.fillStyle='rgba(0,0,0,.32)';ctx.fillRect(rx+9,ry+10,rw-10,rh+9);
+        ctx.fillStyle=palette.edge;ctx.fillRect(rx-5,ry-21,rw+10,rh+26);
+        // Telhado colonial do Bastião / ardósia cinza-azulada do Vale.
         for(let yy=0;yy<rh+6;yy+=14){
-          const stagger=(Math.floor(yy/14)%2)*10;
-          for(let xx=-stagger;xx<rw+8;xx+=20){
-            ctx.fillStyle=((xx+yy)%3===0)?'#b45b3c':'#9b452f';
+          const offset=(Math.floor(yy/14)%2)*10;
+          for(let xx=-offset;xx<rw+8;xx+=20){
+            const varId=(xx*7+yy*3+h.x*5+h.y)%5;
+            ctx.fillStyle=varId===0?palette.dark:palette.mid;
             ctx.fillRect(rx+xx-2,ry+yy-18,19,12);
-            ctx.fillStyle='#e29763';ctx.fillRect(rx+xx,ry+yy-17,16,2);
-            ctx.fillStyle='#6d2e23';ctx.fillRect(rx+xx-2,ry+yy-8,19,2);
+            ctx.fillStyle=palette.light;ctx.fillRect(rx+xx,ry+yy-17,16,2);
+            ctx.fillStyle=palette.edge;ctx.fillRect(rx+xx-2,ry+yy-8,19,2);
+            if(vale){
+              ctx.fillStyle='#7e89aa';ctx.fillRect(rx+xx+2,ry+yy-14,4,2);
+            }
           }
         }
-        ctx.fillStyle='#5b3028';ctx.fillRect(rx-8,ry-25,rw+16,9);
-        ctx.fillStyle='#c17a54';ctx.fillRect(rx-6,ry-24,rw+12,3);
-        ctx.fillStyle='#34201c';ctx.fillRect(rx-9,ry+rh-10,rw+18,13);
-        ctx.fillStyle='#e5ad6c';ctx.fillRect(rx-8,ry+rh-10,rw+16,3);
+        // Cumeeira elevada, beiral e duas águas.
+        ctx.fillStyle=palette.dark;ctx.fillRect(rx-9,ry-27,rw+18,8);
+        ctx.fillStyle=palette.ridge;ctx.fillRect(rx-7,ry-26,rw+14,3);
+        ctx.fillStyle=palette.edge;ctx.fillRect(rx-9,ry+rh-10,rw+18,13);
+        ctx.fillStyle=palette.light;ctx.fillRect(rx-8,ry+rh-10,rw+16,3);
+        // Chaminé, dormer e placa de madeira distinguem as profissões.
+        if(h.id==='forja'||h.id==='alquimia_vale'||h.id==='laboratorio'){
+          const sx=rx+rw-56,sy=ry+rh*.28;
+          ctx.fillStyle='#3b3332';ctx.fillRect(sx,sy-38,24,40);
+          ctx.fillStyle='#b1a39a';ctx.fillRect(sx+3,sy-42,18,8);
+          ctx.fillStyle='#4a3530';ctx.fillRect(sx+5,sy-40,14,4);
+          for(let cloud=0;cloud<4;cloud++){
+            let sy2=sy-48-cloud*11-Math.sin(now*.0005+cloud)*4;
+            ctx.fillStyle='rgba(215,218,218,'+(0.13-cloud*.025)+')';
+            ctx.fillRect(sx+7+cloud*5,sy2,12+cloud*4,5);
+          }
+        }else{
+          const sx=rx+rw*.55,sy=ry+rh*.31;
+          ctx.fillStyle=palette.edge;ctx.fillRect(sx-17,sy-6,36,29);
+          ctx.fillStyle='#ccad83';ctx.fillRect(sx-14,sy-4,30,24);
+          ctx.fillStyle=vale?'#8fb4c4':'#688d9d';ctx.fillRect(sx-9,sy+1,20,14);
+          ctx.fillStyle='#3c3636';ctx.fillRect(sx,sy+1,2,14);
+          ctx.fillStyle=palette.ridge;ctx.fillRect(sx-18,sy-8,38,4);
+        }
       }
     }
 
@@ -4059,6 +4153,11 @@
         else if (t === TILE.SEWER_GRATE || t === TILE.ROPE_LADDER || t === TILE.STAIR_UP || t === TILE.STAIR_DOWN) mctx.fillStyle = '#facc15';
         else if (t === TILE.TREE || t === TILE.PINE) mctx.fillStyle = '#14532d';
         else if (t === TILE.MARSH) mctx.fillStyle = '#355a64';
+        else if(t===TILE.CLIFF)mctx.fillStyle='#727e7b';
+        else if(t===TILE.FERN)mctx.fillStyle='#2c7144';
+        else if(t===TILE.MUSHROOM)mctx.fillStyle='#967458';
+        else if(t===TILE.ROCK)mctx.fillStyle='#64736a';
+        else if(t===TILE.REEDS)mctx.fillStyle='#5b9068';
         else if (t === TILE.PORTAL_EXIT || t === TILE.PORTAL_RETURN) mctx.fillStyle = '#c084fc';
         else if (t === TILE.SIGNPOST) mctx.fillStyle = '#e9a65a';
         else if (t === TILE.CAMP_FIRE) mctx.fillStyle = '#ff9b42';
