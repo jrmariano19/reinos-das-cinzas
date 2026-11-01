@@ -1937,7 +1937,7 @@
     {id:'wolves',name:'Uivos do Bosque',icon:'🐺',where:'Bosque das Lanternas',
       goal:5,rewardGold:560,rewardXp:430,accept:e=>e.floor===1&&e.sprite==='wolf'},
     {id:'raiders',name:'Saqueadores da Passarela',icon:'⚔️',where:'Acampamento do Vale',
-      goal:6,rewardGold:780,rewardXp:650,accept:e=>e.floor===1&&e.sprite==='bandit'},
+      goal:5,rewardGold:780,rewardXp:650,accept:e=>e.floor===1&&e.sprite==='bandit'},
     {id:'ghosts',name:'Eco das Catacumbas',icon:'🔮',where:'Cripta dos Ecos (-2)',
       goal:4,rewardGold:680,rewardXp:520,accept:e=>e.floor===-2}
   ];
@@ -2405,6 +2405,7 @@
   };
 
   function applyDamageToMonster(mob, dmg, sourceName = 'ataque') {
+    if(!mob || mob.dead || dmg<=0)return;
     mob.hp = Math.max(0, mob.hp - dmg);
     addFloatingText(mob.floor, mob.x, mob.y, `-${dmg}`, '#ff2a2a');
     addSpark(mob.floor, mob.x, mob.y, 'blood');
@@ -2422,6 +2423,7 @@
 
     if (mob.hp <= 0) {
       mob.dead = true;
+      if(mob.isBoss)mob.warning=null;
       mob.respawnAt = performance.now() + (mob.isBoss ? 150000 : 16000);
       if (player.targetId === mob.id) player.targetId = null;
 
