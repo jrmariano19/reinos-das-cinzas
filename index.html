@@ -366,6 +366,18 @@
       </div>
     </div>
 
+    <!-- Progressão RPG: escolhas permanentes e forja -->
+    <div class="tibia-inset px-1.5 py-1.5 flex flex-col gap-1">
+      <div class="flex justify-between items-center text-[9px] text-amber-300 font-bold">
+        <span>⚒️ Progressão do Cavaleiro</span>
+        <span id="combatPower" class="text-neutral-300">ATQ 24 • DEF 20</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1">
+        <button onclick="window.openTalents()" class="tibia-btn py-1 text-[10px] font-bold">✨ Talentos <span id="talentPointsBadge">0</span></button>
+        <button onclick="window.openForge()" class="tibia-btn py-1 text-[10px] text-amber-300 font-bold">⚒️ Forja <span id="forgeTierBadge">+0</span></button>
+      </div>
+    </div>
+
     <!-- JANELA BATTLE LIST (CLIQUE PARA DAR TARGET NO MONSTRO) -->
     <div class="tibia-inset flex flex-col flex-1 min-h-[105px] overflow-hidden">
       <div class="bg-neutral-800 px-2 py-0.5 border-b border-neutral-700 flex justify-between items-center text-[10px] font-bold text-gray-300">
@@ -393,6 +405,36 @@
       <div id="backpackGrid" class="p-1.5 grid grid-cols-5 gap-1 overflow-y-auto"></div>
     </div>
 
+  </div>
+</div>
+
+<!-- ÁRVORE DE TALENTOS: pontos permanentes conforme o nível -->
+<div id="talentModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-3">
+  <div class="tibia-panel w-full max-w-md p-4 shadow-2xl flex flex-col gap-3">
+    <div class="flex items-center justify-between border-b border-amber-800 pb-2">
+      <div><div class="text-amber-300 font-bold text-sm">✨ Talentos do Cavaleiro</div>
+        <div class="text-gray-400 text-[10px]">Um ponto a cada nível • escolhas permanentes</div></div>
+      <button onclick="window.closeTalents()" class="tibia-btn px-2 py-1">✕</button>
+    </div>
+    <div class="text-amber-200 text-xs">Pontos disponíveis: <b id="talentPointsTotal">0</b></div>
+    <div id="talentRows" class="grid grid-cols-1 gap-2"></div>
+    <p id="talentMessage" class="text-[10px] text-neutral-400" aria-live="polite">Aumente seus atributos para enfrentar chefes.</p>
+    <button onclick="window.closeTalents()" class="tibia-btn py-1">Continuar aventura</button>
+  </div>
+</div>
+
+<!-- FORJA DO BASTIÃO: melhorias de equipamento com ouro -->
+<div id="forgeModal" class="fixed inset-0 bg-black/85 hidden items-center justify-center z-50 p-3">
+  <div class="tibia-panel w-full max-w-sm p-4 shadow-2xl flex flex-col gap-3">
+    <div class="flex items-center justify-between border-b border-amber-800 pb-2">
+      <div><div class="text-amber-300 font-bold text-sm">⚒️ Forja das Cinzas</div>
+        <div class="text-gray-400 text-[10px]">Doran • armas aprimoradas no Bastião</div></div>
+      <button onclick="window.closeForge()" class="tibia-btn px-2 py-1">✕</button>
+    </div>
+    <div id="forgeDetails" class="text-xs text-neutral-200"></div>
+    <button id="forgeUpgradeBtn" onclick="window.upgradeWeapon()" class="tibia-btn py-2 font-bold text-amber-300 text-xs">Aprimorar espada</button>
+    <div id="forgeMessage" class="text-[10px] text-amber-200 min-h-4" aria-live="polite"></div>
+    <button onclick="window.closeForge()" class="tibia-btn py-1">Voltar</button>
   </div>
 </div>
 
@@ -573,6 +615,9 @@
     cityQuestGoal: 4,
     cityQuestCompleted: false,
     valeKills: 0, valeGoal: 5, valeCompleted: false,
+    weaponTier: 0,
+    talentPoints: 0,
+    talentRanks: { fury:0, bulwark:0, vigor:0, stride:0 },
     outfit: {
       head: '#d97706',      // Pluma / Detalhe dourado no elmo
       primary: '#991b1b',   // Tabardo & Capa Vermelho Brasa
@@ -994,7 +1039,7 @@
       // Punho e Guarda-mão dourada
       pixelPart(swX - 2, swY + 2, 7, 2, '#d97706', '#fef08a', '#78350f');
       // Lâmina diagonal chanfrada com reflexo metálico
-      const bladeColor = opts.legendary ? '#fde047' : '#e2e8f0';
+      const bladeColor = opts.forgedTier>=3 ? '#67e8f9' : opts.forgedTier>=1 ? '#f59e0b' : opts.legendary ? '#fde047' : '#e2e8f0';
       const bladeEdge  = opts.legendary ? '#ffffff' : '#ffffff';
       pixelPart(swX, swY - 12, 4, 14, bladeColor, bladeEdge, '#64748b');
     }
@@ -1752,6 +1797,108 @@
     return false;
   }
 
+  // Progressão persistente: atributos derivados dos talentos e da arma.
+  const TALENTS = [
+    {id:'fury',label:'Fúria das Cinzas',icon:'⚔️',effect:'+6% de dano por nível'},
+    {id:'bulwark',label:'Bastião de Ferro',icon:'🛡️',effect:'+2 defesa por nível'},
+    {id:'vigor',label:'Sangue do Guardião',icon:'❤️',effect:'+25 pontos de vida por nível'},
+    {id:'stride',label:'Passo do Vento',icon:'🏃',effect:'Movimento 12 ms mais rápido por nível'}
+  ];
+  const FORGE_COSTS=[450,900,1500,2400];
+  const FORGE_MIN_LEVEL=[4,8,12,16];
+  const effectiveAttack=()=>Math.round((player.atk+(player.weaponTier||0)*6)*
+    (1+(player.talentRanks?.fury||0)*0.06));
+  const effectiveDefense=()=>player.def+(player.weaponTier||0)*2+
+    (player.talentRanks?.bulwark||0)*2;
+  const effectiveStepDelay=()=>Math.max(105,player.moveSpeedMs-
+    (player.talentRanks?.stride||0)*12);
+  function tallyTalents(){
+    return TALENTS.reduce((n,t)=>n+(player.talentRanks?.[t.id]||0),0);
+  }
+  function syncTalentPoints(){
+    if(!player.talentRanks || typeof player.talentRanks!=='object')
+      player.talentRanks={fury:0,bulwark:0,vigor:0,stride:0};
+    for(const talent of TALENTS){
+      const rank=player.talentRanks[talent.id];
+      player.talentRanks[talent.id]=Number.isInteger(rank)?Math.max(0,Math.min(5,rank)):0;
+    }
+    player.talentPoints=Math.max(0,(player.level-1)-tallyTalents());
+  }
+  window.openTalents=function(){
+    syncTalentPoints();renderTalentModal();
+    const m=document.getElementById('talentModal');m.classList.remove('hidden');m.classList.add('flex');
+  };
+  window.closeTalents=function(){
+    const m=document.getElementById('talentModal');m.classList.add('hidden');m.classList.remove('flex');
+  };
+  function renderTalentModal(){
+    document.getElementById('talentPointsTotal').textContent=player.talentPoints;
+    document.getElementById('talentRows').innerHTML=TALENTS.map(t=>{
+      const rank=player.talentRanks[t.id]||0;
+      const disabled=player.talentPoints<=0||rank>=5;
+      return '<button onclick="window.allocateTalent(\''+t.id+'\')" '+(disabled?'disabled ':'')+
+        'class="tibia-btn p-2 flex items-center justify-between text-left gap-3 '+(disabled?'opacity-60':'')+'">'+
+        '<span class="flex flex-col"><strong class="text-amber-200 text-xs">'+t.icon+' '+t.label+'</strong>'+
+        '<span class="text-[10px] text-gray-300">'+t.effect+'</span></span>'+
+        '<b class="text-amber-300 whitespace-nowrap">'+rank+'/5</b></button>';
+    }).join('');
+  }
+  window.allocateTalent=function(id){
+    const t=TALENTS.find(x=>x.id===id);if(!t)return false;
+    syncTalentPoints();
+    if(player.talentPoints<1 || player.talentRanks[id]>=5){
+      document.getElementById('talentMessage').textContent='Sem pontos disponíveis ou talento no limite.';
+      return false;
+    }
+    player.talentRanks[id]++;
+    if(id==='vigor'){player.maxHp+=25;player.hp+=25;}
+    syncTalentPoints();
+    document.getElementById('talentMessage').textContent='Talento evoluído: '+t.label+'.';
+    addLog('✨ Talento '+t.label+' elevado para '+player.talentRanks[id]+'/5.','#fcd34d');
+    renderTalentModal();updateHUD();saveProgress();return true;
+  };
+  function nearForge(){
+    return player.floor===0 && Math.max(Math.abs(player.x-30),Math.abs(player.y-8))<=4;
+  }
+  window.openForge=function(){
+    const modal=document.getElementById('forgeModal');
+    modal.classList.remove('hidden');modal.classList.add('flex');
+    document.getElementById('forgeMessage').textContent=nearForge()?
+      'Doran aquece a lâmina na forja.':'Aprimore sua arma junto ao ferreiro Doran (Bastião, SQM 30,8).';
+    renderForge();
+  };
+  window.closeForge=function(){
+    const m=document.getElementById('forgeModal');m.classList.add('hidden');m.classList.remove('flex');
+  };
+  function renderForge(){
+    const tier=Math.max(0,Math.min(4,player.weaponTier||0));
+    const cost=FORGE_COSTS[tier],req=FORGE_MIN_LEVEL[tier];
+    document.getElementById('forgeDetails').innerHTML=
+      '<strong class="text-amber-200">Lâmina Solar das Cinzas +'+tier+'</strong>'+
+      '<div class="mt-1">Ataque efetivo: <b class="text-green-300">'+effectiveAttack()+'</b>'+
+      ' • Defesa efetiva: <b class="text-sky-300">'+effectiveDefense()+'</b></div>'+
+      (tier>=4?'<div class="mt-2 text-green-300">Nível máximo de aprimoramento atingido.</div>':
+      '<div class="mt-2 text-neutral-300">Próximo nível: +6 ataque, +2 defesa</div>'+
+      '<div class="mt-1 text-amber-300">Custo: '+cost+' ouro • Nível mínimo '+req+'</div>')+
+      '<div class="mt-1 text-gray-400">Seu ouro: '+player.gold+'</div>';
+    document.getElementById('forgeUpgradeBtn').disabled=
+      tier>=4||!nearForge()||player.gold<(cost||0)||player.level<(req||99);
+  }
+  window.upgradeWeapon=function(){
+    const tier=player.weaponTier||0,cost=FORGE_COSTS[tier],req=FORGE_MIN_LEVEL[tier];
+    if(tier>=4||!nearForge()||player.gold<cost||player.level<req){
+      document.getElementById('forgeMessage').textContent='Aprimoramento indisponível: confira ouro, nível e proximidade da forja.';
+      return false;
+    }
+    player.gold-=cost;player.weaponTier=tier+1;
+    player.weaponName='Lâmina Solar das Cinzas +'+player.weaponTier;
+    addSpark(player.floor,player.x,player.y,'magic');
+    addFloatingText(player.floor,player.x,player.y-.7,'FORJA +'+player.weaponTier,'#fbbf24',true);
+    addLog('⚒️ Doran forjou Lâmina Solar +'+player.weaponTier+' (-'+cost+' ouro)!','#fcd34d');
+    document.getElementById('forgeMessage').textContent='Aprimoramento concluído! Sua espada está mais forte.';
+    updateHUD();renderForge();saveProgress();return true;
+  };
+
   // Console de Log Clássico do Tibia
   function addLog(text, color = '#dfdfdf', category = 'all') {
     const now = new Date();
@@ -1847,7 +1994,7 @@
 
   window.movePlayer = function(dx, dy) {
     const now = performance.now();
-    const speed = now < player.hasteUntil ? 110 : player.moveSpeedMs;
+    const speed = now < player.hasteUntil ? 90 : effectiveStepDelay();
     if (now - player.moveCooldown < speed) return false;
 
     if (dx < 0) player.dir = 'left';
@@ -2188,6 +2335,7 @@
       player.atk += 3;
       player.def += 2;
       player.cap += 25;
+      syncTalentPoints();
       addFloatingText(player.floor, player.x, player.y - 0.6, `LEVEL ${player.level}!`, '#ffff00', true);
       addSpark(player.floor, player.x, player.y, 'magic');
       addLog(`You advanced from Level ${player.level - 1} to Level ${player.level}.`, '#ffffff');
@@ -2445,6 +2593,8 @@
       addFloatingText(player.floor, player.x, player.y, 'Curado!', '#33ff33');
       addLog('Sacerdotisa Lyra restaurou sua vida e mana.', '#66ff66');
       updateHUD();
+    } else if (npc.id === 'doran') {
+      window.openForge();
     } else if (npc.id === 'npc_breno' || npc.id === 'npc_eron') {
       window.openMerchantShop(npc.id);
     }
@@ -2619,7 +2769,12 @@
     document.getElementById('goldText').textContent = player.gold;
     document.getElementById('blessText').textContent = player.blessing;
     document.getElementById('capText').textContent = player.cap;
-    document.getElementById('atkDefText').textContent = `${player.atk}/${player.def}`;
+    document.getElementById('atkDefText').textContent = `${effectiveAttack()}/${effectiveDefense()}`;
+    document.getElementById('combatPower').textContent = `ATQ ${effectiveAttack()} • DEF ${effectiveDefense()}`;
+    document.getElementById('talentPointsBadge').textContent = player.talentPoints>0?`+${player.talentPoints}`:'0';
+    document.getElementById('forgeTierBadge').textContent = `+${player.weaponTier||0}`;
+    const slotW=document.getElementById('slotWeapon');
+    if(slotW){slotW.textContent=player.weaponTier>0?'⚔️':player.legendarySword?'🗡️':'⚔️';slotW.title=player.weaponName;}
     document.getElementById('hpPotCount').textContent = `×${player.hpPots}`;
     document.getElementById('mpPotCount').textContent = `×${player.mpPots}`;
 
@@ -2672,7 +2827,7 @@
     const targetMob = entities.find(e => e.id === player.targetId && !e.dead && e.floor === player.floor);
     if (targetMob && player.chase && !isProtectionZone(player.floor, player.x, player.y)) {
       const dist = Math.max(Math.abs(targetMob.x - player.x), Math.abs(targetMob.y - player.y));
-      if (dist > 1 && now - player.moveCooldown >= (now < player.hasteUntil ? 110 : player.moveSpeedMs)) {
+      if (dist > 1 && now - player.moveCooldown >= (now < player.hasteUntil ? 90 : effectiveStepDelay())) {
         const dx = Math.sign(targetMob.x - player.x);
         const dy = Math.sign(targetMob.y - player.y);
         if (!window.movePlayer(dx, dy)) {
@@ -2680,7 +2835,7 @@
           else if (dy !== 0) window.movePlayer(0, dy);
         }
       }
-    } else if (player.path.length > 0 && now - player.moveCooldown >= (now < player.hasteUntil ? 110 : player.moveSpeedMs)) {
+    } else if (player.path.length > 0 && now - player.moveCooldown >= (now < player.hasteUntil ? 90 : effectiveStepDelay())) {
       const next = player.path[0];
       const dx = Math.sign(next.x - player.x);
       const dy = Math.sign(next.y - player.y);
@@ -2703,7 +2858,11 @@
         if (Math.random() < 0.1) {
           addSpark(player.floor, targetMob.x, targetMob.y, 'puff');
         } else {
-          const dmg = Math.max(3, Math.floor((player.atk * stanceMult) * (0.75 + Math.random() * 0.45)));
+          const dmg = Math.max(3, Math.floor((effectiveAttack() * stanceMult) * (0.75 + Math.random() * 0.45)));
+          if(Math.random()<Math.min(.2,(player.talentRanks?.fury||0)*.035)){
+            addFloatingText(player.floor,targetMob.x,targetMob.y-.5,'CRÍTICO!','#facc15');
+            applyDamageToMonster(targetMob,Math.floor(dmg*.4),'golpe crítico');
+          }
           applyDamageToMonster(targetMob, dmg, 'ataque de espada');
         }
         updateHUD();
@@ -2781,7 +2940,7 @@
       else if (!playerInPZ && distToPlayer <= 1 && now - e.lastAtk >= 1450) {
         e.lastAtk = now;
         const defBonus = player.stance === 'def' ? 1.35 : player.stance === 'atk' ? 0.8 : 1.0;
-        const rawDmg = e.atk - Math.floor(player.def * 0.45 * defBonus) + Math.floor(Math.random() * 5);
+        const rawDmg = e.atk - Math.floor(effectiveDefense() * 0.45 * defBonus) + Math.floor(Math.random() * 5);
         let finalDmg = Math.max(0, rawDmg);
 
         if (now < player.shieldWallUntil) {
@@ -3259,6 +3418,7 @@
           isAttacking: now < player.attackAnimUntil,
           outfit: player.outfit,
           legendary: player.legendarySword,
+          forgedTier: player.weaponTier||0,
           shieldWall: now < player.shieldWallUntil
         });
         drawTibiaNameAndBar(px, py, player.name, player.hp / player.maxHp, false);
@@ -3501,11 +3661,15 @@
     if (key === 'escape') {
       window.closeMerchantShop();
       window.closeOutfitModal();
+      window.closeTalents();
+      window.closeForge();
       clearPendingInteractions();
       return;
     }
     if (document.getElementById('merchantModal').classList.contains('flex') ||
-        document.getElementById('outfitModal').classList.contains('flex')) return;
+        document.getElementById('outfitModal').classList.contains('flex') ||
+        document.getElementById('talentModal').classList.contains('flex') ||
+        document.getElementById('forgeModal').classList.contains('flex')) return;
     if (['w','a','s','d','e','arrowup','arrowdown','arrowleft','arrowright','1','2','3','4','5','6'].includes(key)) e.preventDefault();
     if (key === 'e') { window.interactNearby(); }
     else if (key === 'w' || key === 'arrowup') { clearPendingInteractions(); player.path = []; window.movePlayer(0, -1); }
@@ -3577,7 +3741,7 @@
     'hpPots','mpPots','questKills','questCompleted',
     'cryptKills','cryptGoal','cryptCompleted','openedChests',
     'cityQuestGoal','cityQuestCompleted','valeKills','valeGoal','valeCompleted',
-    'lootBag','outfit','stance','chase'
+    'lootBag','outfit','stance','chase','weaponTier','talentRanks','talentPoints'
   ];
   function saveProgress() {
     try {
@@ -3599,7 +3763,7 @@
         if (typeof player[k] === 'boolean' && typeof data[k] !== 'boolean') continue;
         if (typeof player[k] === 'string' && typeof data[k] !== 'string') continue;
         if ((k === 'lootBag' || k === 'openedChests') && !Array.isArray(data[k])) continue;
-        if (k === 'outfit' && (!data[k] || typeof data[k] !== 'object' || Array.isArray(data[k]))) continue;
+        if ((k === 'outfit'||k==='talentRanks') && (!data[k] || typeof data[k] !== 'object' || Array.isArray(data[k]))) continue;
         player[k] = data[k];
       }
       if (![0,1,-1,-2].includes(player.floor)) player.floor = 0;
@@ -3612,6 +3776,8 @@
           isTileBlocked(player.floor,player.x,player.y,'player')) {
         player.x = 22; player.y = 14; player.floor = 0;
       }
+      syncTalentPoints();
+      player.weaponTier=Math.max(0,Math.min(4,Number.isInteger(player.weaponTier)?player.weaponTier:0));
       player.renderX=player.x; player.renderY=player.y;
       player.hp=Math.max(1,Math.min(player.maxHp,player.hp));
       player.mp=Math.max(0,Math.min(player.maxMp,player.mp));
@@ -3646,6 +3812,7 @@
     initWorldMap();
     initEntities();
     const restored = restoreProgress();
+    syncTalentPoints();
     if (cityChestCount() >= player.cityQuestGoal && !player.cityQuestCompleted) {
       completeCityQuest();
     }
