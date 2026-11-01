@@ -518,7 +518,7 @@
     WOOD_FLOOR: 18, HOUSE_WALL: 19, HOUSE_DOOR: 20,
     FURNITURE: 21, LANTERN: 22, FOUNTAIN: 23, MARKET_STALL: 24,
     CRYPT_FLOOR: 25, CRYPT_WALL: 26, STAIR_DOWN: 27,
-    STAIR_UP: 28, MOSS_FLOOR: 29, BRIDGE: 30
+    STAIR_UP: 28, MOSS_FLOOR: 29, BRIDGE: 30, CHEST: 31
   };
 
   // Estado do Jogador (Ivo - Cavaleiro das Cinzas)
@@ -564,6 +564,7 @@
     cryptKills: 0,
     cryptGoal: 4,
     cryptCompleted: false,
+    openedChests: [],
     outfit: {
       head: '#d97706',      // Pluma / Detalhe dourado no elmo
       primary: '#991b1b',   // Tabardo & Capa Vermelho Brasa
@@ -581,6 +582,30 @@
 
   // Mapas por Andar (0 e -1)
   const maps = { 0: [], '-1': [], '-2': [] };
+
+  // Construções autorais. A porta fica sempre na parede sul de cada casa.
+  const houses = [
+    {id:'arquivo',name:'Arquivo das Cinzas',x:12,y:6,w:5,h:5,door:14},
+    {id:'forja',name:'Forja do Bastião',x:27,y:6,w:6,h:5,door:29},
+    {id:'estalagem',name:'Estalagem da Brasa',x:12,y:13,w:5,h:5,door:14},
+    {id:'laboratorio',name:'Laboratório da Névoa',x:28,y:13,w:5,h:5,door:30}
+  ];
+  const chests = [
+    {id:'arquivo',name:'Baú dos Registros',x:13,y:9,gold:80,mp:1},
+    {id:'forja',name:'Baú do Ferreiro',x:31,y:9,gold:110,hp:1},
+    {id:'estalagem',name:'Baú de Provisões',x:13,y:16,gold:65,food:true},
+    {id:'laboratorio',name:'Baú Alquímico',x:31,y:16,gold:90,mp:2}
+  ];
+  const openDoors = new Set();
+  const doorKey=(x,y)=>x+':'+y;
+  const nearTile=(x,y,range=1.5)=>player.floor===0 && Math.max(Math.abs(player.x-x),Math.abs(player.y-y))<=range;
+  function houseAt(x,y){
+    return houses.find(h=>x>=h.x && x<h.x+h.w && y>=h.y && y<h.y+h.h);
+  }
+  function houseRevealed(h){
+    return player.floor===0 && player.x>=h.x-1 && player.x<h.x+h.w+1
+       && player.y>=h.y-1 && player.y<h.y+h.h+1;
+  }
   const corpses = [];
   const bloodPools = [];
   const floatingTexts = [];
@@ -589,6 +614,8 @@
   const entities = [];
   let openedCorpse = null;
   let pendingNpcId = null; // Conversa automática ao alcançar NPC selecionado.
+  let pendingChestId = null;
+  let pendingDoorKey = null;
   let chatFilter = 'all';
   const chatMessages = [];
   const spriteCache = {};
@@ -1263,13 +1290,7 @@
     ruins.forEach(([rx, ry]) => { if (maps[0][ry]) maps[0][ry][rx] = TILE.RUIN_PILLAR; });
 
     // Quatro casas com paredes, assoalho e portas acessiveis.
-    const homes = [
-      { x: 12, y: 6, w: 5, h: 5, door: 14 },
-      { x: 27, y: 6, w: 6, h: 5, door: 29 },
-      { x: 12, y: 13, w: 5, h: 5, door: 14 },
-      { x: 28, y: 13, w: 5, h: 5, door: 30 }
-    ];
-    homes.forEach(({x,y,w,h,door}) => {
+    houses.forEach(({x,y,w,h,door}) => {
       for (let yy = y; yy < y + h; yy++) {
         for (let xx = x; xx < x + w; xx++) {
           const edge = yy === y || yy === y + h - 1 || xx === x || xx === x + w - 1;
@@ -1280,6 +1301,8 @@
       maps[0][y + 1][x + 1] = TILE.FURNITURE;
       maps[0][y + 1][x + w - 2] = TILE.FURNITURE;
     });
+    // Objetos interativos colocados em locais livres e alcançáveis do interior.
+    chests.forEach(ch => { maps[0][ch.y][ch.x] = TILE.CHEST; });
     [[20,7],[25,7],[20,16],[25,16]].forEach(([x,y]) => { maps[0][y][x] = TILE.LANTERN; });
     maps[0][12][17] = TILE.FOUNTAIN;
     maps[0][12][29] = TILE.MARKET_STALL;
@@ -1375,6 +1398,20 @@
       dir: 'down', hp: 100, maxHp: 100,
       dialog: 'Bem-vindo ao meu mercado! Tenho poções e provisões para a próxima expedição.'
     });
+
+    // Moradores locais, cada um com seu próprio diálogo e estabelecimento.
+    [
+      {id:'mira',name:'Mira (Cronista)',sprite:'healer',x:15,y:8,
+       dialog:'Bem-vindo ao Arquivo. Os registros dos Reinos estão guardados aqui. Procure o baú ao fundo para descobrir suprimentos antigos.'},
+      {id:'doran',name:'Doran (Ferreiro)',sprite:'guard',x:30,y:8,
+       dialog:'Uma boa espada é feita na forja e aperfeiçoada no campo de batalha. As minhas provisões estão no baú da oficina.'},
+      {id:'seris',name:'Seris (Estalajadeira)',sprite:'healer',x:15,y:15,
+       dialog:'Entre, guerreiro! A Estalagem da Brasa é um lugar seguro. Há provisões guardadas junto à parede de madeira.'},
+      {id:'veyra',name:'Veyra (Alquimista)',sprite:'mage',x:30,y:15,
+       dialog:'A névoa esconde segredos nas Catacumbas. Meu baú contém frascos úteis para sua próxima expedição.'}
+    ].forEach(n=>entities.push({
+      ...n,type:'npc',floor:0,renderX:n.x,renderY:n.y,dir:'down',hp:100,maxHp:100
+    }));
 
     // Monstros dos Ermos Cinzentos (Floor 0 - Sul do Portão)
     const surfaceSpawns = [
@@ -1484,6 +1521,8 @@
       t === TILE.PINE ||
       t === TILE.ANCIENT_STONE ||
       t === TILE.HOUSE_WALL || t === TILE.FURNITURE ||
+      t === TILE.CHEST ||
+      (t === TILE.HOUSE_DOOR && !openDoors.has(doorKey(x,y))) ||
       t === TILE.LANTERN || t === TILE.FOUNTAIN ||
       t === TILE.MARKET_STALL || t === TILE.CRYPT_WALL ||
       t === TILE.WATER ||
@@ -1597,6 +1636,12 @@
     const nx = player.x + dx;
     const ny = player.y + dy;
 
+    // Ao atravessar uma porta fechada, o personagem abre a passagem antes de entrar.
+    if (player.floor===0 && maps[0]?.[ny]?.[nx]===TILE.HOUSE_DOOR &&
+        !openDoors.has(doorKey(nx,ny))) {
+      openDoors.add(doorKey(nx,ny));
+      addLog('Você abriu uma porta de madeira.', '#e5c18a');
+    }
     if (!isTileBlocked(player.floor, nx, ny, 'player')) {
       player.x = nx;
       player.y = ny;
@@ -1611,6 +1656,21 @@
           pendingNpcId = null;
           player.path = [];
           window.talkToNearestNPC(npc.id);
+        }
+      }
+      if (pendingChestId) {
+        const ch=chests.find(c=>c.id===pendingChestId);
+        if (!ch) pendingChestId=null;
+        else if(nearTile(ch.x,ch.y,1)){
+          pendingChestId=null;player.path=[];
+          window.openHouseChest(ch.id);
+        }
+      }
+      if (pendingDoorKey) {
+        const [dx,dy]=pendingDoorKey.split(':').map(Number);
+        if(nearTile(dx,dy,1)){
+          pendingDoorKey=null;player.path=[];
+          window.toggleHouseDoor(dx,dy);
         }
       }
       return true;
@@ -1638,7 +1698,8 @@
       label.textContent = 'Catacumbas de Brasa (Andar -1)';
     } else if (inPZ) {
       badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-emerald-300 font-bold shadow-lg';
-      label.textContent = 'Bastião das Cinzas (Zona Segura)';
+      const building=houseAt(player.x,player.y);
+      label.textContent = building ? building.name+' (Interior)' : 'Bastião das Cinzas (Zona Segura)';
     } else {
       badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-red-400 font-bold shadow-lg';
       label.textContent = player.x <= 14 && player.y >= 28
@@ -1649,6 +1710,7 @@
         ? 'Pantano da Nevoa (Ermos)'
         : 'Ermos Cinzentos (Zona de Combate)';
     }
+    updateContextHint();
   }
 
   // Hotkeys Clássicas (1 a 6) com Falas Laranjas do Tibia ("Ivo says: exori")
@@ -2867,7 +2929,9 @@
     const floor = player.floor, key = (x,y) => y * MAP_SIZE + x;
     if (targetX < 0 || targetY < 0 || targetX >= MAP_SIZE || targetY >= MAP_SIZE) return [];
     const dirs = [[0,-1],[1,0],[0,1],[-1,0],[1,-1],[1,1],[-1,1],[-1,-1]];
-    const canStep = (x,y) => !isTileBlocked(floor,x,y,'player');
+    // A* pode planejar passagem por portas fechadas: a animação abre ao chegar.
+    const canStep = (x,y) => !isTileBlocked(floor,x,y,'player') ||
+      (floor===0 && maps[0]?.[y]?.[x]===TILE.HOUSE_DOOR);
     if (!canStep(targetX,targetY)) {
       let alt = null, best = Infinity;
       for (let radius = 1; radius <= 3 && !alt; radius++) {
@@ -2987,7 +3051,8 @@
     'level','floor','x','y','hp','maxHp','mp','maxMp','xp','maxXp',
     'gold','blessing','cap','atk','def','weaponName','legendarySword',
     'hpPots','mpPots','questKills','questCompleted',
-    'cryptKills','cryptGoal','cryptCompleted','lootBag','outfit','stance','chase'
+    'cryptKills','cryptGoal','cryptCompleted','openedChests',
+    'lootBag','outfit','stance','chase'
   ];
   function saveProgress() {
     try {
@@ -3008,11 +3073,15 @@
         if (typeof player[k] === 'number' && (!Number.isFinite(data[k]) || typeof data[k] !== 'number')) continue;
         if (typeof player[k] === 'boolean' && typeof data[k] !== 'boolean') continue;
         if (typeof player[k] === 'string' && typeof data[k] !== 'string') continue;
-        if (k === 'lootBag' && !Array.isArray(data[k])) continue;
+        if ((k === 'lootBag' || k === 'openedChests') && !Array.isArray(data[k])) continue;
         if (k === 'outfit' && (!data[k] || typeof data[k] !== 'object' || Array.isArray(data[k]))) continue;
         player[k] = data[k];
       }
       if (![0,-1,-2].includes(player.floor)) player.floor = 0;
+      // Porta pode ter ficado aberta na sessão anterior: não expulsar o herói do vão.
+      if (player.floor===0 && maps[0]?.[player.y]?.[player.x]===TILE.HOUSE_DOOR) {
+        openDoors.add(doorKey(player.x,player.y));
+      }
       if (!Number.isInteger(player.x) || !Number.isInteger(player.y) ||
           player.x < 1 || player.y < 1 || player.x >= MAP_SIZE-1 || player.y >= MAP_SIZE-1 ||
           isTileBlocked(player.floor,player.x,player.y,'player')) {
