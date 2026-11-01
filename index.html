@@ -1019,6 +1019,47 @@
       ctxTarget.fillStyle='#ffd05c';ctxTarget.fillRect(33,26,4,3);
     }
 
+    // Saqueador original do Vale: capuz escuro, lenço vermelho e lâmina curta.
+    else if (entityType === 'bandit') {
+      const step=frame===1?2:frame===2?-2:0;
+      pixelPart(14,30+step,8,8,'#43362b','#705949','#231f1b');
+      pixelPart(24,30-step,8,8,'#423329','#80604a','#231c1b');
+      pixelPart(11,16,24,18,'#543a2d','#8a6541','#2a1f19');
+      pixelPart(15,18,16,16,'#8a5e39','#d39c57','#503520');
+      pixelPart(10,16+step,6,17,'#443529','#927655','#211d1a');
+      pixelPart(33,16-step,6,16,'#443529','#927655','#211d1a');
+      pixelPart(15,6,18,13,'#bd8e65','#e5bc8c','#6d4b39');
+      pixelPart(13,2,22,9,'#35332e','#706b5d','#1b1b1c');
+      ctxTarget.fillStyle='#d15044';ctxTarget.fillRect(15,18,19,4);
+      ctxTarget.fillStyle='#241a1a';
+      if(dir!=='up'){
+        ctxTarget.fillRect(dir==='left'?17:21,13,3,2);
+        ctxTarget.fillRect(dir==='right'?27:28,13,3,2);
+      }
+      pixelPart(37,15-step,4,22,'#a9b1b8','#f8fafc','#5c6469');
+      ctxTarget.fillStyle='#d7a85a';ctxTarget.fillRect(34,34-step,10,3);
+      ctxTarget.fillStyle='#6c4b30';ctxTarget.fillRect(37,34-step,4,7);
+    }
+
+    // Lobo cinzento dos bosques: cauda, focinho, quatro patas e olhos brilhantes.
+    else if (entityType === 'wolf') {
+      const step=frame===1?3:frame===2?-2:0;
+      const flipped=dir==='left';
+      pixelPart(flipped?31:9,18,8,7,'#5f6263','#a3a3a3','#2d3336');
+      pixelPart(12,19,24,13,'#626866','#a2a8a4','#34383a');
+      pixelPart(13,28+step,5,10,'#494f51','#9b9f9f','#25292b');
+      pixelPart(23,28-step,5,10,'#52585b','#9b9f9f','#25292b');
+      pixelPart(33,27+step,5,9,'#43494b','#919798','#242a2e');
+      pixelPart(9,27-step,5,9,'#464b4f','#919798','#25282b');
+      const hx=flipped?6:29;
+      pixelPart(hx,13,13,14,'#5f6769','#adb4b4','#32393c');
+      pixelPart(hx+2,7,5,9,'#535b5e','#a8b1b4','#2b3033');
+      pixelPart(hx+8,8,5,7,'#51585e','#b8bab9','#2c3334');
+      ctxTarget.fillStyle='#efc64d';ctxTarget.fillRect(hx+9,19,3,2);
+      ctxTarget.fillStyle='#20252a';ctxTarget.fillRect(flipped?hx:hx+11,24,4,3);
+      ctxTarget.fillStyle='#d6d3ce';ctxTarget.fillRect(hx+5,27,5,3);
+    }
+
     // Quatro habitantes da cidade com roupas e acessórios próprios.
     else if (entityType === 'scribe' || entityType === 'smith' ||
              entityType === 'innkeeper' || entityType === 'alchemist') {
