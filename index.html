@@ -167,7 +167,7 @@
     <!-- Rastreador da Quest "O Primeiro Sangue" -->
     <div class="absolute top-3 right-3 px-2.5 py-1.5 tibia-panel flex flex-col gap-0.5 text-[10px] shadow-lg max-w-[235px]">
       <div class="flex items-center justify-between gap-2 text-amber-300 font-bold">
-        <span>📜 Missão: O Primeiro Sangue</span>
+        <span id="questTitle">📜 Missão: O Primeiro Sangue</span>
         <span id="questCounter" class="text-white bg-amber-900/80 px-1.5 rounded">0/6</span>
       </div>
       <div id="questDesc" class="text-gray-300 leading-tight">
@@ -561,6 +561,9 @@
     questKills: 0,
     questGoal: 6,
     questCompleted: false,
+    cryptKills: 0,
+    cryptGoal: 4,
+    cryptCompleted: false,
     outfit: {
       head: '#d97706',      // Pluma / Detalhe dourado no elmo
       primary: '#991b1b',   // Tabardo & Capa Vermelho Brasa
@@ -1329,7 +1332,7 @@
       dir: 'down',
       hp: 100,
       maxHp: 100,
-      dialog: 'Saudações, Ivo! Desça pelo bueiro a leste para expurgar as Catacumbas de Brasa ou cruze o Portão Sul rumo aos Ermos Cinzentos para enfrentar o Dragão das Cinzas!'
+      dialog: 'Saudações, Ivo! Conclua O Primeiro Sangue nos Ermos e enfrente os guardiões da Cripta dos Ecos no andar -2. Leve poções do mercador Breno!'
     });
 
     entities.push({
@@ -1803,6 +1806,10 @@
         if (player.questKills >= player.questGoal) {
           completeFirstBloodQuest();
         }
+      } else if (mob.floor === -2 && !player.cryptCompleted) {
+        player.cryptKills = Math.min(player.cryptGoal, player.cryptKills + 1);
+        addLog('[Missão] Ecos da Cripta: ' + player.cryptKills + '/' + player.cryptGoal + ' guardiões derrotados.', '#ddb5ff', 'quest');
+        if (player.cryptKills >= player.cryptGoal) completeCryptQuest();
       }
 
       checkLevelUp();
@@ -1894,6 +1901,23 @@
     }
     addFloatingText(player.floor, player.x, player.y - 0.8, 'MISSÃO COMPLETA!', '#ffd700', true);
     addLog('★ PARABÉNS! Você cumpriu "O Primeiro Sangue (6/6)" e forjou a Lâmina Solar das Cinzas (+12 Atk) + 250 Gold!', '#ffd700', 'quest');
+  }
+
+  // Segunda missão: somente criaturas da Cripta dos Ecos contam.
+  function completeCryptQuest() {
+    if (player.cryptCompleted) return;
+    player.cryptCompleted = true;
+    player.gold += 500;
+    player.blessing += 1;
+    player.xp += 250;
+    player.lootBag.push({
+      id:'relic_echoes',icon:'🔮',name:'Emblema dos Ecos (Relíquia)',
+      type:'relic',value:0
+    });
+    addFloatingText(player.floor,player.x,player.y-.8,'ECOS PURIFICADOS!','#e9d5ff',true);
+    addLog('★ Missão "Ecos da Cripta" concluída! +500 ouro, +250 XP, +1 bênção e Emblema dos Ecos.', '#e9d5ff','quest');
+    renderBackpack();
+    saveProgress();
   }
 
   // Modal de Customização de Outfit ("Set Outfit" do Tibia 7.6)
@@ -2144,10 +2168,24 @@
     document.getElementById('hpPotCount').textContent = `×${player.hpPots}`;
     document.getElementById('mpPotCount').textContent = `×${player.mpPots}`;
 
-    document.getElementById('questCounter').textContent = `${player.questKills}/${player.questGoal}`;
-    if (player.questCompleted) {
-      document.getElementById('questDesc').textContent = 'Missão cumprida! Lâmina Solar das Cinzas equipada.';
-      document.getElementById('questDesc').className = 'text-emerald-400 font-bold leading-tight';
+    const questTitle = document.getElementById('questTitle');
+    const questCounter = document.getElementById('questCounter');
+    const questDesc = document.getElementById('questDesc');
+    if (!player.questCompleted) {
+      questTitle.textContent = '📜 Missão: O Primeiro Sangue';
+      questCounter.textContent = player.questKills + '/' + player.questGoal;
+      questDesc.textContent = 'Cruze o portão sul e derrote 6 criaturas dos Ermos Cinzentos.';
+      questDesc.className = 'text-gray-300 leading-tight';
+    } else if (!player.cryptCompleted) {
+      questTitle.textContent = '📜 Missão: Ecos da Cripta';
+      questCounter.textContent = player.cryptKills + '/' + player.cryptGoal;
+      questDesc.textContent = 'Desça pelo bueiro [26,14] e escada [28,21]. Derrote 4 criaturas na Cripta (-2).';
+      questDesc.className = 'text-purple-200 leading-tight';
+    } else {
+      questTitle.textContent = '🏆 Cripta dos Ecos Purificada';
+      questCounter.textContent = player.cryptGoal + '/' + player.cryptGoal;
+      questDesc.textContent = 'Ambas as missões concluídas! Continue explorando os Reinos das Cinzas.';
+      questDesc.className = 'text-emerald-400 font-bold leading-tight';
     }
   }
 
@@ -2924,7 +2962,8 @@
   const savedFields = [
     'level','floor','x','y','hp','maxHp','mp','maxMp','xp','maxXp',
     'gold','blessing','cap','atk','def','weaponName','legendarySword',
-    'hpPots','mpPots','questKills','questCompleted','lootBag','outfit','stance','chase'
+    'hpPots','mpPots','questKills','questCompleted',
+    'cryptKills','cryptGoal','cryptCompleted','lootBag','outfit','stance','chase'
   ];
   function saveProgress() {
     try {
