@@ -708,6 +708,67 @@
       gg.stroke();
     }
     spriteCache['sewer_grate'] = grate;
+
+    // Assoalho de madeira: varia conforme o SQM, gerado localmente sem assets de terceiros.
+    for (let v = 0; v < 4; v++) {
+      const c = createOffscreen(48, 48), g = c.getContext('2d');
+      g.fillStyle = '#573820'; g.fillRect(0,0,48,48);
+      for (let y = 0; y < 48; y += 12) {
+        g.fillStyle = v % 2 ? '#976b3e' : '#a37949';
+        g.fillRect(1,y+1,46,10);
+        g.fillStyle = '#bc9056'; g.fillRect(2,y+2,44,1);
+        g.fillStyle = '#422b20'; g.fillRect(0,y+11,48,2);
+        const joint = ((v + y/12) % 2) ? 18 : 30;
+        g.fillRect(joint,y+1,2,11);
+        g.fillStyle = '#352720'; g.fillRect(5,y+6,2,2);
+      }
+      spriteCache['wood_' + v] = c;
+    }
+    // Piso da Cripta dos Ecos: pedra antiga com fissuras, pó e musgo.
+    for (let v = 0; v < 4; v++) {
+      const c = createOffscreen(48, 48), g = c.getContext('2d');
+      g.fillStyle = '#303c39'; g.fillRect(0,0,48,48);
+      for (let y = 0; y < 48; y += 16) {
+        const offset = (y/16 % 2) * 12;
+        g.fillStyle = '#495851'; g.fillRect(1,y+1,46,14);
+        g.fillStyle = '#1a2526'; g.fillRect(0,y+15,48,2);
+        for (let x = -offset; x < 48; x += 24) {
+          g.fillStyle = '#1a2526'; g.fillRect(x,y+1,2,15);
+          g.fillStyle = '#66736a'; g.fillRect(x+2,y+2,18,1);
+        }
+      }
+      if (v % 2) {
+        g.fillStyle = '#446545'; g.fillRect(3,31,8,3); g.fillRect(37,7,5,4);
+      }
+      spriteCache['crypt_' + v] = c;
+    }
+    // Parede frontal das moradias, telha de barro e colunas de madeira.
+    const houseWall = createOffscreen(48, 64), hw = houseWall.getContext('2d');
+    hw.fillStyle = 'rgba(0,0,0,.25)'; hw.fillRect(3,18,44,46);
+    hw.fillStyle = '#ad9270'; hw.fillRect(0,14,48,46);
+    hw.fillStyle = '#dac5a1'; hw.fillRect(2,17,44,24);
+    hw.fillStyle = '#7e6146'; hw.fillRect(0,41,48,18);
+    hw.fillStyle = '#5d3c25'; hw.fillRect(2,16,5,43); hw.fillRect(42,16,5,43);
+    hw.fillStyle = '#3e231d'; hw.fillRect(0,10,48,9);
+    for (let x = 0; x < 48; x += 12) {
+      hw.fillStyle = (x/12)%2 ? '#a64e35' : '#bb6140';
+      hw.fillRect(x,-0+2,11,14);
+      hw.fillStyle = '#e09360'; hw.fillRect(x+1,3,9,2);
+      hw.fillStyle = '#6c3026'; hw.fillRect(x,13,12,2);
+    }
+    hw.fillStyle = '#e6d7aa'; hw.fillRect(7,21,31,2);
+    spriteCache['house_wall'] = houseWall;
+
+    // Postes e mobiliário próprios, sem recurso gráfico protegido.
+    const lamp = createOffscreen(48,64), lg = lamp.getContext('2d');
+    lg.fillStyle = '#151316'; lg.fillRect(21,19,7,43);
+    lg.fillStyle = '#80613b'; lg.fillRect(23,19,3,41);
+    lg.fillStyle = '#2d292b'; lg.fillRect(12,12,24,6);
+    lg.fillStyle = '#f59e0b'; lg.fillRect(17,1,14,13);
+    lg.fillStyle = '#ffe5a1'; lg.fillRect(21,3,6,8);
+    lg.fillStyle = '#6d4931'; lg.fillRect(14,0,20,3);
+    lg.fillStyle = '#2d292b'; lg.fillRect(17,15,14,5);
+    spriteCache['lantern'] = lamp;
   }
 
   /**
@@ -2131,7 +2192,15 @@
         const t = activeMap[gy][gx];
         const variant = (gx * 7 + gy * 13) % 4;
 
-        if (t === TILE.DUNGEON_FLOOR || t === TILE.DUNGEON_WALL || t === TILE.ROPE_LADDER) {
+        if (t === TILE.WOOD_FLOOR || t === TILE.HOUSE_DOOR || t === TILE.FURNITURE) {
+          ctx.drawImage(spriteCache['wood_' + variant], px, py);
+        } else if (t === TILE.CRYPT_FLOOR || t === TILE.CRYPT_WALL || t === TILE.MOSS_FLOOR || t === TILE.STAIR_UP) {
+          ctx.drawImage(spriteCache['crypt_' + variant], px, py);
+          if (t === TILE.MOSS_FLOOR) {
+            ctx.fillStyle = '#3b623f'; ctx.fillRect(px+5,py+34,14,4);
+            ctx.fillRect(px+29,py+7,9,3);
+          }
+        } else if (t === TILE.DUNGEON_FLOOR || t === TILE.DUNGEON_WALL || t === TILE.ROPE_LADDER || t === TILE.STAIR_DOWN) {
           ctx.drawImage(spriteCache[`dungeon_${variant}`], px, py);
           if (t === TILE.ROPE_LADDER) {
             // Círculo de Luz de Corda (Rope Spot do Tibia)
@@ -2145,7 +2214,7 @@
           }
         } else if (t === TILE.SEWER_GRATE) {
           ctx.drawImage(spriteCache['sewer_grate'], px, py);
-        } else if (t === TILE.STONE_FLOOR || t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.ALTAR) {
+        } else if (t === TILE.STONE_FLOOR || t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.ALTAR || t === TILE.HOUSE_WALL || t === TILE.LANTERN || t === TILE.FOUNTAIN || t === TILE.MARKET_STALL) {
           ctx.drawImage(spriteCache[`stone_${variant}`], px, py);
         } else if (t === TILE.DIRT_ROAD || t === TILE.GATE_ARCH) {
           ctx.drawImage(spriteCache[`dirt_${variant % 3}`], px, py);
@@ -2183,6 +2252,16 @@
             const oy = (gy * 11 + gx * 5 + i * 13) % 44;
             ctx.fillRect(px + ox, py + oy, 5, 2);
           }
+        }
+        if (t === TILE.STAIR_UP || t === TILE.STAIR_DOWN) {
+          ctx.fillStyle = '#211d24'; ctx.fillRect(px + 6, py + 5, 36, 38);
+          ctx.fillStyle = '#9d8874';
+          for (let step = 0; step < 5; step++) {
+            ctx.fillRect(px + 8, py + 7 + step * 7, 32, 5);
+            ctx.fillStyle = '#bba687'; ctx.fillRect(px + 8, py + 7 + step * 7, 32, 1);
+            ctx.fillStyle = '#9d8874';
+          }
+          ctx.fillStyle = '#f9ba52'; ctx.fillRect(px+22,py+20,4,7);
         }
         if (t === TILE.FLOWERS) {
           ctx.fillStyle = '#14532d';
@@ -2247,7 +2326,7 @@
         const py = Math.round((gy - camY) * TILE_SIZE);
         const t = activeMap[gy][gx];
 
-        if (t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.DUNGEON_WALL) {
+        if (t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.DUNGEON_WALL || t === TILE.CRYPT_WALL) {
           ctx.drawImage(spriteCache['wall'], px - 6, py - 8);
           if (t === TILE.TORCH_WALL) {
             const flicker = Math.sin(now * 0.015 + gx) * 2;
@@ -2258,6 +2337,47 @@
             ctx.fillStyle = '#fef08a';
             ctx.fillRect(px + 22, py + 12, 4, 4);
           }
+        } else if (t === TILE.HOUSE_WALL) {
+          ctx.drawImage(spriteCache['house_wall'], px, py - 16);
+        } else if (t === TILE.HOUSE_DOOR) {
+          ctx.fillStyle = '#462b21'; ctx.fillRect(px+3,py-18,42,37);
+          ctx.fillStyle = '#b07846'; ctx.fillRect(px+6,py-16,7,38);
+          ctx.fillRect(px+35,py-16,7,38);
+          ctx.fillStyle = '#7c422f'; ctx.fillRect(px+5,py-21,38,8);
+          ctx.fillStyle = '#ddba79'; ctx.fillRect(px+10,py-20,28,3);
+          ctx.fillStyle = '#29201c'; ctx.fillRect(px+13,py-12,22,29);
+        } else if (t === TILE.FURNITURE) {
+          ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(px+10,py+35,30,5);
+          ctx.fillStyle = '#3d281b'; ctx.fillRect(px+9,py+14,30,23);
+          ctx.fillStyle = '#a37345'; ctx.fillRect(px+7,py+12,34,8);
+          ctx.fillStyle = '#e0b478'; ctx.fillRect(px+9,py+13,30,2);
+          ctx.fillStyle = '#6d4b31'; ctx.fillRect(px+11,py+24,26,4);
+          ctx.fillStyle = '#dbbd77'; ctx.fillRect(px+29,py+24,3,3);
+        } else if (t === TILE.LANTERN) {
+          ctx.fillStyle = 'rgba(255,190,72,.09)';
+          ctx.beginPath(); ctx.arc(px+24,py+17,35,0,Math.PI*2); ctx.fill();
+          ctx.drawImage(spriteCache['lantern'],px,py-18);
+          ctx.fillStyle = 'rgba(255,220,108,' + (0.55+Math.sin(now*.009+gx)*.2) + ')';
+          ctx.fillRect(px+21,py-14,6,7);
+        } else if (t === TILE.FOUNTAIN) {
+          ctx.fillStyle = '#302f2c'; ctx.fillRect(px+1,py+21,46,22);
+          ctx.fillStyle = '#a3a19a'; ctx.fillRect(px+4,py+14,40,22);
+          ctx.fillStyle = '#4b7c8d'; ctx.fillRect(px+8,py+16,32,13);
+          ctx.fillStyle = '#93daec'; ctx.fillRect(px+10,py+17,26,3);
+          ctx.fillStyle = '#7b7871'; ctx.fillRect(px+20,py+1,9,24);
+          ctx.fillStyle = '#d2cbbb'; ctx.fillRect(px+18,py-2,13,6);
+          ctx.fillStyle = '#a5e3f5';
+          ctx.fillRect(px+18,py+9,2,12+Math.round(Math.sin(now*.006)*2));
+          ctx.fillRect(px+29,py+9,2,10);
+        } else if (t === TILE.MARKET_STALL) {
+          ctx.fillStyle = '#3d261b'; ctx.fillRect(px+6,py+9,4,34); ctx.fillRect(px+39,py+9,4,34);
+          ctx.fillStyle = '#a66b39'; ctx.fillRect(px+3,py+27,43,11);
+          ctx.fillStyle = '#e0b77a'; ctx.fillRect(px+4,py+27,40,3);
+          for(let c=0;c<5;c++) {
+            ctx.fillStyle = c%2 ? '#f1ddb2' : '#8c3338';
+            ctx.fillRect(px+1+c*9,py+2,9,14);
+          }
+          ctx.fillStyle = '#d5ab54'; ctx.fillRect(px+13,py+22,7,5); ctx.fillRect(px+28,py+19,8,8);
         } else if (t === TILE.GATE_ARCH) {
           ctx.fillStyle = '#a8a29e';
           ctx.fillRect(px - 2, py - 18, 52, 64);
@@ -2467,9 +2587,15 @@
         if (t === TILE.STONE_FLOOR) mctx.fillStyle = '#787878';
         else if (t === TILE.DIRT_ROAD || t === TILE.GATE_ARCH) mctx.fillStyle = '#b08954';
         else if (t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.DUNGEON_WALL) mctx.fillStyle = '#52525b';
-        else if (t === TILE.DUNGEON_FLOOR) mctx.fillStyle = '#3f3f46';
-        else if (t === TILE.SEWER_GRATE || t === TILE.ROPE_LADDER) mctx.fillStyle = '#facc15';
-        else if (t === TILE.TREE) mctx.fillStyle = '#14532d';
+        else if (t === TILE.DUNGEON_FLOOR || t === TILE.CRYPT_FLOOR) mctx.fillStyle = '#3f3f46';
+        else if (t === TILE.CRYPT_WALL) mctx.fillStyle = '#182322';
+        else if (t === TILE.MOSS_FLOOR) mctx.fillStyle = '#36533a';
+        else if (t === TILE.HOUSE_WALL) mctx.fillStyle = '#aa6247';
+        else if (t === TILE.WOOD_FLOOR || t === TILE.HOUSE_DOOR || t === TILE.FURNITURE) mctx.fillStyle = '#9e7048';
+        else if (t === TILE.LANTERN || t === TILE.FOUNTAIN || t === TILE.MARKET_STALL) mctx.fillStyle = '#e8ae5c';
+        else if (t === TILE.SEWER_GRATE || t === TILE.ROPE_LADDER || t === TILE.STAIR_UP || t === TILE.STAIR_DOWN) mctx.fillStyle = '#facc15';
+        else if (t === TILE.TREE || t === TILE.PINE) mctx.fillStyle = '#14532d';
+        else if (t === TILE.MARSH) mctx.fillStyle = '#355a64';
         else mctx.fillStyle = '#2e5222';
 
         mctx.fillRect(x * scaleX, y * scaleY, Math.ceil(scaleX), Math.ceil(scaleY));
@@ -2582,7 +2708,7 @@
 
     addLog('Bem-vindo ao REINOS DAS CINZAS (MMORPG Clássico 7.6 • O Bastião de Cinza).', '#ffd700');
     addLog('Ivo (Cavaleiro das Cinzas) entra no Bastião das Cinzas.', '#ffffff');
-    addLog('Dica: Pise no bueiro a leste [26, 14] para descer às Catacumbas de Brasa (-1) ou saia pelo Portão Sul rumo aos Ermos Cinzentos!', '#66e0ff');
+    addLog('Dica: Pise no bueiro [26,14] para descer às Catacumbas (-1), depois na escada [28,21] para explorar a Cripta dos Ecos (-2).', '#66e0ff');
 
     requestAnimationFrame(gameLoop);
   };
