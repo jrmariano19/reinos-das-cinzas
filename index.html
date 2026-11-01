@@ -1,0 +1,2445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>REINOS DAS CINZAS — MMORPG Clássico 7.6</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Tipografia e Reset Clássico Estilo Tibia 7.6 */
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #1c1c1c;
+      font-family: Verdana, Tahoma, Arial, sans-serif;
+      font-size: 11px;
+      color: #dfdfdf;
+    }
+
+    /* Bordas Chanfradas 3D Estilo Cliente Clássico */
+    .tibia-panel {
+      background-color: #363636;
+      background-image: 
+        radial-gradient(rgba(255,255,255,0.03) 1px, transparent 0),
+        radial-gradient(rgba(0,0,0,0.2) 1px, transparent 0);
+      background-size: 8px 8px;
+      background-position: 0 0, 4px 4px;
+      border-top: 2px solid #666666;
+      border-left: 2px solid #666666;
+      border-right: 2px solid #1f1f1f;
+      border-bottom: 2px solid #1f1f1f;
+    }
+
+    .tibia-inset {
+      background-color: #222222;
+      border-top: 2px solid #151515;
+      border-left: 2px solid #151515;
+      border-right: 2px solid #555555;
+      border-bottom: 2px solid #555555;
+    }
+
+    .tibia-btn {
+      background: linear-gradient(180deg, #4b4b4b 0%, #323232 100%);
+      border-top: 2px solid #727272;
+      border-left: 2px solid #727272;
+      border-right: 2px solid #1b1b1b;
+      border-bottom: 2px solid #1b1b1b;
+      color: #e6d5b8;
+      cursor: pointer;
+      transition: filter 0.08s;
+    }
+    .tibia-btn:hover {
+      filter: brightness(1.15);
+    }
+    .tibia-btn:active, .tibia-btn.active {
+      background: #252525;
+      border-top: 2px solid #181818;
+      border-left: 2px solid #181818;
+      border-right: 2px solid #585858;
+      border-bottom: 2px solid #585858;
+      transform: translateY(1px);
+    }
+
+    /* Layout Principal do Cliente */
+    .client-grid {
+      display: grid;
+      grid-template-columns: 1fr 248px;
+      grid-template-rows: 1fr 165px;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    @media (max-width: 900px) {
+      .client-grid {
+        grid-template-columns: 1fr 205px;
+        grid-template-rows: 1fr 150px;
+      }
+    }
+
+    /* Janela do Jogo (15x11 SQMs exatos) */
+    .viewport-container {
+      grid-column: 1;
+      grid-row: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle, #252525 0%, #121212 100%);
+      padding: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #gameCanvas {
+      aspect-ratio: 15 / 11;
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      border: 3px solid #111;
+      box-shadow: 0 0 24px rgba(0,0,0,0.9), inset 0 0 8px rgba(0,0,0,0.8);
+      cursor: crosshair;
+      background-color: #111;
+    }
+
+    /* Slot de Equipamento Paperdoll */
+    .equip-slot {
+      width: 34px;
+      height: 34px;
+      background-color: #262626;
+      border-top: 2px solid #161616;
+      border-left: 2px solid #161616;
+      border-right: 2px solid #555555;
+      border-bottom: 2px solid #555555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: pointer;
+    }
+    .equip-slot:hover {
+      border-color: #a89060;
+      background-color: #2f2f2f;
+    }
+
+    /* Scrollbar Clássica */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1d1d1d;
+      border-left: 1px solid #111;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #484848;
+      border: 1px solid #666;
+    }
+
+    /* Contorno de texto pixelado */
+    .text-shadow-black {
+      text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+    }
+  </style>
+</head>
+<body>
+
+<div class="client-grid">
+  <!-- ÁREA CENTRAL/ESQUERDA SUPERIOR: VIEWPORT 15x11 SQMs -->
+  <div class="viewport-container tibia-panel">
+    <canvas id="gameCanvas" width="480" height="352"></canvas>
+
+    <!-- Indicador de Zona Segura (Protection Zone) e Dicas Rápidas -->
+    <div id="pzBadge" class="absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-emerald-300 font-bold shadow-lg">
+      <span>🕊️</span>
+      <span id="zoneLabel">Bastião das Cinzas (Zona Segura)</span>
+    </div>
+
+    <!-- Rastreador da Quest "O Primeiro Sangue" -->
+    <div class="absolute top-3 right-3 px-2.5 py-1.5 tibia-panel flex flex-col gap-0.5 text-[10px] shadow-lg max-w-[235px]">
+      <div class="flex items-center justify-between gap-2 text-amber-300 font-bold">
+        <span>📜 Missão: O Primeiro Sangue</span>
+        <span id="questCounter" class="text-white bg-amber-900/80 px-1.5 rounded">0/6</span>
+      </div>
+      <div id="questDesc" class="text-gray-300 leading-tight">
+        Cruze o portão sul para os Ermos Cinzentos e abata 6 criaturas.
+      </div>
+    </div>
+
+    <!-- Controles D-Pad Mobile (visíveis apenas em telas touch/pequenas) -->
+    <div class="md:hidden absolute bottom-3 left-3 grid grid-cols-3 gap-1 w-24 h-24 opacity-80">
+      <div></div>
+      <button class="tibia-btn rounded flex items-center justify-center font-bold" onclick="window.movePlayer(0,-1)">▲</button>
+      <div></div>
+      <button class="tibia-btn rounded flex items-center justify-center font-bold" onclick="window.movePlayer(-1,0)">◀</button>
+      <button class="tibia-btn rounded flex items-center justify-center font-bold text-[9px]" onclick="window.triggerHotkey(1)">ATK</button>
+      <button class="tibia-btn rounded flex items-center justify-center font-bold" onclick="window.movePlayer(1,0)">▶</button>
+      <div></div>
+      <button class="tibia-btn rounded flex items-center justify-center font-bold" onclick="window.movePlayer(0,1)">▼</button>
+      <div></div>
+    </div>
+  </div>
+
+  <!-- ÁREA INFERIOR: HOTKEYS (1 a 6) + CONSOLE DE LOG TIBIANO -->
+  <div class="tibia-panel flex flex-col p-1.5 gap-1.5 overflow-hidden" style="grid-column: 1; grid-row: 2;">
+    <!-- Barra de Hotkeys Clássica + Botão Correr -->
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <button id="hk1" onclick="window.triggerHotkey(1)" class="tibia-btn px-2 py-1 flex items-center gap-1.5 text-[10px] relative overflow-hidden">
+        <span class="text-amber-400 font-bold">[1]</span>
+        <span>⚔️ Golpe Brutal</span>
+        <span class="text-gray-400 text-[9px]">(Exori)</span>
+        <div id="cd1" class="absolute inset-0 bg-black/70 hidden items-center justify-center text-white font-bold"></div>
+      </button>
+
+      <button id="hk2" onclick="window.triggerHotkey(2)" class="tibia-btn px-2 py-1 flex items-center gap-1.5 text-[10px] relative overflow-hidden">
+        <span class="text-amber-400 font-bold">[2]</span>
+        <span>🛡️ Provocar</span>
+        <span class="text-gray-400 text-[9px]">(Exeta Res)</span>
+        <div id="cd2" class="absolute inset-0 bg-black/70 hidden items-center justify-center text-white font-bold"></div>
+      </button>
+
+      <button id="hk3" onclick="window.triggerHotkey(3)" class="tibia-btn px-2 py-1 flex items-center gap-1.5 text-[10px] relative overflow-hidden">
+        <span class="text-amber-400 font-bold">[3]</span>
+        <span>👢 Investida / Correr</span>
+        <span class="text-gray-400 text-[9px]">(Utani Hur)</span>
+        <div id="cd3" class="absolute inset-0 bg-black/70 hidden items-center justify-center text-white font-bold"></div>
+      </button>
+
+      <button id="hk4" onclick="window.triggerHotkey(4)" class="tibia-btn px-2 py-1 flex items-center gap-1.5 text-[10px] relative overflow-hidden">
+        <span class="text-amber-400 font-bold">[4]</span>
+        <span>🔰 Muralha</span>
+        <span class="text-gray-400 text-[9px]">(Utamo Vita)</span>
+        <div id="cd4" class="absolute inset-0 bg-black/70 hidden items-center justify-center text-white font-bold"></div>
+      </button>
+
+      <button id="hk5" onclick="window.triggerHotkey(5)" class="tibia-btn px-2 py-1 flex items-center gap-1.5 text-[10px]">
+        <span class="text-amber-400 font-bold">[5]</span>
+        <span>🧪 Vida</span>
+        <span id="hpPotCount" class="text-red-400 font-bold">×5</span>
+      </button>
+
+      <button id="hk6" onclick="window.triggerHotkey(6)" class="tibia-btn px-2 py-1 flex items-center gap-1.5 text-[10px]">
+        <span class="text-amber-400 font-bold">[6]</span>
+        <span>💧 Mana</span>
+        <span id="mpPotCount" class="text-sky-400 font-bold">×5</span>
+      </button>
+
+      <div class="ml-auto hidden lg:flex items-center gap-2 text-[10px] text-gray-400 pr-1">
+        <span>Andar: <b class="text-gray-200">WASD / Setas / Clique no Chão</b></span>
+        <span>•</span>
+        <span>Atacar: <b class="text-red-400">Clique no Monstro / Battle</b></span>
+      </div>
+    </div>
+
+    <!-- Abas do Console de Chat -->
+    <div class="flex items-center justify-between border-b border-neutral-700 pb-0.5 text-[10px]">
+      <div class="flex gap-1">
+        <button onclick="window.switchChatTab('all')" id="tab-all" class="tibia-btn active px-2.5 py-0.5 font-bold text-amber-300">Server Log</button>
+        <button onclick="window.switchChatTab('default')" id="tab-default" class="tibia-btn px-2.5 py-0.5">Default Chat</button>
+        <button onclick="window.switchChatTab('quest')" id="tab-quest" class="tibia-btn px-2.5 py-0.5">Quest Log</button>
+      </div>
+      <span id="coordsLabel" class="text-gray-400 font-mono text-[10px]">SQM: [20, 14]</span>
+    </div>
+
+    <!-- Caixa de Mensagens (Server Log) -->
+    <div id="chatLog" class="tibia-inset flex-1 p-1.5 overflow-y-auto font-mono text-[11px] space-y-0.5 leading-snug"></div>
+  </div>
+
+  <!-- BARRA LATERAL DIREITA ESTILO TIBIA (MINIMAP, STATUS, PAPERDOLL, BATTLE, LOOT) -->
+  <div class="tibia-panel flex flex-col p-1.5 gap-1.5 overflow-y-auto" style="grid-column: 2; grid-row: 1 / span 2;">
+    
+    <!-- Cabeçalho do Jogo -->
+    <div class="tibia-inset px-2 py-1 text-center flex items-center justify-between">
+      <span class="text-amber-400 font-bold tracking-wider text-[10px] text-shadow-black">🔥 REINOS DAS CINZAS</span>
+      <span id="floorBadge" class="text-[9px] bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-600 text-amber-200 font-bold">Andar: 0 (Térreo)</span>
+    </div>
+
+    <!-- Minimapa + Bússola + Botões Rápidos -->
+    <div class="flex gap-1.5 items-center">
+      <div class="tibia-inset p-0.5 relative">
+        <canvas id="minimapCanvas" width="112" height="96" class="block cursor-pointer" title="Clique no minimapa para navegar"></canvas>
+      </div>
+      <div class="flex-1 flex flex-col gap-1">
+        <!-- Rosa dos Ventos Estilo Tibia -->
+        <div class="tibia-inset h-9 flex flex-col items-center justify-center text-[8px] text-amber-200/80 font-bold leading-none">
+          <span>N</span>
+          <div class="flex items-center gap-2"><span>W</span><span class="text-amber-400">✥</span><span>E</span></div>
+          <span>S</span>
+        </div>
+        <button onclick="window.talkToNearestNPC()" class="tibia-btn py-0.5 px-1 text-[9px] font-bold text-center">
+          💬 Falar c/ NPC
+        </button>
+        <button onclick="window.openOutfitModal()" class="tibia-btn py-0.5 px-1 text-[9px] font-bold text-center text-amber-300">
+          🎨 Set Outfit
+        </button>
+        <button id="ashToggleBtn" onclick="window.toggleAshParticles()" class="tibia-btn active py-0.5 px-1 text-[8px] font-bold text-center text-orange-300" title="Alternar chuva de cinzas e brasas">
+          🌨️ Cinzas: ON
+        </button>
+      </div>
+    </div>
+
+    <!-- Barras Compactas de Status (HP, Mana, XP, Nível, Ouro, Bênção) -->
+    <div class="tibia-inset p-1.5 flex flex-col gap-1">
+      <div class="flex justify-between items-center text-[10px]">
+        <span id="playerNameTitle" class="font-bold text-amber-300">Ivo • Nv 1</span>
+        <span class="text-gray-400 text-[9px]">Cavaleiro das Cinzas</span>
+      </div>
+
+      <!-- Barra de Vida -->
+      <div class="flex items-center gap-1.5">
+        <span class="w-8 text-[10px] text-red-300 font-bold">HitP:</span>
+        <div class="flex-1 h-3 bg-neutral-900 border border-neutral-700 relative overflow-hidden">
+          <div id="hpBarFill" class="h-full bg-gradient-to-r from-red-700 to-red-500 transition-all duration-150" style="width: 100%;"></div>
+          <span id="hpText" class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white text-shadow-black">180 / 180</span>
+        </div>
+      </div>
+
+      <!-- Barra de Mana -->
+      <div class="flex items-center gap-1.5">
+        <span class="w-8 text-[10px] text-sky-300 font-bold">Mana:</span>
+        <div class="flex-1 h-3 bg-neutral-900 border border-neutral-700 relative overflow-hidden">
+          <div id="mpBarFill" class="h-full bg-gradient-to-r from-blue-800 to-sky-500 transition-all duration-150" style="width: 100%;"></div>
+          <span id="mpText" class="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white text-shadow-black">80 / 80</span>
+        </div>
+      </div>
+
+      <!-- Barra de Experiência -->
+      <div class="flex items-center gap-1.5">
+        <span class="w-8 text-[10px] text-amber-300 font-bold">Exp:</span>
+        <div class="flex-1 h-2.5 bg-neutral-900 border border-neutral-700 relative overflow-hidden">
+          <div id="xpBarFill" class="h-full bg-gradient-to-r from-amber-700 to-yellow-400 transition-all duration-200" style="width: 0%;"></div>
+          <span id="xpText" class="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white text-shadow-black">0 / 100</span>
+        </div>
+      </div>
+
+      <!-- Ouro, Bênção, Cap e Atributos -->
+      <div class="grid grid-cols-4 gap-1 pt-0.5 text-[9px] text-center border-t border-neutral-800 mt-0.5">
+        <div class="bg-neutral-900/70 py-0.5 rounded" title="Moedas de Ouro">💰 <span id="goldText" class="text-yellow-400 font-bold">45</span></div>
+        <div class="bg-neutral-900/70 py-0.5 rounded" title="Bênçãos Ativas">✨ <span id="blessText" class="text-cyan-300 font-bold">1</span></div>
+        <div class="bg-neutral-900/70 py-0.5 rounded" title="Capacidade (Oz)">⚖️ <span id="capText" class="text-emerald-300 font-bold">420</span></div>
+        <div class="bg-neutral-900/70 py-0.5 rounded" title="Ataque / Defesa">⚔️ <span id="atkDefText" class="text-gray-200 font-bold">22/18</span></div>
+      </div>
+    </div>
+
+    <!-- PAPERDOLL DE EQUIPAMENTOS + POSTURA DE COMBATE -->
+    <div class="tibia-inset p-1.5 flex items-center justify-between gap-1.5">
+      <!-- Grade Paperdoll 3x3 Clássica com Ícones Pixel Art -->
+      <div class="grid grid-cols-3 gap-1">
+        <div class="equip-slot" onclick="window.inspectEquip('amulet')" title="Amuleto de Cinza Ancestral (Arm: 1)">📿</div>
+        <div class="equip-slot" onclick="window.inspectEquip('helmet')" title="Elmo Cruzado das Cinzas (Arm: 6)">🪖</div>
+        <div class="equip-slot" onclick="window.inspectEquip('backpack')" title="Mochila de Couro Cinzento (20 Slots)">🎒</div>
+        <div id="slotWeapon" class="equip-slot" onclick="window.inspectEquip('weapon')" title="Espada Longa das Cinzas (Atk: 24, Def: 16)">🗡️</div>
+        <div class="equip-slot" onclick="window.inspectEquip('armor')" title="Armadura de Placas Forjada em Brasa (Arm: 11)">🛡️</div>
+        <div class="equip-slot" onclick="window.inspectEquip('shield')" title="Escudo Torre do Bastião (Def: 26)">⚜️</div>
+        <div class="equip-slot" onclick="window.inspectEquip('ring')" title="Anel de Brasa Viva">💍</div>
+        <div class="equip-slot" onclick="window.inspectEquip('legs')" title="Grevas de Ferro Negro (Arm: 7)">👖</div>
+        <div class="equip-slot" onclick="window.inspectEquip('boots')" title="Botas de Explorador das Cinzas (Arm: 2)">🥾</div>
+      </div>
+
+      <!-- Postura de Combate (Full Atk / Balanced / Full Def + Chase) -->
+      <div class="flex flex-col gap-1 flex-1">
+        <div class="text-[9px] text-gray-400 text-center font-bold">POSTURA</div>
+        <button id="stance-atk" onclick="window.setStance('atk')" class="tibia-btn active py-0.5 px-1 text-[9px] flex items-center justify-center gap-1" title="Ataque Total (+25% Dano)">
+          <span>⚔️</span><span>Atk Total</span>
+        </button>
+        <button id="stance-bal" onclick="window.setStance('bal')" class="tibia-btn py-0.5 px-1 text-[9px] flex items-center justify-center gap-1" title="Combate Equilibrado">
+          <span>⚖️</span><span>Equilibrado</span>
+        </button>
+        <button id="stance-def" onclick="window.setStance('def')" class="tibia-btn py-0.5 px-1 text-[9px] flex items-center justify-center gap-1" title="Defesa Total (+35% Defesa)">
+          <span>🛡️</span><span>Def Total</span>
+        </button>
+        <button id="chaseBtn" onclick="window.toggleChase()" class="tibia-btn active py-0.5 px-1 text-[9px] flex items-center justify-center gap-1 mt-0.5 text-emerald-300" title="Perseguir alvo automaticamente">
+          <span>🏃</span><span id="chaseLabel">Perseguir: ON</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- JANELA BATTLE LIST (CLIQUE PARA DAR TARGET NO MONSTRO) -->
+    <div class="tibia-inset flex flex-col flex-1 min-h-[105px] overflow-hidden">
+      <div class="bg-neutral-800 px-2 py-0.5 border-b border-neutral-700 flex justify-between items-center text-[10px] font-bold text-gray-300">
+        <span>🎯 Battle List</span>
+        <span class="text-[9px] text-gray-400">Clique p/ Atacar</span>
+      </div>
+      <div id="battleList" class="p-1 overflow-y-auto space-y-1 flex-1"></div>
+    </div>
+
+    <!-- JANELA DE LOOT DE CORPO ABERTO (DINÂMICA) -->
+    <div id="corpseLootPanel" class="tibia-inset hidden flex-col h-24 overflow-hidden border border-amber-700/70">
+      <div class="bg-amber-950/70 px-2 py-0.5 border-b border-amber-800 flex justify-between items-center text-[10px] font-bold text-amber-300">
+        <span id="corpseLootTitle">💀 Corpo Aberto</span>
+        <button onclick="window.lootAllCorpse()" class="text-[9px] bg-amber-700 hover:bg-amber-600 text-white px-1.5 rounded">Pegar Tudo</button>
+      </div>
+      <div id="corpseLootGrid" class="p-1.5 flex items-center gap-1.5 overflow-x-auto"></div>
+    </div>
+
+    <!-- JANELA MOCHILA / LOOT COLETADO -->
+    <div class="tibia-inset flex flex-col h-24 overflow-hidden">
+      <div class="bg-neutral-800 px-2 py-0.5 border-b border-neutral-700 flex justify-between items-center text-[10px] font-bold text-amber-300">
+        <span>🎒 Backpack (Inventário)</span>
+        <span class="text-[9px] text-gray-400">Clique p/ Usar</span>
+      </div>
+      <div id="backpackGrid" class="p-1.5 grid grid-cols-5 gap-1 overflow-y-auto"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL DE CUSTOMIZAÇÃO DE OUTFIT ESTILO TIBIA 7.6 ("Set Outfit") -->
+<div id="outfitModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center z-50 p-4">
+  <div class="tibia-panel w-full max-w-sm p-3 flex flex-col gap-3 shadow-2xl">
+    <div class="flex justify-between items-center border-b border-neutral-600 pb-1">
+      <span class="font-bold text-amber-300 text-xs">🎨 Customizar Outfit — Cavaleiro das Cinzas</span>
+      <button onclick="window.closeOutfitModal()" class="tibia-btn px-2 py-0.5 text-xs font-bold">✕</button>
+    </div>
+
+    <div class="flex gap-3 items-center">
+      <div class="tibia-inset p-2 flex flex-col items-center justify-center w-28 h-28">
+        <canvas id="outfitPreviewCanvas" width="64" height="64" style="image-rendering: pixelated;" class="w-20 h-20"></canvas>
+        <span class="text-[9px] text-gray-400 mt-1">Perspectiva 45°</span>
+      </div>
+
+      <div class="flex-1 flex flex-col gap-2 text-[10px]">
+        <div>
+          <label class="text-gray-300 font-bold block mb-0.5">Elmo / Pluma:</label>
+          <div class="flex gap-1" id="palette-head"></div>
+        </div>
+        <div>
+          <label class="text-gray-300 font-bold block mb-0.5">Tabardo & Capa (Primary):</label>
+          <div class="flex gap-1" id="palette-primary"></div>
+        </div>
+        <div>
+          <label class="text-gray-300 font-bold block mb-0.5">Grevas & Calça (Secondary):</label>
+          <div class="flex gap-1" id="palette-secondary"></div>
+        </div>
+        <div>
+          <label class="text-gray-300 font-bold block mb-0.5">Botas (Detail):</label>
+          <div class="flex gap-1" id="palette-detail"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-1 border-t border-neutral-700">
+      <button onclick="window.closeOutfitModal()" class="tibia-btn px-4 py-1 text-xs font-bold text-amber-300">Confirmar Outfit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * REINOS DAS CINZAS — MMORPG Clássico 7.6 • O Bastião de Cinza
+ * Engine 2D Oblíqua 45° Ultra-Fiel ao Tibia 7.6
+ * Com Gerador de Sprites Anatômicos Sombreados, Atmosfera de Cinzas, Catacumbas de Brasa (-1) e Loot Container
+ */
+(function() {
+  // Grade 15x11 SQMs renderizados a 48x48 pixels por SQM para riqueza máxima de detalhes pixel-art
+  const VIEW_COLS = 15;
+  const VIEW_ROWS = 11;
+  const TILE_SIZE = 48; // 15 * 48 = 720px | 11 * 48 = 528px
+  const MAP_SIZE = 44;
+
+  const canvas = document.getElementById('gameCanvas');
+  canvas.width = VIEW_COLS * TILE_SIZE;
+  canvas.height = VIEW_ROWS * TILE_SIZE;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  const minimapCanvas = document.getElementById('minimapCanvas');
+  const mctx = minimapCanvas.getContext('2d');
+
+  // Tipos de Terreno
+  const TILE = {
+    GRASS: 0,
+    STONE_FLOOR: 1,
+    DIRT_ROAD: 2,
+    CASTLE_WALL: 3,
+    GATE_ARCH: 4,
+    TREE: 5,
+    WATER: 6,
+    FLOWERS: 7,
+    ALTAR: 8,
+    RUIN_PILLAR: 9,
+    TORCH_WALL: 10,
+    SEWER_GRATE: 11, // Bueiro na Cidadela que desce para o Andar -1 (Catacumbas)
+    ROPE_LADDER: 12, // Escada/Corda no Subsolo para subir de volta ao Térreo
+    DUNGEON_FLOOR: 13,
+    DUNGEON_WALL: 14
+  };
+
+  // Estado do Jogador (Ivo - Cavaleiro das Cinzas)
+  const player = {
+    name: 'Ivo',
+    title: 'Cavaleiro das Cinzas',
+    level: 1,
+    floor: 0, // 0 = Superfície (Bastião das Cinzas / Ermos Cinzentos), -1 = Subsolo (Catacumbas de Brasa)
+    x: 22,
+    y: 14,
+    renderX: 22,
+    renderY: 14,
+    dir: 'down', // up, down, left, right
+    hp: 180,
+    maxHp: 180,
+    mp: 80,
+    maxMp: 80,
+    xp: 0,
+    maxXp: 100,
+    gold: 45,
+    blessing: 1,
+    cap: 420,
+    atk: 24,
+    def: 20,
+    weaponName: 'Espada Longa das Cinzas (Atk: 24, Def: 16)',
+    legendarySword: false,
+    hpPots: 5,
+    mpPots: 5,
+    stance: 'atk',
+    chase: true,
+    targetId: null,
+    moveCooldown: 0,
+    moveSpeedMs: 185,
+    hasteUntil: 0,
+    shieldWallUntil: 0,
+    lastAttackTime: 0,
+    attackAnimUntil: 0,
+    walkFrame: 0,
+    path: [],
+    questKills: 0,
+    questGoal: 6,
+    questCompleted: false,
+    outfit: {
+      head: '#d97706',      // Pluma / Detalhe dourado no elmo
+      primary: '#991b1b',   // Tabardo & Capa Vermelho Brasa
+      secondary: '#4b5563', // Grevas de Ferro Negro
+      detail: '#451a03'     // Botas de Couro Marrom
+    },
+    lootBag: [
+      { id: 'meat_1', icon: '🍖', name: 'Carne Defumada (+35 HP)', type: 'food', value: 35 },
+      { id: 'rope_1', icon: '🪢', name: 'Corda de Explorador', type: 'tool', value: 0 },
+      { id: 'torch_1', icon: '🔦', name: 'Tocha de Brasa Perene', type: 'light', value: 0 }
+    ]
+  };
+
+  const cooldowns = { 1: 0, 2: 0, 3: 0, 4: 0 };
+
+  // Mapas por Andar (0 e -1)
+  const maps = { 0: [], '-1': [] };
+  const corpses = [];
+  const bloodPools = [];
+  const floatingTexts = [];
+  const sparks = [];
+  const fireWaves = [];
+  const entities = [];
+  let openedCorpse = null;
+  let chatFilter = 'all';
+  const chatMessages = [];
+  const spriteCache = {};
+
+  // Sistema Atmosférico de Partículas de Cinza e Brasa ("Reinos das Cinzas")
+  let ashEnabled = true;
+  const ashParticles = Array.from({ length: 46 }, () => ({
+    x: Math.random() * (VIEW_COLS * TILE_SIZE),
+    y: Math.random() * (VIEW_ROWS * TILE_SIZE),
+    vx: -0.25 - Math.random() * 0.35,
+    vy: 0.4 + Math.random() * 0.55,
+    size: Math.random() < 0.8 ? 2 : 3,
+    isEmber: Math.random() < 0.18,
+    alpha: 0.35 + Math.random() * 0.45
+  }));
+
+  window.toggleAshParticles = function() {
+    ashEnabled = !ashEnabled;
+    const btn = document.getElementById('ashToggleBtn');
+    if (btn) {
+      btn.classList.toggle('active', ashEnabled);
+      btn.textContent = `🌨️ Cinzas: ${ashEnabled ? 'ON' : 'OFF'}`;
+    }
+  };
+
+  function createOffscreen(w = 48, h = 48) {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    return c;
+  }
+
+  /**
+   * GERADOR DE PIXEL ART ANATÔMICO E TEXTURAS TIBIA 7.6
+   * Desenha matrizes pixel a pixel com contorno preto 1px, sombreamento metálico e projeção oblíqua 45°
+   */
+  function buildTileSprites() {
+    // 1. Piso de Pedra da Cidadela (48x48) com textura realista de blocos de calcário e musgo
+    for (let v = 0; v < 4; v++) {
+      const c = createOffscreen(48, 48);
+      const g = c.getContext('2d');
+      g.fillStyle = '#575652';
+      g.fillRect(0, 0, 48, 48);
+
+      const blocks = [
+        [1, 1, 21, 14, '#6a6964'], [23, 1, 24, 15, '#62615c'],
+        [1, 16, 15, 14, '#5f5e59'], [17, 17, 30, 14, '#6d6c67'],
+        [1, 31, 26, 16, '#65645f'], [28, 32, 19, 15, '#5d5c57']
+      ];
+      blocks.forEach(([bx, by, bw, bh, col]) => {
+        g.fillStyle = col;
+        g.fillRect(bx, by, bw, bh);
+        // Chanfro iluminado superior/esquerdo (Luz 45° Noroeste)
+        g.fillStyle = 'rgba(255,255,255,0.12)';
+        g.fillRect(bx, by, bw, 1);
+        g.fillRect(bx, by, 1, bh);
+        // Sombra inferior/direita
+        g.fillStyle = 'rgba(0,0,0,0.28)';
+        g.fillRect(bx, by + bh - 1, bw, 1);
+        g.fillRect(bx + bw - 1, by, 1, bh);
+        // Textura granular na pedra
+        for (let p = 0; p < 12; p++) {
+          g.fillStyle = p % 2 === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)';
+          g.fillRect(bx + ((p * 7 + v * 3) % (bw - 2)) + 1, by + ((p * 5 + v) % (bh - 2)) + 1, 2, 2);
+        }
+      });
+
+      if (v === 1 || v === 3) {
+        g.fillStyle = '#48633e';
+        g.fillRect(15, 15, 4, 2);
+        g.fillRect(27, 31, 5, 2);
+      }
+      spriteCache[`stone_${v}`] = c;
+    }
+
+    // 2. Piso das Catacumbas / Subsolo -1 (Pedra úmida escura)
+    for (let v = 0; v < 4; v++) {
+      const c = createOffscreen(48, 48);
+      const g = c.getContext('2d');
+      g.fillStyle = '#2d2e33';
+      g.fillRect(0, 0, 48, 48);
+      for (let i = 0; i < 45; i++) {
+        g.fillStyle = i % 3 === 0 ? '#373940' : '#242529';
+        g.fillRect((i * 19 + v * 7) % 45, (i * 23 + v * 11) % 45, 3, 3);
+      }
+      spriteCache[`dungeon_${v}`] = c;
+    }
+
+    // 3. Grama Rica estilo Tibia (48x48)
+    for (let v = 0; v < 4; v++) {
+      const c = createOffscreen(48, 48);
+      const g = c.getContext('2d');
+      g.fillStyle = '#335c24';
+      g.fillRect(0, 0, 48, 48);
+      for (let i = 0; i < 65; i++) {
+        const rx = (i * 17 + v * 9) % 45;
+        const ry = (i * 23 + v * 13) % 45;
+        g.fillStyle = i % 3 === 0 ? '#41702f' : (i % 2 === 0 ? '#2b4f1e' : '#4d8239');
+        g.fillRect(rx, ry, 2, 3);
+      }
+      spriteCache[`grass_${v}`] = c;
+    }
+
+    // 4. Estrada Real de Terra e Cascalho (48x48)
+    for (let v = 0; v < 3; v++) {
+      const c = createOffscreen(48, 48);
+      const g = c.getContext('2d');
+      g.fillStyle = '#8a6b41';
+      g.fillRect(0, 0, 48, 48);
+      for (let i = 0; i < 70; i++) {
+        const rx = (i * 19 + v * 7) % 45;
+        const ry = (i * 29 + v * 11) % 45;
+        g.fillStyle = i % 3 === 0 ? '#9e7c4e' : (i % 2 === 0 ? '#735834' : '#b39060');
+        g.fillRect(rx, ry, 3, 2);
+      }
+      spriteCache[`dirt_${v}`] = c;
+    }
+
+    // 5. Muralha de Castelo Oblíqua 45° (56x56)
+    const wall = createOffscreen(56, 56);
+    const wg = wall.getContext('2d');
+    wg.fillStyle = 'rgba(0,0,0,0.5)';
+    wg.fillRect(10, 10, 46, 46);
+    // Topo inclinado 45°
+    wg.fillStyle = '#a8a497';
+    wg.fillRect(0, 0, 48, 14);
+    // Face frontal de blocos de pedra
+    wg.fillStyle = '#78756a';
+    wg.fillRect(0, 14, 48, 34);
+    wg.fillStyle = '#4f4d45';
+    for (let y = 22; y < 48; y += 8) {
+      wg.fillRect(0, y, 48, 1);
+    }
+    wg.fillRect(16, 14, 1, 8);
+    wg.fillRect(34, 14, 1, 8);
+    wg.fillRect(10, 22, 1, 8);
+    wg.fillRect(26, 22, 1, 8);
+    wg.fillRect(20, 30, 1, 8);
+    wg.fillRect(38, 30, 1, 8);
+    wg.strokeStyle = '#1f1e1b';
+    wg.lineWidth = 1;
+    wg.strokeRect(0.5, 0.5, 47, 47);
+    spriteCache['wall'] = wall;
+
+    // 6. Bueiro de Ferro (Sewer Grate)
+    const grate = createOffscreen(48, 48);
+    const gg = grate.getContext('2d');
+    gg.drawImage(spriteCache['stone_0'], 0, 0);
+    gg.fillStyle = '#171717';
+    gg.beginPath();
+    gg.arc(24, 24, 15, 0, Math.PI * 2);
+    gg.fill();
+    gg.strokeStyle = '#52525b';
+    gg.lineWidth = 3;
+    gg.stroke();
+    gg.strokeStyle = '#71717a';
+    gg.lineWidth = 2;
+    for (let x = 14; x <= 34; x += 5) {
+      gg.beginPath();
+      gg.moveTo(x, 11);
+      gg.lineTo(x, 37);
+      gg.stroke();
+    }
+    spriteCache['sewer_grate'] = grate;
+  }
+
+  /**
+   * DESENHA HUMANÓIDES E MONSTROS COM ANATOMIA REALISTA ESTILO TIBIA 7.6
+   * Projeção Oblíqua 45° (Inclinado para Noroeste - Topo/Esquerda), Contorno Preto 1px,
+   * Sombra no Chão, Animação de Pernas/Braços (walkFrame) e Direção (up, down, left, right)
+   */
+  function drawTibiaRealisticSprite(ctxTarget, px, py, entityType, opts = {}) {
+    const dir = opts.dir || 'down';
+    const frame = opts.frame || 0; // 0, 1, 2
+    const isAttacking = opts.isAttacking || false;
+
+    ctxTarget.save();
+    // Projeção Oblíqua 45° Clássica do Tibia: Pés no centro do SQM, corpo inclinado para (-6, -10)
+    ctxTarget.translate(Math.round(px), Math.round(py));
+
+    // Sombra projetada no chão do SQM
+    ctxTarget.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctxTarget.beginPath();
+    const shadowRadius = (entityType === 'dragon' || entityType === 'cyclops') ? 19 : 13;
+    ctxTarget.ellipse(24, 38, shadowRadius, shadowRadius * 0.48, -0.2, 0, Math.PI * 2);
+    ctxTarget.fill();
+
+    // Aura de Escudo Mágico (Utamo Vita)
+    if (opts.shieldWall) {
+      ctxTarget.strokeStyle = 'rgba(56, 189, 248, 0.9)';
+      ctxTarget.lineWidth = 2;
+      ctxTarget.beginPath();
+      ctxTarget.arc(21, 22, 22, 0, Math.PI * 2);
+      ctxTarget.stroke();
+    }
+
+    // Passos alternados (animação das pernas e balanço dos braços)
+    const legSwing = frame === 1 ? 3 : (frame === 2 ? -3 : 0);
+    const armSwing = isAttacking ? 6 : (frame === 1 ? -2 : (frame === 2 ? 2 : 0));
+
+    // Auxiliar para desenhar caixa sombreada com contorno preto 1px (Estética autêntica de Sprite Tibiano)
+    function pixelPart(x, y, w, h, mainColor, highlightColor, shadowColor) {
+      ctxTarget.fillStyle = '#09090b'; // Contorno preto externo 1px
+      ctxTarget.fillRect(x - 1, y - 1, w + 2, h + 2);
+      ctxTarget.fillStyle = mainColor;
+      ctxTarget.fillRect(x, y, w, h);
+      if (highlightColor) {
+        ctxTarget.fillStyle = highlightColor;
+        ctxTarget.fillRect(x, y, w, 1);
+        ctxTarget.fillRect(x, y, 1, h);
+      }
+      if (shadowColor) {
+        ctxTarget.fillStyle = shadowColor;
+        ctxTarget.fillRect(x, y + h - 1, w, 1);
+        ctxTarget.fillRect(x + w - 1, y, 1, h);
+      }
+    }
+
+    // =========================================================================
+    // 1. CAVALEIRO DE VALDORIA (IVO) & GUARDAS REAIS (Anatomia Knight/Warrior 7.6)
+    // =========================================================================
+    if (entityType === 'knight' || entityType === 'guard' || entityType === 'commander') {
+      const cHead = opts.outfit ? opts.outfit.head : (entityType === 'commander' ? '#f59e0b' : '#38bdf8');
+      const cPri  = opts.outfit ? opts.outfit.primary : (entityType === 'guard' ? '#1d4ed8' : '#991b1b');
+      const cSec  = opts.outfit ? opts.outfit.secondary : '#4b5563';
+      const cDet  = opts.outfit ? opts.outfit.detail : '#3f271d';
+
+      // Coordenadas base inclinadas a 45° para Noroeste
+      const bx = 10;
+      const by = 4;
+
+      // Capa esvoaçante nas costas (visível especialmente olhando para norte/leste/sul)
+      pixelPart(bx + 4, by + 13, 16, 16, cPri, '#ef4444', '#450a0a');
+
+      // Pernas (Grevas metálicas articuladas + Botas com passo alternado)
+      pixelPart(bx + 5, by + 25 + legSwing * 0.5, 6, 7, cSec, '#9ca3af', '#1f2937');
+      pixelPart(bx + 13, by + 25 - legSwing * 0.5, 6, 7, cSec, '#9ca3af', '#1f2937');
+      // Botas de couro pesado
+      pixelPart(bx + 5, by + 31 + legSwing * 0.5, 6, 4, cDet, '#78350f', '#1c1917');
+      pixelPart(bx + 13, by + 31 - legSwing * 0.5, 6, 4, cDet, '#78350f', '#1c1917');
+
+      // Torso Anatômico (Peitoral de Aço + Tabardo Heráldico com Cruz Dourada)
+      pixelPart(bx + 4, by + 13, 16, 13, '#6b7280', '#d1d5db', '#374151');
+      pixelPart(bx + 6, by + 14, 12, 11, cPri, '#f87171', '#450a0a');
+      // Cruz Templária Dourada no Peito (quando não está de costas)
+      if (dir !== 'up') {
+        ctxTarget.fillStyle = '#fbbf24';
+        ctxTarget.fillRect(bx + 11, by + 15, 2, 9);
+        ctxTarget.fillRect(bx + 8, by + 18, 8, 2);
+      }
+
+      // Ombreiras de Placa Real (Pauldrons)
+      pixelPart(bx + 1, by + 12, 5, 6, '#9ca3af', '#f3f4f6', '#374151');
+      pixelPart(bx + 18, by + 12, 5, 6, '#9ca3af', '#f3f4f6', '#374151');
+
+      // Cabeça + Elmo Cruzado de Aço com Sombreamento Espelhado e Pluma
+      pixelPart(bx + 6, by + 1, 12, 11, '#9ca3af', '#f9fafb', '#374151');
+      // Pluma / Crista do Elmo (Customizável)
+      pixelPart(bx + 9, by - 3, 6, 4, cHead, '#fef08a', '#78350f');
+
+      // Visor em T do Elmo Cruzado (muda conforme a direção que o personagem olha)
+      ctxTarget.fillStyle = '#111827';
+      if (dir === 'down') {
+        ctxTarget.fillRect(bx + 8, by + 5, 8, 2);
+        ctxTarget.fillRect(bx + 11, by + 5, 2, 6);
+        ctxTarget.fillStyle = '#fbbf24'; // Detalhe de ouro no elmo
+        ctxTarget.fillRect(bx + 7, by + 4, 10, 1);
+      } else if (dir === 'left') {
+        ctxTarget.fillRect(bx + 6, by + 5, 5, 2);
+        ctxTarget.fillRect(bx + 7, by + 5, 2, 5);
+      } else if (dir === 'right') {
+        ctxTarget.fillRect(bx + 13, by + 5, 5, 2);
+        ctxTarget.fillRect(bx + 15, by + 5, 2, 5);
+      }
+
+      // Escudo Torre de Valdoria (Braço Esquerdo) com Brasão Dourado
+      const shX = dir === 'left' ? bx - 3 : bx - 2;
+      const shY = by + 13 - armSwing * 0.4;
+      pixelPart(shX, shY, 9, 13, '#1e3a8a', '#93c5fd', '#172554');
+      ctxTarget.fillStyle = '#fbbf24';
+      ctxTarget.fillRect(shX + 3, shY + 2, 3, 9);
+      ctxTarget.fillRect(shX + 1, shY + 5, 7, 2);
+
+      // Espada Longa de Aço / Lâmina Solar (Braço Direito) em ângulo oblíquo 45°
+      const swX = bx + 21;
+      const swY = by + 12 + armSwing;
+      // Punho e Guarda-mão dourada
+      pixelPart(swX - 2, swY + 2, 7, 2, '#d97706', '#fef08a', '#78350f');
+      // Lâmina diagonal chanfrada com reflexo metálico
+      const bladeColor = opts.legendary ? '#fde047' : '#e2e8f0';
+      const bladeEdge  = opts.legendary ? '#ffffff' : '#ffffff';
+      pixelPart(swX, swY - 12, 4, 14, bladeColor, bladeEdge, '#64748b');
+    }
+
+    // =========================================================================
+    // 2. ANCIÃO KAELEN / SACERDOTISA (Mage / Noble Robe com Barba e Cajado)
+    // =========================================================================
+    else if (entityType === 'mage' || entityType === 'healer') {
+      const bx = 11, by = 5;
+      const robeCol = entityType === 'mage' ? '#581c87' : '#0369a1';
+      // Túnica longa com dobras sombreadas
+      pixelPart(bx + 4, by + 13, 15, 20, robeCol, '#a855f7', '#1e1b4b');
+      ctxTarget.fillStyle = '#fbbf24'; // Cinturão rúnico dourado
+      ctxTarget.fillRect(bx + 5, by + 20, 13, 2);
+      ctxTarget.fillRect(bx + 10, by + 20, 3, 12);
+
+      // Cabeça + Rosto + Longa Barba Branca de Sábio
+      pixelPart(bx + 6, by + 2, 11, 10, '#fde68a', '#ffffff', '#b45309');
+      if (entityType === 'mage') {
+        // Chapéu Pontudo / Capuz Arcano
+        pixelPart(bx + 4, by - 3, 15, 6, '#3b0764', '#9333ea', '#111827');
+        // Barba Branca
+        pixelPart(bx + 7, by + 9, 9, 8, '#f3f4f6', '#ffffff', '#9ca3af');
+      }
+      ctxTarget.fillStyle = '#111827';
+      ctxTarget.fillRect(bx + 8, by + 6, 2, 2);
+      ctxTarget.fillRect(bx + 13, by + 6, 2, 2);
+
+      // Cajado de Cristal Luminoso
+      pixelPart(bx + 21, by + 2, 3, 29, '#78350f', '#b45309', '#292524');
+      pixelPart(bx + 19, by - 2, 7, 6, '#38bdf8', '#e0f2fe', '#0284c7');
+    }
+
+    // =========================================================================
+    // 3. RATO DE ESGOTO (Cave Rat - Pelagem sombreada, orelhas, bigodes e cauda)
+    // =========================================================================
+    else if (entityType === 'rat') {
+      const rx = 12, ry = 18 + Math.abs(legSwing);
+      // Cauda rosada segmentada
+      pixelPart(rx + 17, ry + 9, 8, 3, '#f472b6', '#fbcfe8', '#9d174d');
+      // Corpo arqueado de roedor
+      pixelPart(rx + 4, ry + 3, 14, 10, '#78716c', '#a8a29e', '#44403c');
+      // Cabeça pontuda e orelhas arredondadas
+      pixelPart(rx, ry + 5, 7, 7, '#57534e', '#a8a29e', '#292524');
+      pixelPart(rx + 4, ry + 2, 4, 4, '#fda4af', '#ffe4e6', '#881337');
+      // Olho vermelho brilhante
+      ctxTarget.fillStyle = '#ef4444';
+      ctxTarget.fillRect(rx + 2, ry + 7, 2, 2);
+      // Patinhas com garras
+      pixelPart(rx + 5, ry + 12, 3, 3, '#fda4af', null, '#881337');
+      pixelPart(rx + 13, ry + 12, 3, 3, '#fda4af', null, '#881337');
+    }
+
+    // =========================================================================
+    // 4. ORC GUERREIRO (Orc Warrior - Pele verde musculosa, armadura de couro/osso, cimitarra)
+    // =========================================================================
+    else if (entityType === 'orc') {
+      const bx = 9, by = 4;
+      // Pernas musculosas e botas de couro
+      pixelPart(bx + 5, by + 25 + legSwing * 0.5, 6, 8, '#15803d', '#4ade80', '#052e16');
+      pixelPart(bx + 13, by + 25 - legSwing * 0.5, 6, 8, '#15803d', '#4ade80', '#052e16');
+      pixelPart(bx + 5, by + 31 + legSwing * 0.5, 6, 4, '#451a03', '#78350f', '#09090b');
+      pixelPart(bx + 13, by + 31 - legSwing * 0.5, 6, 4, '#451a03', '#78350f', '#09090b');
+
+      // Peitoral de couro cravejado + músculos verdes
+      pixelPart(bx + 3, by + 12, 18, 14, '#166534', '#4ade80', '#052e16');
+      pixelPart(bx + 5, by + 13, 14, 12, '#78350f', '#b45309', '#292524');
+      // Tachas metálicas no peitoral
+      ctxTarget.fillStyle = '#d4d4d8';
+      ctxTarget.fillRect(bx + 7, by + 15, 2, 2);
+      ctxTarget.fillRect(bx + 15, by + 15, 2, 2);
+      ctxTarget.fillRect(bx + 11, by + 19, 2, 2);
+
+      // Cabeça de Orc com presas brancas (Tusks) e Elmo de Ferro com Chifres
+      pixelPart(bx + 6, by + 2, 12, 10, '#15803d', '#4ade80', '#052e16');
+      pixelPart(bx + 5, by, 14, 5, '#52525b', '#a1a1aa', '#18181b');
+      // Olhos vermelhos ferozes e presas inferiores
+      ctxTarget.fillStyle = '#ef4444';
+      ctxTarget.fillRect(bx + 8, by + 6, 2, 2);
+      ctxTarget.fillRect(bx + 14, by + 6, 2, 2);
+      ctxTarget.fillStyle = '#fef3c7';
+      ctxTarget.fillRect(bx + 7, by + 9, 2, 3);
+      ctxTarget.fillRect(bx + 15, by + 9, 2, 3);
+
+      // Escudo Redondo de Madeira Cravejado
+      pixelPart(bx - 3, by + 13, 9, 11, '#78350f', '#b45309', '#292524');
+      pixelPart(bx, by + 16, 3, 5, '#a1a1aa', '#ffffff', '#27272a');
+
+      // Cimitarra Serrilhada
+      pixelPart(bx + 21, by + 3 + armSwing, 5, 16, '#d4d4d8', '#ffffff', '#52525b');
+    }
+
+    // =========================================================================
+    // 5. TROLL DAS ROCHAS (Pelagem marrom-avermelhada densa, tanga e clava de madeira)
+    // =========================================================================
+    else if (entityType === 'troll') {
+      const bx = 8, by = 3;
+      pixelPart(bx + 5, by + 25 + legSwing * 0.5, 7, 9, '#7c2d12', '#c2410c', '#431407');
+      pixelPart(bx + 14, by + 25 - legSwing * 0.5, 7, 9, '#7c2d12', '#c2410c', '#431407');
+      // Torso corcunda peludo
+      pixelPart(bx + 2, by + 10, 22, 16, '#9a3412', '#ea580c', '#431407');
+      // Tanga de couro rústico
+      pixelPart(bx + 5, by + 22, 16, 5, '#78350f', '#a16207', '#292524');
+      // Cabeça de Troll com orelhas pontudas e olhos amarelos
+      pixelPart(bx + 6, by + 2, 13, 10, '#7c2d12', '#ea580c', '#431407');
+      ctxTarget.fillStyle = '#facc15';
+      ctxTarget.fillRect(bx + 8, by + 6, 3, 2);
+      ctxTarget.fillRect(bx + 14, by + 6, 3, 2);
+      // Clava Gigante de Madeira com Espinhos
+      pixelPart(bx + 22, by + 4 + armSwing, 7, 19, '#5c3a21', '#854d0e', '#27170c');
+      ctxTarget.fillStyle = '#e5e7eb';
+      ctxTarget.fillRect(bx + 21, by + 6 + armSwing, 2, 2);
+      ctxTarget.fillRect(bx + 29, by + 9 + armSwing, 2, 2);
+    }
+
+    // =========================================================================
+    // 6. CICLOPE ANCIÃO (Gigante 48x48 de um olho só, musculatura pesada)
+    // =========================================================================
+    else if (entityType === 'cyclops') {
+      const bx = 5, by = -2;
+      // Pernas colossais
+      pixelPart(bx + 7, by + 28 + legSwing * 0.5, 8, 11, '#d97706', '#fbbf24', '#78350f');
+      pixelPart(bx + 19, by + 28 - legSwing * 0.5, 8, 11, '#d97706', '#fbbf24', '#78350f');
+      // Tanga de pele de urso
+      pixelPart(bx + 6, by + 24, 22, 7, '#57534e', '#a8a29e', '#1c1917');
+      // Peitoral e ombros largos de gigante
+      pixelPart(bx + 3, by + 9, 28, 16, '#f59e0b', '#fde68a', '#92400e');
+      // Cabeça maciça com UM ÚNICO OLHO CENTRAL VERMELHO BRILHANTE
+      pixelPart(bx + 10, by - 1, 14, 12, '#f59e0b', '#fde68a', '#92400e');
+      pixelPart(bx + 14, by + 3, 6, 5, '#ffffff', '#ffffff', '#ef4444');
+      ctxTarget.fillStyle = '#dc2626';
+      ctxTarget.fillRect(bx + 16, by + 4, 3, 3);
+      // Clava de Pedra Maciça
+      pixelPart(bx + 29, by + 6 + armSwing, 8, 22, '#78716c', '#d6d3d1', '#292524');
+    }
+
+    // =========================================================================
+    // 7. DRAGÃO DE VALDORIA (Tibia Dragon 48x48: Asas abertas, chifres, cauda e escamas)
+    // =========================================================================
+    else if (entityType === 'dragon') {
+      const bx = 2, by = -4;
+      const wingFlap = frame === 1 ? -3 : 2;
+
+      // Cauda reptiliana segmentada com espinhos
+      pixelPart(bx + 16, by + 33, 18, 6, '#15803d', '#4ade80', '#052e16');
+      // Asa Esquerda e Asa Direita abertas em 45°
+      pixelPart(bx - 4, by + 8 + wingFlap, 15, 18, '#166534', '#22c55e', '#052e16');
+      pixelPart(bx + 2, by + 11 + wingFlap, 10, 13, '#991b1b', '#ef4444', '#450a0a');
+      pixelPart(bx + 29, by + 6 + wingFlap, 15, 18, '#166534', '#22c55e', '#052e16');
+      pixelPart(bx + 31, by + 9 + wingFlap, 10, 13, '#991b1b', '#ef4444', '#450a0a');
+
+      // Corpo escamoso central e peito vermelho-dourado
+      pixelPart(bx + 10, by + 12, 20, 22, '#15803d', '#4ade80', '#052e16');
+      pixelPart(bx + 14, by + 15, 12, 17, '#b45309', '#facc15', '#78350f');
+
+      // Pescoço e Cabeça de Dragão com Chifres de Marfim e Olhos de Fogo
+      pixelPart(bx + 12, by + 1, 16, 13, '#16a34a', '#86efac', '#052e16');
+      // Chifres superiores
+      pixelPart(bx + 9, by - 3, 5, 6, '#fef3c7', '#ffffff', '#92400e');
+      pixelPart(bx + 26, by - 3, 5, 6, '#fef3c7', '#ffffff', '#92400e');
+      // Olhos e narinas fumegantes
+      ctxTarget.fillStyle = '#fef08a';
+      ctxTarget.fillRect(bx + 15, by + 5, 3, 3);
+      ctxTarget.fillRect(bx + 22, by + 5, 3, 3);
+      ctxTarget.fillStyle = '#ef4444';
+      ctxTarget.fillRect(bx + 16, by + 11, 2, 2);
+      ctxTarget.fillRect(bx + 22, by + 11, 2, 2);
+    }
+
+    ctxTarget.restore();
+  }
+
+  // Constrói o Mapa do Térreo (0: Cidadela de Valdoria + Campos) e Subsolo (-1: Catacumbas)
+  function initWorldMap() {
+    for (let y = 0; y < MAP_SIZE; y++) {
+      maps[0][y] = [];
+      maps['-1'][y] = [];
+      for (let x = 0; x < MAP_SIZE; x++) {
+        // Subsolo (-1): Catacumbas de Valdoria (x: 14..30, y: 8..24)
+        if (x >= 14 && x <= 30 && y >= 8 && y <= 24) {
+          const isDWall = (x === 14 || x === 30 || y === 8 || y === 24);
+          maps['-1'][y][x] = isDWall ? TILE.DUNGEON_WALL : TILE.DUNGEON_FLOOR;
+        } else {
+          maps['-1'][y][x] = TILE.DUNGEON_WALL;
+        }
+
+        // Superfície (0)
+        if (x === 0 || y === 0 || x === MAP_SIZE - 1 || y === MAP_SIZE - 1) {
+          maps[0][y][x] = TILE.TREE;
+          continue;
+        }
+
+        // Interior da Cidadela de Valdoria (x: 10..34, y: 4..19)
+        if (x >= 10 && x <= 34 && y >= 4 && y >= 4 && y <= 19) {
+          const isBorder = (x === 10 || x === 34 || y === 4 || y === 19);
+          const isSouthGate = (y === 19 && x >= 20 && x <= 24);
+
+          if (isSouthGate) {
+            maps[0][y][x] = (x === 20 || x === 24) ? TILE.GATE_ARCH : TILE.DIRT_ROAD;
+          } else if (isBorder) {
+            maps[0][y][x] = (x % 4 === 0 && y === 19) ? TILE.TORCH_WALL : TILE.CASTLE_WALL;
+          } else if (x >= 21 && x <= 23) {
+            maps[0][y][x] = TILE.DIRT_ROAD;
+          } else {
+            maps[0][y][x] = TILE.STONE_FLOOR;
+          }
+        } else {
+          if (x >= 21 && x <= 23 && y > 19 && y < 40) {
+            maps[0][y][x] = TILE.DIRT_ROAD;
+          } else {
+            maps[0][y][x] = TILE.GRASS;
+          }
+        }
+      }
+    }
+
+    // Elementos fiéis ao Bastião das Cinzas (Andar 0)
+    maps[0][15][16] = TILE.FLOWERS;
+    maps[0][12][15] = TILE.FLOWERS;
+    maps[0][15][28] = TILE.TREE;
+    maps[0][10][29] = TILE.TREE;
+    maps[0][8][18]  = TILE.ALTAR;
+    maps[0][14][26] = TILE.SEWER_GRATE; // Bueiro interativo para descer às Catacumbas de Brasa (-1)
+    maps['-1'][14][26] = TILE.ROPE_LADDER; // Ponto de corda/escada para subir de volta ao Térreo (0)
+
+    // Pilares nas Catacumbas (-1)
+    [[18,12],[26,12],[18,18],[26,18]].forEach(([px, py]) => {
+      maps['-1'][py][px] = TILE.RUIN_PILLAR;
+    });
+
+    // Árvores e Ruínas ao Sul da Cidadela (Andar 0)
+    const trees = [
+      [13,23],[16,25],[28,23],[31,26],[12,30],[18,33],[27,31],[33,34],
+      [9,22],[36,24],[14,37],[29,37],[25,27],[19,24]
+    ];
+    trees.forEach(([tx, ty]) => { if (maps[0][ty]) maps[0][ty][tx] = TILE.TREE; });
+
+    const ruins = [[15,28],[17,28],[15,31],[28,29],[30,29],[29,33]];
+    ruins.forEach(([rx, ry]) => { if (maps[0][ty]) maps[0][ry][rx] = TILE.RUIN_PILLAR; });
+  }
+
+  // Inicializa NPCs e Criaturas Clássicas do Tibia no Térreo (0) e Subsolo (-1)
+  function initEntities() {
+    entities.length = 0;
+
+    // NPCs do Bastião das Cinzas (Andar 0)
+    entities.push({
+      id: 'npc_kaelen',
+      name: 'Ancião Kaelen (Oráculo das Cinzas)',
+      type: 'npc',
+      sprite: 'mage',
+      floor: 0,
+      x: 23,
+      y: 12,
+      renderX: 23,
+      renderY: 12,
+      dir: 'down',
+      hp: 100,
+      maxHp: 100,
+      dialog: 'Saudações, Ivo! Desça pelo bueiro a leste para expurgar as Catacumbas de Brasa ou cruze o Portão Sul rumo aos Ermos Cinzentos para enfrentar o Dragão das Cinzas!'
+    });
+
+    entities.push({
+      id: 'npc_guard',
+      name: 'Guarda do Bastião',
+      type: 'npc',
+      sprite: 'guard',
+      floor: 0,
+      x: 19,
+      y: 17,
+      renderX: 19,
+      renderY: 17,
+      dir: 'down',
+      hp: 100,
+      maxHp: 100,
+      dialog: 'Mantenha a guarda erguida, Cavaleiro das Cinzas! Nos Ermos Cinzentos ao sul, clique nos corpos abatidos para recolher o Loot.'
+    });
+
+    entities.push({
+      id: 'npc_healer',
+      name: 'Sacerdotisa Lyra',
+      type: 'npc',
+      sprite: 'healer',
+      floor: 0,
+      x: 18,
+      y: 9,
+      renderX: 18,
+      renderY: 9,
+      dir: 'down',
+      hp: 100,
+      maxHp: 100,
+      dialog: 'Que a chama eterna do Bastião purifique as cinzas da sua armadura e restaure seu sangue e mana!'
+    });
+
+    // Monstros dos Ermos Cinzentos (Floor 0 - Sul do Portão)
+    const surfaceSpawns = [
+      { name: 'Rato das Cinzas', sprite: 'rat', x: 21, y: 22, hp: 35, atk: 7, xp: 20, gold: [5, 12] },
+      { name: 'Troll Cinzento', sprite: 'troll', x: 25, y: 23, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
+      { name: 'Troll Cinzento', sprite: 'troll', x: 18, y: 25, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 23, y: 27, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 16, y: 29, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 27, y: 28, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 20, y: 33, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
+      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 27, y: 34, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
+      { name: 'Dragão das Cinzas', sprite: 'dragon', x: 22, y: 38, hp: 320, atk: 34, xp: 280, gold: [100, 220] }
+    ];
+
+    surfaceSpawns.forEach((m, idx) => {
+      entities.push({
+        id: `mob_surf_${idx}`,
+        name: m.name,
+        type: 'monster',
+        sprite: m.sprite,
+        floor: 0,
+        x: m.x,
+        y: m.y,
+        spawnX: m.x,
+        spawnY: m.y,
+        renderX: m.x,
+        renderY: m.y,
+        dir: 'down',
+        walkFrame: 0,
+        hp: m.hp,
+        maxHp: m.hp,
+        atk: m.atk,
+        xp: m.xp,
+        goldRange: m.gold,
+        lastMove: 0,
+        lastAtk: 0,
+        dead: false,
+        respawnAt: 0
+      });
+    });
+
+    // Monstros das Catacumbas de Brasa (Floor -1)
+    const sewerSpawns = [
+      { name: 'Rato de Brasa', sprite: 'rat', x: 23, y: 14, hp: 35, atk: 7, xp: 20, gold: [5, 14] },
+      { name: 'Rato de Brasa', sprite: 'rat', x: 25, y: 17, hp: 35, atk: 7, xp: 20, gold: [5, 14] },
+      { name: 'Rato de Brasa', sprite: 'rat', x: 20, y: 15, hp: 35, atk: 7, xp: 20, gold: [5, 14] },
+      { name: 'Troll das Catacumbas', sprite: 'troll', x: 19, y: 20, hp: 65, atk: 12, xp: 35, gold: [12, 25] },
+      { name: 'Orc de Ferro Negro', sprite: 'orc', x: 25, y: 21, hp: 95, atk: 17, xp: 55, gold: [18, 38] }
+    ];
+
+    sewerSpawns.forEach((m, idx) => {
+      entities.push({
+        id: `mob_sewer_${idx}`,
+        name: m.name,
+        type: 'monster',
+        sprite: m.sprite,
+        floor: -1,
+        x: m.x,
+        y: m.y,
+        spawnX: m.x,
+        spawnY: m.y,
+        renderX: m.x,
+        renderY: m.y,
+        dir: 'down',
+        walkFrame: 0,
+        hp: m.hp,
+        maxHp: m.hp,
+        atk: m.atk,
+        xp: m.xp,
+        goldRange: m.gold,
+        lastMove: 0,
+        lastAtk: 0,
+        dead: false,
+        respawnAt: 0
+      });
+    });
+  }
+
+  function isProtectionZone(floor, x, y) {
+    if (floor !== 0) return false;
+    return (x >= 11 && x <= 33 && y >= 5 && y <= 18);
+  }
+
+  function isTileBlocked(floor, x, y, ignoreEntityId = null) {
+    if (x < 0 || y < 0 || x >= MAP_SIZE || y >= MAP_SIZE) return true;
+    const t = maps[floor][y][x];
+    if (
+      t === TILE.CASTLE_WALL ||
+      t === TILE.GATE_ARCH ||
+      t === TILE.TREE ||
+      t === TILE.WATER ||
+      t === TILE.ALTAR ||
+      t === TILE.RUIN_PILLAR ||
+      t === TILE.TORCH_WALL ||
+      t === TILE.DUNGEON_WALL
+    ) {
+      return true;
+    }
+    if (player.floor === floor && player.x === x && player.y === y && ignoreEntityId !== 'player') return true;
+    for (const e of entities) {
+      if (!e.dead && e.floor === floor && e.id !== ignoreEntityId && e.x === x && e.y === y) return true;
+    }
+    return false;
+  }
+
+  // Console de Log Clássico do Tibia
+  function addLog(text, color = '#dfdfdf', category = 'all') {
+    const now = new Date();
+    const timeStr = now.toTimeString().slice(0, 5);
+    chatMessages.push({ timeStr, text, color, category });
+    if (chatMessages.length > 80) chatMessages.shift();
+    renderChatLog();
+  }
+
+  function renderChatLog() {
+    const box = document.getElementById('chatLog');
+    const filtered = chatMessages.filter(m => chatFilter === 'all' || m.category === chatFilter);
+    box.innerHTML = filtered.map(m =>
+      `<div style="color:${m.color}"><span class="text-neutral-500">${m.timeStr}</span> ${m.text}</div>`
+    ).join('');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  window.switchChatTab = function(tab) {
+    chatFilter = tab;
+    ['all', 'default', 'quest'].forEach(t => {
+      const btn = document.getElementById(`tab-${t}`);
+      if (btn) btn.classList.toggle('active', t === tab);
+    });
+    renderChatLog();
+  };
+
+  function addFloatingText(floor, gridX, gridY, text, color = '#ff3333', isSpeech = false) {
+    floatingTexts.push({
+      floor,
+      x: gridX,
+      y: gridY,
+      text,
+      color,
+      isSpeech,
+      createdAt: performance.now(),
+      duration: isSpeech ? 2100 : 1100
+    });
+  }
+
+  function addSpark(floor, gridX, gridY, type = 'blood') {
+    sparks.push({
+      floor,
+      x: gridX,
+      y: gridY,
+      type,
+      createdAt: performance.now(),
+      duration: 380
+    });
+  }
+
+  // Verifica se o jogador pisou no Bueiro (Descer) ou Escada/Corda (Subir)
+  function checkFloorTransition() {
+    const currentTile = maps[player.floor][player.y][player.x];
+    if (player.floor === 0 && currentTile === TILE.SEWER_GRATE) {
+      player.floor = -1;
+      player.targetId = null;
+      player.path = [];
+      addLog('Você desceu pelo bueiro para as Catacumbas de Brasa (Andar -1).', '#fbbf24');
+      updateZoneUI();
+      renderBattleList();
+    } else if (player.floor === -1 && currentTile === TILE.ROPE_LADDER) {
+      player.floor = 0;
+      player.targetId = null;
+      player.path = [];
+      addLog('Você usou sua corda e subiu de volta para o Bastião das Cinzas (Térreo).', '#fbbf24');
+      updateZoneUI();
+      renderBattleList();
+    }
+  }
+
+  window.movePlayer = function(dx, dy) {
+    const now = performance.now();
+    const speed = now < player.hasteUntil ? 110 : player.moveSpeedMs;
+    if (now - player.moveCooldown < speed) return false;
+
+    if (dx < 0) player.dir = 'left';
+    else if (dx > 0) player.dir = 'right';
+    else if (dy < 0) player.dir = 'up';
+    else if (dy > 0) player.dir = 'down';
+
+    const nx = player.x + dx;
+    const ny = player.y + dy;
+
+    if (!isTileBlocked(player.floor, nx, ny, 'player')) {
+      player.x = nx;
+      player.y = ny;
+      player.moveCooldown = now;
+      player.walkFrame = player.walkFrame === 1 ? 2 : 1;
+      checkFloorTransition();
+      updateZoneUI();
+      return true;
+    } else {
+      addSpark(player.floor, nx, ny, 'puff');
+      return false;
+    }
+  };
+
+  function updateZoneUI() {
+    const inPZ = isProtectionZone(player.floor, player.x, player.y);
+    const badge = document.getElementById('pzBadge');
+    const label = document.getElementById('zoneLabel');
+    const coords = document.getElementById('coordsLabel');
+    const floorBadge = document.getElementById('floorBadge');
+
+    coords.textContent = `SQM: [${player.x}, ${player.y}, ${player.floor}]`;
+    floorBadge.textContent = player.floor === 0 ? 'Andar: 0 (Térreo)' : 'Andar: -1 (Catacumbas)';
+
+    if (player.floor === -1) {
+      badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-amber-400 font-bold shadow-lg';
+      label.textContent = 'Catacumbas de Brasa (Andar -1)';
+    } else if (inPZ) {
+      badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-emerald-300 font-bold shadow-lg';
+      label.textContent = 'Bastião das Cinzas (Zona Segura)';
+    } else {
+      badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-red-400 font-bold shadow-lg';
+      label.textContent = 'Ermos Cinzentos (Zona de Combate)';
+    }
+  }
+
+  // Hotkeys Clássicas (1 a 6) com Falas Laranjas do Tibia ("Ivo says: exori")
+  window.triggerHotkey = function(slot) {
+    const now = performance.now();
+
+    if (slot === 1) {
+      if (now < cooldowns[1]) return;
+      if (player.mp < 15) {
+        addLog('Mana insuficiente para Golpe Brutal (15 MP).', '#ff6666');
+        return;
+      }
+      player.mp -= 15;
+      cooldowns[1] = now + 2000;
+      player.attackAnimUntil = now + 350;
+      addFloatingText(player.floor, player.x, player.y - 0.5, 'Ivo says: exori', '#ff9933', true);
+
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          addSpark(player.floor, player.x + dx, player.y + dy, 'magic');
+          const mob = entities.find(e => !e.dead && e.floor === player.floor && e.type === 'monster' && e.x === player.x + dx && e.y === player.y + dy);
+          if (mob) {
+            const dmg = Math.floor(player.atk * 1.45 + Math.random() * 10);
+            applyDamageToMonster(mob, dmg, 'Golpe Brutal (exori)');
+          }
+        }
+      }
+      updateHUD();
+    } else if (slot === 2) {
+      if (now < cooldowns[2]) return;
+      if (player.mp < 10) {
+        addLog('Mana insuficiente para Provocar (10 MP).', '#ff6666');
+        return;
+      }
+      player.mp -= 10;
+      cooldowns[2] = now + 3200;
+      addFloatingText(player.floor, player.x, player.y - 0.5, 'Ivo says: exeta res', '#ff9933', true);
+      addSpark(player.floor, player.x, player.y, 'magic');
+
+      let count = 0;
+      entities.forEach(e => {
+        if (!e.dead && e.floor === player.floor && e.type === 'monster' && Math.hypot(e.x - player.x, e.y - player.y) <= 5) {
+          count++;
+          addSpark(player.floor, e.x, e.y, 'blood');
+          if (!player.targetId) player.targetId = e.id;
+        }
+      });
+      addLog(`Ivo provocou ${count} criatura(s) ao redor!`, '#ffd166', 'default');
+      updateHUD();
+    } else if (slot === 3) {
+      if (now < cooldowns[3]) return;
+      if (player.mp < 10) {
+        addLog('Mana insuficiente para Investida (10 MP).', '#ff6666');
+        return;
+      }
+      player.mp -= 10;
+      cooldowns[3] = now + 5000;
+      player.hasteUntil = now + 8000;
+      addFloatingText(player.floor, player.x, player.y - 0.5, 'Ivo says: utani tempo hur', '#ff9933', true);
+      addSpark(player.floor, player.x, player.y, 'magic');
+      addLog('Haste ativado! Velocidade de passo aumentada por 8 segundos.', '#66e0ff');
+      updateHUD();
+    } else if (slot === 4) {
+      if (now < cooldowns[4]) return;
+      if (player.mp < 15) {
+        addLog('Mana insuficiente para Muralha (15 MP).', '#ff6666');
+        return;
+      }
+      player.mp -= 15;
+      cooldowns[4] = now + 6000;
+      player.shieldWallUntil = now + 9000;
+      addFloatingText(player.floor, player.x, player.y - 0.5, 'Ivo says: utamo vita', '#ff9933', true);
+      addSpark(player.floor, player.x, player.y, 'magic');
+      addLog('Muralha das Cinzas ativa! Dano reduzido em 50% por 9s.', '#66ff99');
+      updateHUD();
+    } else if (slot === 5) {
+      if (player.hpPots <= 0) {
+        addLog('Você não possui Poções de Vida!', '#ff6666');
+        return;
+      }
+      player.hpPots--;
+      const heal = 75 + Math.floor(Math.random() * 25);
+      player.hp = Math.min(player.maxHp, player.hp + heal);
+      addFloatingText(player.floor, player.x, player.y, `+${heal}`, '#33ff33');
+      addFloatingText(player.floor, player.x, player.y - 0.5, 'Aaaah...', '#ff9933', true);
+      addSpark(player.floor, player.x, player.y, 'magic');
+      addLog(`Você usou uma Health Potion e recuperou ${heal} hitpoints.`, '#55ff55');
+      updateHUD();
+    } else if (slot === 6) {
+      if (player.mpPots <= 0) {
+        addLog('Você não possui Poções de Mana!', '#ff6666');
+        return;
+      }
+      player.mpPots--;
+      const mana = 50 + Math.floor(Math.random() * 20);
+      player.mp = Math.min(player.maxMp, player.mp + mana);
+      addFloatingText(player.floor, player.x, player.y, `+${mana} MP`, '#55bbff');
+      addFloatingText(player.floor, player.x, player.y - 0.5, 'Aaaah...', '#ff9933', true);
+      addSpark(player.floor, player.x, player.y, 'magic');
+      addLog(`Você usou uma Mana Potion e recuperou ${mana} mana.`, '#66ccff');
+      updateHUD();
+    }
+  };
+
+  function applyDamageToMonster(mob, dmg, sourceName = 'ataque') {
+    mob.hp = Math.max(0, mob.hp - dmg);
+    addFloatingText(mob.floor, mob.x, mob.y, `-${dmg}`, '#ff2a2a');
+    addSpark(mob.floor, mob.x, mob.y, 'blood');
+
+    // Poça de sangue no piso (como no Tibia)
+    bloodPools.push({
+      floor: mob.floor,
+      x: mob.x,
+      y: mob.y,
+      color: '#991b1b',
+      createdAt: performance.now()
+    });
+
+    addLog(`${mob.name} perdeu ${dmg} hitpoints devido a um ${sourceName} de Ivo.`, '#e0e0e0');
+
+    if (mob.hp <= 0) {
+      mob.dead = true;
+      mob.respawnAt = performance.now() + 16000;
+      if (player.targetId === mob.id) player.targetId = null;
+
+      const goldDrop = mob.goldRange[0] + Math.floor(Math.random() * (mob.goldRange[1] - mob.goldRange[0] + 1));
+      player.xp += mob.xp;
+
+      // Gera itens dentro do corpo morto (Clique no corpo ou veja na janela lateral para saquear)
+      const corpseItems = [
+        { icon: '🪙', name: `${goldDrop} Gold Coins`, type: 'gold', value: goldDrop }
+      ];
+      if (Math.random() < 0.65) {
+        corpseItems.push({ icon: '🍖', name: 'Carne de Caça (+35 HP)', type: 'food', value: 35 });
+      }
+      if (Math.random() < 0.4) {
+        corpseItems.push({ icon: '🧪', name: 'Health Potion', type: 'hppot', value: 1 });
+      }
+      if (mob.sprite === 'dragon' || mob.sprite === 'cyclops') {
+        corpseItems.push({ icon: '💎', name: 'Rubi de Brasa Ancestral (+120 Gold)', type: 'treasure', value: 120 });
+      }
+
+      const newCorpse = {
+        id: 'corpse_' + Date.now() + Math.random(),
+        floor: mob.floor,
+        x: mob.x,
+        y: mob.y,
+        sprite: mob.sprite,
+        name: `Corpo de ${mob.name}`,
+        items: corpseItems,
+        createdAt: performance.now()
+      };
+      corpses.push(newCorpse);
+      openCorpseWindow(newCorpse);
+
+      addLog(`Loot de ${mob.name}: ${corpseItems.map(i => i.name).join(', ')}. (Clique no corpo ou em Pegar Tudo)`, '#ffd166');
+
+      if (!player.questCompleted) {
+        player.questKills = Math.min(player.questGoal, player.questKills + 1);
+        addLog(`[Missão] O Primeiro Sangue: ${player.questKills}/${player.questGoal} criaturas derrotadas.`, '#ffbb33', 'quest');
+        if (player.questKills >= player.questGoal) {
+          completeFirstBloodQuest();
+        }
+      }
+
+      checkLevelUp();
+      updateHUD();
+      renderBattleList();
+    }
+  }
+
+  // Abre a janela de Loot do Corpo na Barra Lateral Direita
+  function openCorpseWindow(corpse) {
+    openedCorpse = corpse;
+    const panel = document.getElementById('corpseLootPanel');
+    const title = document.getElementById('corpseLootTitle');
+    const grid = document.getElementById('corpseLootGrid');
+
+    if (!corpse || corpse.items.length === 0) {
+      panel.classList.add('hidden');
+      panel.classList.remove('flex');
+      return;
+    }
+
+    panel.classList.remove('hidden');
+    panel.classList.add('flex');
+    title.textContent = `💀 ${corpse.name}`;
+    grid.innerHTML = corpse.items.map((it, idx) => `
+      <div onclick="window.takeCorpseItem(${idx})" class="equip-slot !w-9 !h-9 flex-shrink-0 text-sm relative" title="Clique para coletar: ${it.name}">
+        <span>${it.icon}</span>
+        ${it.type === 'gold' ? `<span class="absolute bottom-0 right-0.5 text-[8px] font-bold text-yellow-300 text-shadow-black">${it.value}</span>` : ''}
+      </div>
+    `).join('');
+  }
+
+  window.takeCorpseItem = function(idx) {
+    if (!openedCorpse || !openedCorpse.items[idx]) return;
+    const it = openedCorpse.items[idx];
+    if (it.type === 'gold') {
+      player.gold += it.value;
+      addLog(`Você coletou ${it.value} moedas de ouro.`, '#ffd700');
+    } else if (it.type === 'hppot') {
+      player.hpPots += it.value;
+      addLog('Você coletou 1x Health Potion.', '#55ff55');
+    } else {
+      player.lootBag.push(it);
+      addLog(`Você guardou ${it.name} na Backpack.`, '#66ff66');
+    }
+    openedCorpse.items.splice(idx, 1);
+    openCorpseWindow(openedCorpse);
+    updateHUD();
+    renderBackpack();
+  };
+
+  window.lootAllCorpse = function() {
+    if (!openedCorpse) return;
+    while (openedCorpse.items.length > 0) {
+      window.takeCorpseItem(0);
+    }
+  };
+
+  function checkLevelUp() {
+    while (player.xp >= player.maxXp) {
+      player.xp -= player.maxXp;
+      player.level++;
+      player.maxXp = Math.floor(player.maxXp * 1.45);
+      player.maxHp += 35;
+      player.hp = player.maxHp;
+      player.maxMp += 15;
+      player.mp = player.maxMp;
+      player.atk += 3;
+      player.def += 2;
+      player.cap += 25;
+      addFloatingText(player.floor, player.x, player.y - 0.6, `LEVEL ${player.level}!`, '#ffff00', true);
+      addSpark(player.floor, player.x, player.y, 'magic');
+      addLog(`You advanced from Level ${player.level - 1} to Level ${player.level}.`, '#ffffff');
+    }
+  }
+
+  function completeFirstBloodQuest() {
+    player.questCompleted = true;
+    player.legendarySword = true;
+    player.atk += 12;
+    player.gold += 250;
+    player.blessing += 1;
+    player.weaponName = 'Lâmina Solar das Cinzas (Atk: 36, Def: 22)';
+    const slotW = document.getElementById('slotWeapon');
+    if (slotW) {
+      slotW.textContent = '⚔️';
+      slotW.title = player.weaponName;
+      slotW.style.borderColor = '#fbbf24';
+    }
+    addFloatingText(player.floor, player.x, player.y - 0.8, 'MISSÃO COMPLETA!', '#ffd700', true);
+    addLog('★ PARABÉNS! Você cumpriu "O Primeiro Sangue (6/6)" e forjou a Lâmina Solar das Cinzas (+12 Atk) + 250 Gold!', '#ffd700', 'quest');
+  }
+
+  // Modal de Customização de Outfit ("Set Outfit" do Tibia 7.6)
+  const OUTFIT_COLORS = [
+    '#991b1b', '#dc2626', '#d97706', '#facc15', '#15803d',
+    '#0284c7', '#1d4ed8', '#6d28d9', '#4b5563', '#f3f4f6', '#1c1917'
+  ];
+
+  function renderOutfitModalPalettes() {
+    const parts = ['head', 'primary', 'secondary', 'detail'];
+    parts.forEach(part => {
+      const container = document.getElementById(`palette-${part}`);
+      if (!container) return;
+      container.innerHTML = OUTFIT_COLORS.map(col => `
+        <button onclick="window.setOutfitColor('${part}', '${col}')"
+          style="background:${col}"
+          class="w-4 h-4 border ${player.outfit[part] === col ? 'border-white scale-110' : 'border-black'}"></button>
+      `).join('');
+    });
+
+    // Atualiza Preview 45° no Modal
+    const prevCanvas = document.getElementById('outfitPreviewCanvas');
+    if (prevCanvas) {
+      const pctx = prevCanvas.getContext('2d');
+      pctx.imageSmoothingEnabled = false;
+      pctx.clearRect(0, 0, 64, 64);
+      drawTibiaRealisticSprite(pctx, 8, 10, 'knight', {
+        dir: 'down',
+        frame: 0,
+        outfit: player.outfit,
+        legendary: player.legendarySword
+      });
+    }
+  }
+
+  window.openOutfitModal = function() {
+    const modal = document.getElementById('outfitModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    renderOutfitModalPalettes();
+  };
+
+  window.closeOutfitModal = function() {
+    const modal = document.getElementById('outfitModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  };
+
+  window.setOutfitColor = function(part, color) {
+    player.outfit[part] = color;
+    renderOutfitModalPalettes();
+  };
+
+  // Interação com NPCs
+  window.talkToNearestNPC = function() {
+    const npc = entities.find(e => e.type === 'npc' && e.floor === player.floor && Math.hypot(e.x - player.x, e.y - player.y) <= 3.5);
+    if (!npc) {
+      addLog('Aproxime-se de um NPC dentro do Bastião das Cinzas para conversar.', '#aaaaaa');
+      return;
+    }
+    addFloatingText(player.floor, player.x, player.y - 0.5, 'Ivo says: hi', '#ff9933', true);
+    setTimeout(() => {
+      addFloatingText(npc.floor, npc.x, npc.y - 0.5, `${npc.name} says: ${npc.dialog}`, '#55ffff', true);
+      addLog(`${npc.name}: "${npc.dialog}"`, '#55ffff', 'default');
+      if (player.hp < player.maxHp || player.mp < player.maxMp) {
+        player.hp = player.maxHp;
+        player.mp = player.maxMp;
+        addSpark(player.floor, player.x, player.y, 'magic');
+        addFloatingText(player.floor, player.x, player.y, 'Curado!', '#33ff33');
+        updateHUD();
+      }
+    }, 300);
+  };
+
+  window.inspectEquip = function(slot) {
+    const descriptions = {
+      amulet: 'You see um Amuleto de Cinza Ancestral (Arm: 1).',
+      helmet: 'You see um Elmo Cruzado das Cinzas (Arm: 6).',
+      backpack: `You see uma Mochila de Couro Cinzento (${player.lootBag.length} itens).`,
+      weapon: `You see ${player.weaponName}.`,
+      armor: 'You see uma Armadura de Placas Forjada em Brasa (Arm: 11).',
+      shield: 'You see um Escudo Torre do Bastião (Def: 26).',
+      ring: 'You see um Anel de Brasa Viva (+1 Bênção).',
+      legs: 'You see Grevas de Ferro Negro (Arm: 7).',
+      boots: 'You see Botas de Explorador das Cinzas (Arm: 2).'
+    };
+    addLog(descriptions[slot] || 'You see um equipamento.', '#00ff00');
+  };
+
+  window.setStance = function(stance) {
+    player.stance = stance;
+    ['atk', 'bal', 'def'].forEach(s => {
+      document.getElementById(`stance-${s}`).classList.toggle('active', s === stance);
+    });
+  };
+
+  window.toggleChase = function() {
+    player.chase = !player.chase;
+    const btn = document.getElementById('chaseBtn');
+    const lbl = document.getElementById('chaseLabel');
+    btn.classList.toggle('active', player.chase);
+    lbl.textContent = `Perseguir: ${player.chase ? 'ON' : 'OFF'}`;
+  };
+
+  window.selectTarget = function(id) {
+    const ent = entities.find(e => e.id === id && !e.dead && e.floor === player.floor);
+    if (!ent) return;
+
+    if (ent.type === 'npc') {
+      player.targetId = null;
+      window.talkToNearestNPC();
+      return;
+    }
+
+    if (player.targetId === id) {
+      player.targetId = null;
+    } else {
+      player.targetId = id;
+      addLog(`Target travado em: ${ent.name}.`, '#ff6666');
+    }
+    renderBattleList();
+  };
+
+  function renderBattleList() {
+    const container = document.getElementById('battleList');
+    const visible = entities.filter(e =>
+      !e.dead &&
+      e.floor === player.floor &&
+      Math.abs(e.x - player.x) <= 8 &&
+      Math.abs(e.y - player.y) <= 6
+    );
+
+    if (visible.length === 0) {
+      container.innerHTML = `<div class="text-neutral-500 text-[10px] text-center py-4">Nenhuma criatura neste andar.</div>`;
+      return;
+    }
+
+    container.innerHTML = visible.map(e => {
+      const pct = Math.max(0, Math.round((e.hp / e.maxHp) * 100));
+      const isTarget = player.targetId === e.id;
+      const barCol = e.type === 'npc' ? '#38bdf8' : (pct > 60 ? '#00c000' : pct > 30 ? '#c0c000' : '#c00000');
+      const icon = e.type === 'npc' ? '🧙‍♂️' : (e.sprite === 'rat' ? '🐀' : e.sprite === 'troll' ? '🧌' : e.sprite === 'orc' ? '👹' : e.sprite === 'cyclops' ? '👁️' : '🐉');
+
+      return `
+        <div onclick="window.selectTarget('${e.id}')" class="p-1 rounded cursor-pointer border ${isTarget ? 'border-red-500 bg-red-950/40' : 'border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800'} flex flex-col gap-0.5">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="${isTarget ? 'text-red-400 font-bold' : 'text-gray-200'} truncate">${icon} ${e.name}</span>
+            ${isTarget ? '<span class="text-[9px] text-red-400 font-bold">ATK</span>' : ''}
+          </div>
+          <div class="w-full h-1.5 bg-black border border-neutral-700">
+            <div style="width:${pct}%; background:${barCol}" class="h-full"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderBackpack() {
+    const grid = document.getElementById('backpackGrid');
+    grid.innerHTML = player.lootBag.map((item, idx) => `
+      <div onclick="window.useBackpackItem(${idx})" class="equip-slot !w-8 !h-8 text-sm" title="${item.name}">
+        ${item.icon}
+      </div>
+    `).join('');
+  }
+
+  window.useBackpackItem = function(idx) {
+    const item = player.lootBag[idx];
+    if (!item) return;
+    if (item.type === 'food') {
+      player.hp = Math.min(player.maxHp, player.hp + item.value);
+      addFloatingText(player.floor, player.x, player.y - 0.4, 'Munch...', '#ff9933', true);
+      addLog(`Você comeu ${item.name} e recuperou ${item.value} hitpoints.`, '#66ff66');
+      player.lootBag.splice(idx, 1);
+    } else if (item.type === 'treasure') {
+      player.gold += item.value;
+      addLog(`Você converteu ${item.name} em ${item.value} moedas de ouro!`, '#ffd700');
+      player.lootBag.splice(idx, 1);
+    } else if (item.type === 'tool') {
+      checkFloorTransition();
+      addLog('Use a corda sobre o círculo de subida nas Catacumbas (-1) para retornar à superfície.', '#fbbf24');
+    } else {
+      addLog(`You see ${item.name}.`, '#00ff00');
+    }
+    updateHUD();
+    renderBackpack();
+  };
+
+  function updateHUD() {
+    document.getElementById('playerNameTitle').textContent = `${player.name} • Nv ${player.level}`;
+    document.getElementById('hpBarFill').style.width = `${(player.hp / player.maxHp) * 100}%`;
+    document.getElementById('hpText').textContent = `${player.hp} / ${player.maxHp}`;
+    document.getElementById('mpBarFill').style.width = `${(player.mp / player.maxMp) * 100}%`;
+    document.getElementById('mpText').textContent = `${player.mp} / ${player.maxMp}`;
+    document.getElementById('xpBarFill').style.width = `${(player.xp / player.maxXp) * 100}%`;
+    document.getElementById('xpText').textContent = `${player.xp} / ${player.maxXp}`;
+    document.getElementById('goldText').textContent = player.gold;
+    document.getElementById('blessText').textContent = player.blessing;
+    document.getElementById('capText').textContent = player.cap;
+    document.getElementById('atkDefText').textContent = `${player.atk}/${player.def}`;
+    document.getElementById('hpPotCount').textContent = `×${player.hpPots}`;
+    document.getElementById('mpPotCount').textContent = `×${player.mpPots}`;
+
+    document.getElementById('questCounter').textContent = `${player.questKills}/${player.questGoal}`;
+    if (player.questCompleted) {
+      document.getElementById('questDesc').textContent = 'Missão cumprida! Lâmina Solar das Cinzas equipada.';
+      document.getElementById('questDesc').className = 'text-emerald-400 font-bold leading-tight';
+    }
+  }
+
+  // Loop de Jogo e Inteligência Artificial Tibiana
+  function updateGameLogic(now) {
+    for (let s = 1; s <= 4; s++) {
+      const cdEl = document.getElementById(`cd${s}`);
+      if (now < cooldowns[s]) {
+        const rem = ((cooldowns[s] - now) / 1000).toFixed(1);
+        cdEl.classList.remove('hidden');
+        cdEl.classList.add('flex');
+        cdEl.textContent = `${rem}s`;
+      } else {
+        cdEl.classList.add('hidden');
+        cdEl.classList.remove('flex');
+      }
+    }
+
+    const targetMob = entities.find(e => e.id === player.targetId && !e.dead && e.floor === player.floor);
+    if (targetMob && player.chase && !isProtectionZone(player.floor, player.x, player.y)) {
+      const dist = Math.max(Math.abs(targetMob.x - player.x), Math.abs(targetMob.y - player.y));
+      if (dist > 1 && now - player.moveCooldown >= (now < player.hasteUntil ? 110 : player.moveSpeedMs)) {
+        const dx = Math.sign(targetMob.x - player.x);
+        const dy = Math.sign(targetMob.y - player.y);
+        if (!window.movePlayer(dx, dy)) {
+          if (dx !== 0) window.movePlayer(dx, 0);
+          else if (dy !== 0) window.movePlayer(0, dy);
+        }
+      }
+    } else if (player.path.length > 0 && now - player.moveCooldown >= (now < player.hasteUntil ? 110 : player.moveSpeedMs)) {
+      const next = player.path[0];
+      const dx = Math.sign(next.x - player.x);
+      const dy = Math.sign(next.y - player.y);
+      if (dx === 0 && dy === 0) {
+        player.path.shift();
+      } else if (window.movePlayer(dx, dy)) {
+        if (player.x === next.x && player.y === next.y) player.path.shift();
+      } else {
+        player.path = [];
+      }
+    }
+
+    // Ataque corpo a corpo automático do Cavaleiro Ivo
+    if (targetMob && now - player.lastAttackTime >= 1100) {
+      const dist = Math.max(Math.abs(targetMob.x - player.x), Math.abs(targetMob.y - player.y));
+      if (dist <= 1) {
+        player.lastAttackTime = now;
+        player.attackAnimUntil = now + 280;
+        const stanceMult = player.stance === 'atk' ? 1.25 : player.stance === 'def' ? 0.75 : 1.0;
+        if (Math.random() < 0.1) {
+          addSpark(player.floor, targetMob.x, targetMob.y, 'puff');
+        } else {
+          const dmg = Math.max(3, Math.floor((player.atk * stanceMult) * (0.75 + Math.random() * 0.45)));
+          applyDamageToMonster(targetMob, dmg, 'ataque de espada');
+        }
+        updateHUD();
+      }
+    }
+
+    // IA das Criaturas no mesmo andar
+    entities.forEach(e => {
+      if (e.type !== 'monster') return;
+
+      if (e.dead) {
+        if (now >= e.respawnAt) {
+          e.dead = false;
+          e.hp = e.maxHp;
+          e.x = e.spawnX;
+          e.y = e.spawnY;
+          e.renderX = e.x;
+          e.renderY = e.y;
+          addSpark(e.floor, e.x, e.y, 'magic');
+          renderBattleList();
+        }
+        return;
+      }
+
+      if (e.floor !== player.floor) return;
+
+      const distToPlayer = Math.max(Math.abs(player.x - e.x), Math.abs(player.y - e.y));
+      const playerInPZ = isProtectionZone(player.floor, player.x, player.y);
+
+      if (now - e.lastMove >= 720) {
+        e.lastMove = now + Math.random() * 240;
+        if (!playerInPZ && distToPlayer <= 6 && distToPlayer > 1) {
+          const dx = Math.sign(player.x - e.x);
+          const dy = Math.sign(player.y - e.y);
+          const nx = e.x + dx;
+          const ny = e.y + dy;
+          if (!isProtectionZone(e.floor, nx, ny) && !isTileBlocked(e.floor, nx, ny, e.id)) {
+            e.x = nx;
+            e.y = ny;
+            e.walkFrame = e.walkFrame === 1 ? 2 : 1;
+            e.dir = dx < 0 ? 'left' : dx > 0 ? 'right' : dy < 0 ? 'up' : 'down';
+          }
+        } else if (distToPlayer > 6 && Math.random() < 0.35) {
+          const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+          const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
+          const nx = e.x + dx;
+          const ny = e.y + dy;
+          if (!isProtectionZone(e.floor, nx, ny) && !isTileBlocked(e.floor, nx, ny, e.id) && Math.hypot(nx - e.spawnX, ny - e.spawnY) <= 4) {
+            e.x = nx;
+            e.y = ny;
+            e.walkFrame = e.walkFrame === 1 ? 2 : 1;
+          }
+        }
+      }
+
+      // Sopro de Fogo do Dragão de Valdoria (Fire Wave estilo Tibia)
+      if (!playerInPZ && e.sprite === 'dragon' && distToPlayer <= 4 && now - e.lastAtk >= 2100 && Math.random() < 0.45) {
+        e.lastAtk = now;
+        addFloatingText(e.floor, e.x, e.y - 0.5, 'GROAAAR!', '#ff6600', true);
+        fireWaves.push({
+          floor: e.floor,
+          x: player.x,
+          y: player.y,
+          createdAt: now,
+          duration: 500
+        });
+        const fireDmg = Math.max(8, Math.floor(22 + Math.random() * 14));
+        player.hp = Math.max(0, player.hp - fireDmg);
+        addFloatingText(player.floor, player.x, player.y, `-${fireDmg}`, '#ff5500');
+        addLog(`Você perdeu ${fireDmg} hitpoints devido ao sopro de fogo de ${e.name}.`, '#ff7733');
+        checkPlayerDeath();
+        updateHUD();
+      }
+      // Ataque físico padrão das criaturas
+      else if (!playerInPZ && distToPlayer <= 1 && now - e.lastAtk >= 1450) {
+        e.lastAtk = now;
+        const defBonus = player.stance === 'def' ? 1.35 : player.stance === 'atk' ? 0.8 : 1.0;
+        const rawDmg = e.atk - Math.floor(player.def * 0.45 * defBonus) + Math.floor(Math.random() * 5);
+        let finalDmg = Math.max(0, rawDmg);
+
+        if (now < player.shieldWallUntil) {
+          finalDmg = Math.floor(finalDmg * 0.5);
+        }
+
+        if (finalDmg <= 1 || Math.random() < 0.25) {
+          addSpark(player.floor, player.x, player.y, 'puff');
+        } else {
+          player.hp = Math.max(0, player.hp - finalDmg);
+          addFloatingText(player.floor, player.x, player.y, `-${finalDmg}`, '#ff3333');
+          addSpark(player.floor, player.x, player.y, 'blood');
+          addLog(`Você perdeu ${finalDmg} hitpoints devido a um ataque de ${e.name}.`, '#ff8888');
+          checkPlayerDeath();
+          updateHUD();
+        }
+      }
+    });
+
+    // Interpolação suave entre os SQMs
+    player.renderX += (player.x - player.renderX) * 0.34;
+    player.renderY += (player.y - player.renderY) * 0.34;
+    entities.forEach(e => {
+      e.renderX += (e.x - e.renderX) * 0.3;
+      e.renderY += (e.y - e.renderY) * 0.3;
+    });
+  }
+
+  function checkPlayerDeath() {
+    if (player.hp <= 0) {
+      player.hp = player.maxHp;
+      player.mp = player.maxMp;
+      player.floor = 0;
+      player.x = 22;
+      player.y = 10;
+      player.renderX = 22;
+      player.renderY = 10;
+      player.targetId = null;
+      addFloatingText(0, player.x, player.y, 'Renasceu das Cinzas!', '#55ffff', true);
+      addLog('Você tombou em batalha, mas a Bênção das Cinzas resgatou sua alma de volta ao Altar do Bastião!', '#55ffff');
+      updateZoneUI();
+    }
+  }
+
+  // Desenha Nome + Barra de Vida Acima do Personagem Estilo Tibia 7.6
+  function drawTibiaNameAndBar(px, py, name, hpPct, isNpc = false) {
+    const barW = 32;
+    const barH = 4;
+    const bx = Math.round(px + 20 - barW / 2);
+    const by = Math.round(py - 9);
+
+    let barColor = '#00c000';
+    if (isNpc) barColor = '#38bdf8';
+    else if (hpPct < 0.3) barColor = '#c00000';
+    else if (hpPct < 0.6) barColor = '#c0c000';
+
+    ctx.font = 'bold 11px Tahoma, Verdana, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#000000';
+    ctx.strokeText(name, px + 20, by - 3);
+    ctx.fillStyle = barColor;
+    ctx.fillText(name, px + 20, by - 3);
+
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
+    ctx.fillStyle = barColor;
+    ctx.fillRect(bx, by, Math.max(1, Math.round(barW * hpPct)), barH);
+  }
+
+  // Renderização Completa da Viewport 15x11 SQMs
+  function renderViewport(now) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const camX = player.renderX - 7;
+    const camY = player.renderY - 5;
+
+    const startCol = Math.floor(camX) - 1;
+    const endCol = startCol + VIEW_COLS + 3;
+    const startRow = Math.floor(camY) - 1;
+    const endRow = startRow + VIEW_ROWS + 3;
+    const activeMap = maps[player.floor];
+
+    // 1. CAMADA DO CHÃO (Piso de Pedra, Bueiro, Estrada, Grama ou Catacumbas)
+    for (let gy = startRow; gy <= endRow; gy++) {
+      for (let gx = startCol; gx <= endCol; gx++) {
+        const px = Math.round((gx - camX) * TILE_SIZE);
+        const py = Math.round((gy - camY) * TILE_SIZE);
+
+        if (gx < 0 || gy < 0 || gx >= MAP_SIZE || gy >= MAP_SIZE) {
+          ctx.fillStyle = '#09090b';
+          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+          continue;
+        }
+
+        const t = activeMap[gy][gx];
+        const variant = (gx * 7 + gy * 13) % 4;
+
+        if (t === TILE.DUNGEON_FLOOR || t === TILE.DUNGEON_WALL || t === TILE.ROPE_LADDER) {
+          ctx.drawImage(spriteCache[`dungeon_${variant}`], px, py);
+          if (t === TILE.ROPE_LADDER) {
+            // Círculo de Luz de Corda (Rope Spot do Tibia)
+            ctx.fillStyle = 'rgba(250, 204, 21, 0.28)';
+            ctx.beginPath();
+            ctx.arc(px + 24, py + 24, 16, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ca8a04';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        } else if (t === TILE.SEWER_GRATE) {
+          ctx.drawImage(spriteCache['sewer_grate'], px, py);
+        } else if (t === TILE.STONE_FLOOR || t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.ALTAR) {
+          ctx.drawImage(spriteCache[`stone_${variant}`], px, py);
+        } else if (t === TILE.DIRT_ROAD || t === TILE.GATE_ARCH) {
+          ctx.drawImage(spriteCache[`dirt_${variant % 3}`], px, py);
+        } else {
+          ctx.drawImage(spriteCache[`grass_${variant}`], px, py);
+        }
+
+        if (t === TILE.FLOWERS) {
+          ctx.fillStyle = '#14532d';
+          ctx.beginPath();
+          ctx.arc(px + 24, py + 24, 14, 0, Math.PI * 2);
+          ctx.fill();
+          const cols = ['#ef4444', '#facc15', '#ffffff', '#fb923c'];
+          for (let f = 0; f < 8; f++) {
+            ctx.fillStyle = cols[f % cols.length];
+            ctx.fillRect(px + 14 + (f * 5) % 18, py + 14 + ((f * 7) % 16), 4, 4);
+          }
+        }
+      }
+    }
+
+    // 2. POÇAS DE SANGUE E CORPOS ABATIDOS NO CHÃO
+    for (let i = bloodPools.length - 1; i >= 0; i--) {
+      const bp = bloodPools[i];
+      if (now - bp.createdAt > 14000) {
+        bloodPools.splice(i, 1);
+        continue;
+      }
+      if (bp.floor !== player.floor) continue;
+      const px = Math.round((bp.x - camX) * TILE_SIZE);
+      const py = Math.round((bp.y - camY) * TILE_SIZE);
+      ctx.fillStyle = 'rgba(153, 27, 27, 0.75)';
+      ctx.beginPath();
+      ctx.ellipse(px + 24, py + 26, 12, 7, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    for (let i = corpses.length - 1; i >= 0; i--) {
+      const c = corpses[i];
+      if (now - c.createdAt > 25000) {
+        corpses.splice(i, 1);
+        continue;
+      }
+      if (c.floor !== player.floor) continue;
+      const px = Math.round((c.x - camX) * TILE_SIZE);
+      const py = Math.round((c.y - camY) * TILE_SIZE);
+      // Desenha esqueleto/corpo caído com brilho se ainda tiver loot
+      ctx.fillStyle = '#7f1d1d';
+      ctx.beginPath();
+      ctx.ellipse(px + 24, py + 26, 15, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#d6d3d1';
+      ctx.fillRect(px + 14, py + 20, 20, 9);
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(px + 18, py + 22, 12, 6);
+      if (c.items && c.items.length > 0) {
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px + 12, py + 18, 24, 14);
+      }
+    }
+
+    // 3. PAREDES 45°, ÁRVORES, PORTÃO TRIPLO E PERSONAGENS REALISTAS (Ordenados por Y)
+    for (let gy = startRow; gy <= endRow; gy++) {
+      for (let gx = startCol; gx <= endCol; gx++) {
+        if (gx < 0 || gy < 0 || gx >= MAP_SIZE || gy >= MAP_SIZE) continue;
+        const px = Math.round((gx - camX) * TILE_SIZE);
+        const py = Math.round((gy - camY) * TILE_SIZE);
+        const t = activeMap[gy][gx];
+
+        if (t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.DUNGEON_WALL) {
+          ctx.drawImage(spriteCache['wall'], px - 6, py - 8);
+          if (t === TILE.TORCH_WALL) {
+            const flicker = Math.sin(now * 0.015 + gx) * 2;
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.arc(px + 24, py + 14, 6 + flicker * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(px + 22, py + 12, 4, 4);
+          }
+        } else if (t === TILE.GATE_ARCH) {
+          ctx.fillStyle = '#a8a29e';
+          ctx.fillRect(px - 2, py - 18, 52, 64);
+          ctx.fillStyle = '#1c1917';
+          ctx.fillRect(px + 10, py + 4, 28, 42);
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(px - 4, py - 20, 56, 8);
+        } else if (t === TILE.ALTAR) {
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillRect(px + 6, py + 6, 36, 36);
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(px + 12, py + 12, 24, 24);
+        } else if (t === TILE.RUIN_PILLAR) {
+          ctx.fillStyle = '#78716c';
+          ctx.fillRect(px + 12, py - 10, 24, 52);
+          ctx.fillStyle = '#d6d3d1';
+          ctx.fillRect(px + 9, py - 13, 30, 8);
+        } else if (t === TILE.TREE) {
+          // Árvore Frondosa em Camadas Oblíqua 45°
+          ctx.fillStyle = 'rgba(0,0,0,0.42)';
+          ctx.beginPath();
+          ctx.ellipse(px + 28, py + 38, 20, 10, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#5c3a21';
+          ctx.fillRect(px + 18, py + 18, 12, 24);
+          ctx.fillStyle = '#14532d';
+          ctx.beginPath();
+          ctx.arc(px + 22, py + 6, 23, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#15803d';
+          ctx.beginPath();
+          ctx.arc(px + 18, py + 2, 19, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath();
+          ctx.arc(px + 14, py - 3, 11, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Entidades na linha Y atual
+      entities.forEach(e => {
+        if (e.dead || e.floor !== player.floor || Math.round(e.renderY) !== gy) return;
+        const px = Math.round((e.renderX - camX) * TILE_SIZE);
+        const py = Math.round((e.renderY - camY) * TILE_SIZE);
+
+        // Quadrado Vermelho de Target do Tibia
+        if (player.targetId === e.id) {
+          ctx.strokeStyle = '#ff1111';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+        }
+
+        const isMoving = Math.abs(e.x - e.renderX) > 0.04 || Math.abs(e.y - e.renderY) > 0.04;
+        drawTibiaRealisticSprite(ctx, px, py, e.sprite, {
+          dir: e.dir || 'down',
+          frame: isMoving ? e.walkFrame : 0
+        });
+        drawTibiaNameAndBar(px, py, e.name, e.hp / e.maxHp, e.type === 'npc');
+      });
+
+      // Jogador (Ivo - Cavaleiro de Valdoria)
+      if (Math.round(player.renderY) === gy) {
+        const px = Math.round((player.renderX - camX) * TILE_SIZE);
+        const py = Math.round((player.renderY - camY) * TILE_SIZE);
+        const isMoving = Math.abs(player.x - player.renderX) > 0.04 || Math.abs(player.y - player.renderY) > 0.04;
+
+        drawTibiaRealisticSprite(ctx, px, py, 'knight', {
+          dir: player.dir,
+          frame: isMoving ? player.walkFrame : 0,
+          isAttacking: now < player.attackAnimUntil,
+          outfit: player.outfit,
+          legendary: player.legendarySword,
+          shieldWall: now < player.shieldWallUntil
+        });
+        drawTibiaNameAndBar(px, py, player.name, player.hp / player.maxHp, false);
+      }
+    }
+
+    // 4. ONDAS DE FOGO DO DRAGÃO E FAÍSCAS DE COMBATE
+    for (let i = fireWaves.length - 1; i >= 0; i--) {
+      const fw = fireWaves[i];
+      if (now - fw.createdAt >= fw.duration) {
+        fireWaves.splice(i, 1);
+        continue;
+      }
+      if (fw.floor !== player.floor) continue;
+      const px = Math.round((fw.x - camX) * TILE_SIZE + 24);
+      const py = Math.round((fw.y - camY) * TILE_SIZE + 24);
+      ctx.fillStyle = 'rgba(249, 115, 22, 0.75)';
+      ctx.beginPath();
+      ctx.arc(px, py, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.85)';
+      ctx.beginPath();
+      ctx.arc(px, py, 12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    for (let i = sparks.length - 1; i >= 0; i--) {
+      const s = sparks[i];
+      const age = now - s.createdAt;
+      if (age >= s.duration) {
+        sparks.splice(i, 1);
+        continue;
+      }
+      if (s.floor !== player.floor) continue;
+      const px = Math.round((s.x - camX) * TILE_SIZE + 24);
+      const py = Math.round((s.y - camY) * TILE_SIZE + 24);
+      const r = 5 + (age / s.duration) * 14;
+
+      if (s.type === 'blood') {
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.arc(px, py, r * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (s.type === 'puff') {
+        ctx.fillStyle = 'rgba(212, 212, 212, 0.8)';
+        ctx.beginPath();
+        ctx.arc(px, py, r * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (s.type === 'magic') {
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(px - r, py - r, r * 2, r * 2);
+      }
+    }
+
+    // 5. TEXTOS FLUTUANTES E FALAS LARANJAS ESTILO TIBIA ("Ivo says: exori")
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+      const ft = floatingTexts[i];
+      const age = now - ft.createdAt;
+      if (age >= ft.duration) {
+        floatingTexts.splice(i, 1);
+        continue;
+      }
+      if (ft.floor !== player.floor) continue;
+      const progress = age / ft.duration;
+      const px = Math.round((ft.x - camX) * TILE_SIZE + 24);
+      const py = Math.round((ft.y - camY) * TILE_SIZE - (ft.isSpeech ? 18 : progress * 26));
+
+      ctx.font = 'bold 11px Tahoma, Verdana, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#000000';
+      ctx.strokeText(ft.text, px, py);
+      ctx.fillStyle = ft.color;
+      ctx.fillText(ft.text, px, py);
+    }
+
+    // 6. ATMOSFERA DE "REINOS DAS CINZAS" (Flocos de Cinza e Brasas Flutuando no Viewport 15x11)
+    if (ashEnabled) {
+      for (let i = 0; i < ashParticles.length; i++) {
+        const p = ashParticles[i];
+        p.x += p.vx + Math.sin(now * 0.0015 + i) * 0.18;
+        p.y += p.vy;
+
+        if (p.y > canvas.height) {
+          p.y = -4;
+          p.x = Math.random() * canvas.width;
+        }
+        if (p.x < 0) {
+          p.x = canvas.width;
+        }
+
+        if (p.isEmber) {
+          ctx.fillStyle = `rgba(249, 115, 22, ${p.alpha})`;
+        } else {
+          ctx.fillStyle = `rgba(212, 212, 216, ${p.alpha * 0.75})`;
+        }
+        ctx.fillRect(Math.round(p.x), Math.round(p.y), p.size, p.size);
+      }
+    }
+  }
+
+  // Minimapa Lateral por Andar
+  function renderMinimap() {
+    mctx.fillStyle = '#09090b';
+    mctx.fillRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+
+    const scaleX = minimapCanvas.width / MAP_SIZE;
+    const scaleY = minimapCanvas.height / MAP_SIZE;
+    const activeMap = maps[player.floor];
+
+    for (let y = 0; y < MAP_SIZE; y++) {
+      for (let x = 0; x < MAP_SIZE; x++) {
+        const t = activeMap[y][x];
+        if (t === TILE.STONE_FLOOR) mctx.fillStyle = '#787878';
+        else if (t === TILE.DIRT_ROAD || t === TILE.GATE_ARCH) mctx.fillStyle = '#b08954';
+        else if (t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.DUNGEON_WALL) mctx.fillStyle = '#52525b';
+        else if (t === TILE.DUNGEON_FLOOR) mctx.fillStyle = '#3f3f46';
+        else if (t === TILE.SEWER_GRATE || t === TILE.ROPE_LADDER) mctx.fillStyle = '#facc15';
+        else if (t === TILE.TREE) mctx.fillStyle = '#14532d';
+        else mctx.fillStyle = '#2e5222';
+
+        mctx.fillRect(x * scaleX, y * scaleY, Math.ceil(scaleX), Math.ceil(scaleY));
+      }
+    }
+
+    entities.forEach(e => {
+      if (e.dead || e.floor !== player.floor) return;
+      mctx.fillStyle = e.type === 'npc' ? '#38bdf8' : '#ef4444';
+      mctx.fillRect(e.x * scaleX, e.y * scaleY, 2.5, 2.5);
+    });
+
+    mctx.fillStyle = '#ffffff';
+    mctx.fillRect(player.x * scaleX - 1, player.y * scaleY - 1, 4, 4);
+  }
+
+  // Controles de Teclado
+  window.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+    if (key === 'w' || key === 'arrowup') { player.path = []; window.movePlayer(0, -1); }
+    else if (key === 's' || key === 'arrowdown') { player.path = []; window.movePlayer(0, 1); }
+    else if (key === 'a' || key === 'arrowleft') { player.path = []; window.movePlayer(-1, 0); }
+    else if (key === 'd' || key === 'arrowright') { player.path = []; window.movePlayer(1, 0); }
+    else if (['1', '2', '3', '4', '5', '6'].includes(key)) {
+      window.triggerHotkey(parseInt(key, 10));
+    }
+  });
+
+  // Clique no Canvas: Abrir Corpo de Monstro, Selecionar Criatura ou Caminhar até o SQM
+  canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    const clickX = (e.clientX - rect.left) * scaleX;
+    const clickY = (e.clientY - rect.top) * scaleY;
+
+    const camX = player.renderX - 7;
+    const camY = player.renderY - 5;
+
+    const tileX = Math.floor(camX + clickX / TILE_SIZE);
+    const tileY = Math.floor(camY + clickY / TILE_SIZE);
+
+    // 1. Verifica se clicou em uma criatura viva ou NPC
+    const clickedEnt = entities.find(ent => !ent.dead && ent.floor === player.floor && ent.x === tileX && ent.y === tileY);
+    if (clickedEnt) {
+      window.selectTarget(clickedEnt.id);
+      return;
+    }
+
+    // 2. Verifica se clicou em um corpo abatido para abrir a janela de Loot
+    const clickedCorpse = corpses.find(c => c.floor === player.floor && c.x === tileX && c.y === tileY);
+    if (clickedCorpse) {
+      openCorpseWindow(clickedCorpse);
+      return;
+    }
+
+    // 3. Caminha passo a passo até o SQM clicado
+    const steps = [];
+    let cx = player.x;
+    let cy = player.y;
+    for (let i = 0; i < 14; i++) {
+      if (cx === tileX && cy === tileY) break;
+      const dx = Math.sign(tileX - cx);
+      const dy = Math.sign(tileY - cy);
+      cx += dx;
+      cy += dy;
+      steps.push({ x: cx, y: cy });
+    }
+    player.path = steps;
+  });
+
+  minimapCanvas.addEventListener('mousedown', (e) => {
+    const rect = minimapCanvas.getBoundingClientRect();
+    const tx = Math.floor(((e.clientX - rect.left) / rect.width) * MAP_SIZE);
+    const ty = Math.floor(((e.clientY - rect.top) / rect.height) * MAP_SIZE);
+    const steps = [];
+    let cx = player.x;
+    let cy = player.y;
+    for (let i = 0; i < 16; i++) {
+      if (cx === tx && cy === ty) break;
+      cx += Math.sign(tx - cx);
+      cy += Math.sign(ty - cy);
+      steps.push({ x: cx, y: cy });
+    }
+    player.path = steps;
+  });
+
+  let lastBattleRefresh = 0;
+  function gameLoop(now) {
+    updateGameLogic(now);
+    renderViewport(now);
+
+    if (now - lastBattleRefresh > 320) {
+      renderBattleList();
+      renderMinimap();
+      lastBattleRefresh = now;
+    }
+    requestAnimationFrame(gameLoop);
+  }
+
+  window.onload = function() {
+    buildTileSprites();
+    initWorldMap();
+    initEntities();
+    updateHUD();
+    updateZoneUI();
+    renderBackpack();
+    renderBattleList();
+
+    addLog('Bem-vindo ao REINOS DAS CINZAS (MMORPG Clássico 7.6 • O Bastião de Cinza).', '#ffd700');
+    addLog('Ivo (Cavaleiro das Cinzas) entra no Bastião das Cinzas.', '#ffffff');
+    addLog('Dica: Pise no bueiro a leste [26, 14] para descer às Catacumbas de Brasa (-1) ou saia pelo Portão Sul rumo aos Ermos Cinzentos!', '#66e0ff');
+
+    requestAnimationFrame(gameLoop);
+  };
+})();
+</script>
+</body>
+</html>
