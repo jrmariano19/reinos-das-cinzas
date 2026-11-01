@@ -401,8 +401,8 @@
   <div class="tibia-panel max-w-sm w-full p-3 shadow-2xl flex flex-col gap-2">
     <div class="flex justify-between items-center border-b border-neutral-600 pb-2">
       <div>
-        <div class="text-amber-300 font-bold text-xs">🏪 Mercado das Cinzas</div>
-        <div class="text-[10px] text-gray-400">Breno, o mercador • suprimentos de aventura</div>
+        <div id="merchantName" class="text-amber-300 font-bold text-xs">🏪 Mercado das Cinzas</div>
+        <div class="text-[10px] text-gray-400">Mercadores dos Reinos • suprimentos de aventura</div>
       </div>
       <button onclick="window.closeMerchantShop()" class="tibia-btn px-2 py-1 font-bold" aria-label="Fechar loja">✕</button>
     </div>
@@ -1813,7 +1813,7 @@
     const ny = player.y + dy;
 
     // Ao atravessar uma porta fechada, o personagem abre a passagem antes de entrar.
-    if (player.floor===0 && maps[0]?.[ny]?.[nx]===TILE.HOUSE_DOOR &&
+    if ((player.floor===0||player.floor===1) && maps[player.floor]?.[ny]?.[nx]===TILE.HOUSE_DOOR &&
         !openDoors.has(doorKey(nx,ny))) {
       openDoors.add(doorKey(nx,ny));
       addLog('Você abriu uma porta de madeira.', '#e5c18a');
@@ -1835,7 +1835,7 @@
         }
       }
       if (pendingChestId) {
-        const ch=chests.find(c=>c.id===pendingChestId);
+        const ch=chests.find(c=>c.id===pendingChestId && (c.floor??0)===player.floor);
         if (!ch) pendingChestId=null;
         else if(nearTile(ch.x,ch.y,1)){
           pendingChestId=null;player.path=[];
@@ -1843,8 +1843,8 @@
         }
       }
       if (pendingDoorKey) {
-        const [dx,dy]=pendingDoorKey.split(':').map(Number);
-        if(nearTile(dx,dy,1)){
+        const [floor,dx,dy]=pendingDoorKey.split(':').map(Number);
+        if(player.floor===floor && nearTile(dx,dy,1)){
           pendingDoorKey=null;player.path=[];
           window.toggleHouseDoor(dx,dy);
         }
@@ -1864,9 +1864,18 @@
     const floorBadge = document.getElementById('floorBadge');
 
     coords.textContent = `SQM: [${player.x}, ${player.y}, ${player.floor}]`;
-    floorBadge.textContent = player.floor === 0 ? 'Andar: 0 (Terreo)' : player.floor === -1 ? 'Andar: -1 (Catacumbas)' : 'Andar: -2 (Cripta)';
+    floorBadge.textContent = player.floor === 0 ? 'Bastião (0)' : player.floor===1 ? 'Vale (1)' : player.floor === -1 ? 'Catacumbas (-1)' : 'Cripta (-2)';
 
-    if (player.floor === -2) {
+    if (player.floor === 1) {
+      badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-lime-300 font-bold shadow-lg';
+      const building = houseAt(player.x,player.y);
+      label.textContent = building ? building.name+' (Interior)'
+        : inPZ ? 'Vila das Lanternas (Zona Segura)'
+        : player.y>=33&&player.x>=28 ? 'Acampamento dos Saqueadores'
+        : player.y>=24&&player.y<=31 ? 'Rio Largo e Passarela'
+        : player.x<=13 ? 'Bosque das Lanternas'
+        : 'Vale das Lanternas (Ermos)';
+    } else if (player.floor === -2) {
       badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-purple-300 font-bold shadow-lg';
       label.textContent = 'Cripta dos Ecos (Andar -2)';
     } else if (player.floor === -1) {
@@ -2264,21 +2273,21 @@
   function updateContextHint() {
     const hint=document.getElementById('contextHint');
     if(!hint)return;
-    if(player.floor!==0){
+    if(player.floor<0){
       hint.textContent='Explore o subsolo • E para interagir';
       return;
     }
-    const chest=chests.find(c=>nearTile(c.x,c.y,1));
+    const chest=chests.find(c=>(c.floor??0)===player.floor && nearTile(c.x,c.y,1));
     if(chest){
       hint.textContent='[E] '+(player.openedChests.includes(chest.id)?'Examinar':'Abrir')+' '+chest.name;
       return;
     }
-    const door=houses.find(h=>nearTile(h.door,h.y+h.h-1,1));
+    const door=houses.find(h=>(h.floor??0)===player.floor && nearTile(h.door,h.y+h.h-1,1));
     if(door) {
       hint.textContent='[E] '+(openDoors.has(doorKey(door.door,door.y+door.h-1))?'Fechar':'Abrir')+' porta • '+door.name;
       return;
     }
-    const npc=entities.filter(e=>e.type==='npc'&&e.floor===0)
+    const npc=entities.filter(e=>e.type==='npc'&&e.floor===player.floor)
       .sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y))[0];
     if(npc && Math.hypot(npc.x-player.x,npc.y-player.y)<=2.5){
       hint.textContent='[E] Conversar com '+npc.name;
@@ -2288,7 +2297,7 @@
   }
 
   window.toggleHouseDoor = function(x,y) {
-    if(player.floor!==0 || maps[0]?.[y]?.[x]!==TILE.HOUSE_DOOR)return false;
+    if(player.floor<0 || maps[player.floor]?.[y]?.[x]!==TILE.HOUSE_DOOR)return false;
     if(!nearTile(x,y,1)) {
       const path=findPathTo(x,y);
       if(!path.length){addLog('Não há caminho até essa porta.','#ff9999');return false;}
@@ -2300,7 +2309,7 @@
     const id=doorKey(x,y),currentlyOpen=openDoors.has(id);
     if(currentlyOpen) {
       if((player.x===x&&player.y===y)||
-          entities.some(e=>!e.dead&&e.floor===0&&e.x===x&&e.y===y)) {
+          entities.some(e=>!e.dead&&e.floor===player.floor&&e.x===x&&e.y===y)) {
         addLog('Não é possível fechar a porta enquanto alguém está na passagem.','#fbbf24');
         return false;
       }
@@ -2314,7 +2323,7 @@
 
   window.openHouseChest = function(id) {
     const chest=chests.find(c=>c.id===id);
-    if(!chest || player.floor!==0) return false;
+    if(!chest || player.floor!==(chest.floor??0)) return false;
     if(!nearTile(chest.x,chest.y,1)) {
       const path=findPathTo(chest.x,chest.y);
       if(!path.length){addLog('O baú está inacessível.','#ff9999');return false;}
@@ -2335,13 +2344,13 @@
       id:'food_chest_'+chest.id,icon:'🍖',name:'Provisão da Estalagem (+35 HP)',
       type:'food',value:35
     });
-    addSpark(0,chest.x,chest.y,'magic');
-    addFloatingText(0,chest.x,chest.y,'TESOURO!','#fde68a',true);
+    addSpark(player.floor,chest.x,chest.y,'magic');
+    addFloatingText(player.floor,chest.x,chest.y,'TESOURO!','#fde68a',true);
     const extras=[chest.hp?chest.hp+' poção de vida':'',
       chest.mp?chest.mp+' poção de mana':'',chest.food?'provisões':'']
       .filter(Boolean).join(', ');
     addLog('Você abriu '+chest.name+'! +'+chest.gold+' ouro'+(extras?', '+extras:'')+'.','#facc15');
-    if (player.openedChests.length >= player.cityQuestGoal && !player.cityQuestCompleted) {
+    if (cityChestCount() >= player.cityQuestGoal && !player.cityQuestCompleted) {
       completeCityQuest();
     }
     renderBackpack();updateHUD();updateContextHint();saveProgress();
@@ -2349,12 +2358,12 @@
   };
 
   window.interactNearby = function() {
-    if(player.floor!==0)return;
-    const chest=chests.find(c=>nearTile(c.x,c.y,1));
+    if(player.floor<0)return;
+    const chest=chests.find(c=>(c.floor??0)===player.floor && nearTile(c.x,c.y,1));
     if(chest){window.openHouseChest(chest.id);return;}
-    const h=houses.find(h=>nearTile(h.door,h.y+h.h-1,1));
+    const h=houses.find(h=>(h.floor??0)===player.floor && nearTile(h.door,h.y+h.h-1,1));
     if(h){window.toggleHouseDoor(h.door,h.y+h.h-1);return;}
-    const npcs=entities.filter(e=>e.type==='npc'&&e.floor===0)
+    const npcs=entities.filter(e=>e.type==='npc'&&e.floor===player.floor)
       .sort((a,b)=>Math.hypot(a.x-player.x,a.y-player.y)-Math.hypot(b.x-player.x,b.y-player.y));
     if(npcs[0] && Math.hypot(npcs[0].x-player.x,npcs[0].y-player.y)<=3.5)
       window.talkToNearestNPC(npcs[0].id);
@@ -2390,19 +2399,22 @@
       addFloatingText(player.floor, player.x, player.y, 'Curado!', '#33ff33');
       addLog('Sacerdotisa Lyra restaurou sua vida e mana.', '#66ff66');
       updateHUD();
-    } else if (npc.id === 'npc_breno') {
-      window.openMerchantShop();
+    } else if (npc.id === 'npc_breno' || npc.id === 'npc_eron') {
+      window.openMerchantShop(npc.id);
     }
   };
 
-  window.openMerchantShop = function() {
-    const npc = entities.find(e => e.id === 'npc_breno');
-    if (!npc || player.floor !== 0 || Math.hypot(npc.x-player.x,npc.y-player.y)>3.5) {
-      addLog('Aproxime-se de Breno para negociar.', '#fbbf24');
+  let activeMerchantId = 'npc_breno';
+  window.openMerchantShop = function(merchantId='npc_breno') {
+    const npc = entities.find(e => e.id === merchantId);
+    if (!npc || player.floor !== npc.floor || Math.hypot(npc.x-player.x,npc.y-player.y)>3.5) {
+      addLog('Aproxime-se do mercador para negociar.', '#fbbf24');
       return;
     }
+    activeMerchantId=merchantId;
     const modal=document.getElementById('merchantModal');
     modal.classList.remove('hidden'); modal.classList.add('flex');
+    document.getElementById('merchantName').textContent=merchantId==='npc_eron' ? 'Mercado das Lanternas' : 'Mercado das Cinzas';
     document.getElementById('merchantGold').textContent=player.gold;
     document.getElementById('merchantFeedback').textContent='Clique em um item para comprar.';
   };
@@ -2411,13 +2423,14 @@
     modal.classList.add('hidden'); modal.classList.remove('flex');
   };
   window.buyMerchantItem = function(kind) {
+    if(!document.getElementById('merchantModal').classList.contains('flex'))return;
     const prices={hp:30,mp:30,food:20};
     if (!Object.hasOwn(prices,kind)) return;
     const price=prices[kind];
     const feedback=document.getElementById('merchantFeedback');
     if(player.gold<price) {
       feedback.textContent='Ouro insuficiente para esta compra.';
-      addLog('Breno: Você precisa de mais moedas.', '#ff9999');
+      addLog('Mercador: Você precisa de mais moedas.', '#ff9999');
       return;
     }
     player.gold-=price;
@@ -2429,7 +2442,7 @@
     });
     feedback.textContent='Compra realizada! Boa viagem, cavaleiro.';
     document.getElementById('merchantGold').textContent=player.gold;
-    addLog('Breno: Negócio fechado! -'+price+' moedas de ouro.', '#fbbf24');
+    addLog((activeMerchantId==='npc_eron'?'Eron':'Breno')+': Negócio fechado! -'+price+' moedas de ouro.', '#fbbf24');
     updateHUD(); renderBackpack(); saveProgress();
   };
 
@@ -2579,7 +2592,7 @@
       questDesc.className = 'text-purple-200 leading-tight';
     } else if (!player.cityQuestCompleted) {
       questTitle.textContent = '📜 Missão: Tesouros do Bastião';
-      questCounter.textContent = player.openedChests.length + '/' + player.cityQuestGoal;
+      questCounter.textContent = cityChestCount() + '/' + player.cityQuestGoal;
       questDesc.textContent = 'Entre nas quatro casas, converse com os moradores e abra um baú em cada interior.';
       questDesc.className = 'text-amber-200 leading-tight';
     } else if(!player.valeCompleted){
@@ -3150,9 +3163,9 @@
 
     // Telhados desenhados depois de personagens: escondem o interior à distância,
     // desaparecendo automaticamente quando o herói chega perto ou entra.
-    if(player.floor===0) {
+    if(player.floor===0 || player.floor===1) {
       for(const h of houses){
-        if(houseRevealed(h))continue;
+        if((h.floor??0)!==player.floor || houseRevealed(h))continue;
         const rx=Math.round((h.x-camX)*TILE_SIZE);
         const ry=Math.round((h.y-camY)*TILE_SIZE);
         const rw=h.w*TILE_SIZE,rh=h.h*TILE_SIZE;
@@ -3323,7 +3336,7 @@
     const dirs = [[0,-1],[1,0],[0,1],[-1,0],[1,-1],[1,1],[-1,1],[-1,-1]];
     // A* pode planejar passagem por portas fechadas: a animação abre ao chegar.
     const canStep = (x,y) => !isTileBlocked(floor,x,y,'player') ||
-      (floor===0 && maps[0]?.[y]?.[x]===TILE.HOUSE_DOOR);
+      ((floor===0||floor===1) && maps[floor]?.[y]?.[x]===TILE.HOUSE_DOOR);
     if (!canStep(targetX,targetY)) {
       let alt = null, best = Infinity;
       for (let radius = 1; radius <= 3 && !alt; radius++) {
@@ -3411,11 +3424,11 @@
     const tileY = Math.floor(camY + clickY / TILE_SIZE);
 
     // 0. Portas e baús interativos (antes de mirar NPCs ou caminhar).
-    if(player.floor===0){
-      if(maps[0]?.[tileY]?.[tileX]===TILE.HOUSE_DOOR){
+    if(player.floor===0 || player.floor===1){
+      if(maps[player.floor]?.[tileY]?.[tileX]===TILE.HOUSE_DOOR){
         window.toggleHouseDoor(tileX,tileY);return;
       }
-      const chest=chests.find(c=>c.x===tileX&&c.y===tileY);
+      const chest=chests.find(c=>(c.floor??0)===player.floor && c.x===tileX&&c.y===tileY);
       if(chest){window.openHouseChest(chest.id);return;}
     }
 
@@ -3524,7 +3537,7 @@
     initWorldMap();
     initEntities();
     const restored = restoreProgress();
-    if (player.openedChests.length >= player.cityQuestGoal && !player.cityQuestCompleted) {
+    if (cityChestCount() >= player.cityQuestGoal && !player.cityQuestCompleted) {
       completeCityQuest();
     }
     updateHUD();
