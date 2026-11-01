@@ -69,6 +69,23 @@
     }
 
     /* Layout Principal do Cliente */
+    /* Paineis recolhiveis e dock de itens visivel */
+    .sidebar-section{flex-shrink:0;min-height:0;background:#242424;border:1px solid #515151}
+    .sidebar-summary{display:flex;align-items:center;justify-content:space-between;gap:3px;cursor:pointer;padding:4px 6px;color:#f4d68d;font-size:10px;line-height:15px;font-weight:700;background:linear-gradient(180deg,#323232,#202020);user-select:none;list-style:none}
+    .sidebar-summary::-webkit-details-marker{display:none}
+    .sidebar-summary:focus-visible{outline:2px solid #fbbf24;outline-offset:-2px}
+    .sidebar-section[open]>.sidebar-summary{border-bottom:1px solid #3f3f3f}
+    .sidebar-caret::after{content:"＋";color:#f4d68d;font-size:12px}
+    .sidebar-section[open]>.sidebar-summary .sidebar-caret::after{content:"－"}
+    #sidebarMain{flex:1 1 0;min-height:0;overflow-y:auto}
+    #sidebarDock{flex:0 0 auto;max-height:45%;min-height:0;overflow-y:auto;padding-top:4px;border-top:2px solid #9b773c;background:#171717}
+    #sidebarDock .sidebar-section{flex-shrink:0}
+    #sidebarDock #corpseLootPanel{height:85px}
+    #sidebarDock #backpackGrid{height:94px;align-content:start;overflow-y:auto}
+    #sidebarDock #sidebar-backpack:not([open]) #backpackGrid{display:none}
+    #sidebarMain .sidebar-section>.tibia-inset,#sidebarDock .sidebar-section>.tibia-inset{margin:2px}
+    #sidebarQuickControls{display:flex;justify-content:space-between;gap:3px;align-items:center}
+    @media(max-height:570px){#sidebarDock{max-height:52%}#sidebarDock #backpackGrid{height:70px}}
     .client-grid {
       display: grid;
       grid-template-columns: 1fr 248px;
@@ -258,7 +275,7 @@
   </div>
 
   <!-- BARRA LATERAL DIREITA ESTILO TIBIA (MINIMAP, STATUS, PAPERDOLL, BATTLE, LOOT) -->
-  <div class="tibia-panel flex flex-col p-1.5 gap-1.5 overflow-y-auto" style="grid-column: 2; grid-row: 1 / span 2;">
+  <div id="gameSidebar" class="tibia-panel flex flex-col p-1.5 gap-1.5 overflow-hidden min-h-0" style="grid-column: 2; grid-row: 1 / span 2;">
     
     <!-- Cabeçalho do Jogo -->
     <div class="tibia-inset px-2 py-1 text-center flex items-center justify-between">
@@ -266,6 +283,16 @@
       <span id="floorBadge" class="text-[9px] bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-600 text-amber-200 font-bold">Andar: 0 (Térreo)</span>
     </div>
 
+    <div id="sidebarQuickControls">
+      <span class="text-[10px] font-bold text-amber-300">Painéis</span>
+      <div class="flex gap-1">
+        <button class="tibia-btn px-1.5 py-0.5 text-[9px]" onclick="window.setSidebarCompact(true)" title="Recolher os painéis opcionais">− Recolher</button>
+        <button class="tibia-btn px-1.5 py-0.5 text-[9px]" onclick="window.setSidebarCompact(false)" title="Expandir os painéis">+ Abrir</button>
+      </div>
+    </div>
+    <div id="sidebarMain" class="flex flex-col gap-1.5 min-h-0 overflow-y-auto">
+<details id="sidebar-navigation" class="sidebar-section" >
+<summary class="sidebar-summary"><span>🧭 Navegação e minimapa</span><span class="sidebar-caret" aria-hidden="true"></span></summary>
     <!-- Minimapa + Bússola + Botões Rápidos -->
     <div class="flex gap-1.5 items-center">
       <div class="tibia-inset p-0.5 relative">
@@ -301,6 +328,9 @@
 
     <div class="tibia-inset px-1.5 py-0.5 text-center text-[9px] font-bold text-amber-200" id="worldTimeLabel">☀ Dia • céu limpo</div>
 
+</details>
+<details id="sidebar-stats" class="sidebar-section" open>
+<summary class="sidebar-summary"><span>❤️ Atributos <span id="sidebarVitals" class="text-[9px] text-gray-300 font-normal">HP / MP</span></span><span class="sidebar-caret" aria-hidden="true"></span></summary>
     <!-- Barras Compactas de Status (HP, Mana, XP, Nível, Ouro, Bênção) -->
     <div class="tibia-inset p-1.5 flex flex-col gap-1">
       <div class="flex justify-between items-center text-[10px]">
@@ -344,6 +374,9 @@
       </div>
     </div>
 
+</details>
+<details id="sidebar-equipment" class="sidebar-section" >
+<summary class="sidebar-summary"><span>🛡️ Equipamentos e postura</span><span class="sidebar-caret" aria-hidden="true"></span></summary>
     <!-- PAPERDOLL DE EQUIPAMENTOS + POSTURA DE COMBATE -->
     <div class="tibia-inset p-1.5 flex items-center justify-between gap-1.5">
       <!-- Grade Paperdoll 3x3 Clássica com Ícones Pixel Art -->
@@ -377,6 +410,9 @@
       </div>
     </div>
 
+</details>
+<details id="sidebar-progression" class="sidebar-section" >
+<summary class="sidebar-summary"><span>⚒️ Progressão e forja</span><span class="sidebar-caret" aria-hidden="true"></span></summary>
     <!-- Progressão RPG: escolhas permanentes e forja -->
     <div class="tibia-inset px-1.5 py-1.5 flex flex-col gap-1">
       <div class="flex justify-between items-center text-[9px] text-amber-300 font-bold">
@@ -389,6 +425,9 @@
       </div>
     </div>
 
+</details>
+<details id="sidebar-contracts" class="sidebar-section" >
+<summary class="sidebar-summary"><span>📜 Contratos de caçada</span><span class="sidebar-caret" aria-hidden="true"></span></summary>
     <div class="tibia-inset px-1.5 py-1 flex items-center gap-2 justify-between">
       <div class="flex flex-col min-w-0">
         <span class="text-[9px] font-bold text-amber-300">📜 Quadro de Caçadas</span>
@@ -397,6 +436,9 @@
       <button onclick="window.openContracts()" class="tibia-btn px-2 py-1 text-[9px] text-amber-200 whitespace-nowrap">Contratos</button>
     </div>
 
+</details>
+<details id="sidebar-battle" class="sidebar-section" open>
+<summary class="sidebar-summary"><span>🎯 Lista de batalha</span><span class="sidebar-caret" aria-hidden="true"></span></summary>
     <!-- JANELA BATTLE LIST (CLIQUE PARA DAR TARGET NO MONSTRO) -->
     <div class="tibia-inset flex flex-col flex-1 min-h-[105px] overflow-hidden">
       <div class="bg-neutral-800 px-2 py-0.5 border-b border-neutral-700 flex justify-between items-center text-[10px] font-bold text-gray-300">
@@ -406,24 +448,34 @@
       <div id="battleList" class="p-1 overflow-y-auto space-y-1 flex-1"></div>
     </div>
 
+</details>
+    </div><!-- Final dos paineis que rolam -->
+    <div id="sidebarDock" class="flex flex-col gap-1.5">
+      <details id="sidebar-loot" class="sidebar-section" open>
+        <summary class="sidebar-summary"><span>💀 Corpo / loot <b id="lootCount" class="text-amber-200">(0)</b></span><span class="sidebar-caret" aria-hidden="true"></span></summary>
+        <div id="lootEmpty" class="text-[9px] text-neutral-400 px-1.5 py-1">Derrote uma criatura para coletar itens.</div>
     <!-- JANELA DE LOOT DE CORPO ABERTO (DINÂMICA) -->
     <div id="corpseLootPanel" class="tibia-inset hidden flex-col h-24 overflow-hidden border border-amber-700/70">
       <div class="bg-amber-950/70 px-2 py-0.5 border-b border-amber-800 flex justify-between items-center text-[10px] font-bold text-amber-300">
-        <span id="corpseLootTitle">💀 Corpo Aberto</span>
-        <button onclick="window.lootAllCorpse()" class="text-[9px] bg-amber-700 hover:bg-amber-600 text-white px-1.5 rounded">Pegar Tudo</button>
+        <span id="corpseLootTitle" class="truncate max-w-[118px]">💀 Corpo Aberto</span>
+        <button onclick="window.lootAllCorpse()" class="text-[9px] bg-amber-700 hover:bg-amber-600 text-white px-1.5 rounded">Pegar Tudo [L]</button>
       </div>
       <div id="corpseLootGrid" class="p-1.5 flex items-center gap-1.5 overflow-x-auto"></div>
     </div>
 
+      </details>
+      <details id="sidebar-backpack" class="sidebar-section" open>
+        <summary class="sidebar-summary"><span>🎒 Mochila <b id="backpackCount" class="text-amber-200">(0)</b></span><span class="sidebar-caret" aria-hidden="true"></span></summary>
     <!-- JANELA MOCHILA / LOOT COLETADO -->
-    <div class="tibia-inset flex flex-col h-24 overflow-hidden">
+    <div class="tibia-inset flex flex-col min-h-0 overflow-hidden">
       <div class="bg-neutral-800 px-2 py-0.5 border-b border-neutral-700 flex justify-between items-center text-[10px] font-bold text-amber-300">
         <span>🎒 Backpack (Inventário)</span>
         <span class="text-[9px] text-gray-400">Clique p/ Usar</span>
       </div>
       <div id="backpackGrid" class="p-1.5 grid grid-cols-5 gap-1 overflow-y-auto"></div>
     </div>
-
+      </details>
+    </div><!-- Dock de itens sempre visivel -->
   </div>
 </div>
 
