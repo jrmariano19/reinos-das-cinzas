@@ -393,6 +393,27 @@
   </div>
 </div>
 
+<!-- LOJA DO MERCADOR: compras com ouro adquirido dentro do jogo -->
+<div id="merchantModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-3">
+  <div class="tibia-panel max-w-sm w-full p-3 shadow-2xl flex flex-col gap-2">
+    <div class="flex justify-between items-center border-b border-neutral-600 pb-2">
+      <div>
+        <div class="text-amber-300 font-bold text-xs">🏪 Mercado das Cinzas</div>
+        <div class="text-[10px] text-gray-400">Breno, o mercador • suprimentos de aventura</div>
+      </div>
+      <button onclick="window.closeMerchantShop()" class="tibia-btn px-2 py-1 font-bold" aria-label="Fechar loja">✕</button>
+    </div>
+    <p class="text-xs text-yellow-300">Seu ouro: <strong id="merchantGold">0</strong> 🪙</p>
+    <div class="grid grid-cols-1 gap-2">
+      <button onclick="window.buyMerchantItem('hp')" class="tibia-btn flex justify-between p-2 text-left"><span>🧪 Poção de Vida (+1)</span><strong class="text-amber-300">30 ouro</strong></button>
+      <button onclick="window.buyMerchantItem('mp')" class="tibia-btn flex justify-between p-2 text-left"><span>💧 Poção de Mana (+1)</span><strong class="text-amber-300">30 ouro</strong></button>
+      <button onclick="window.buyMerchantItem('food')" class="tibia-btn flex justify-between p-2 text-left"><span>🍖 Provisões (+35 HP)</span><strong class="text-amber-300">20 ouro</strong></button>
+    </div>
+    <p id="merchantFeedback" class="text-xs text-gray-300 min-h-4" aria-live="polite">Clique em um item para comprar.</p>
+    <button onclick="window.closeMerchantShop()" class="tibia-btn py-1 text-xs">Voltar à aventura</button>
+  </div>
+</div>
+
 <!-- MODAL DE CUSTOMIZAÇÃO DE OUTFIT ESTILO TIBIA 7.6 ("Set Outfit") -->
 <div id="outfitModal" class="fixed inset-0 bg-black/75 hidden items-center justify-center z-50 p-4">
   <div class="tibia-panel w-full max-w-sm p-3 flex flex-col gap-3 shadow-2xl">
@@ -931,6 +952,26 @@
       pixelPart(swX, swY - 12, 4, 14, bladeColor, bladeEdge, '#64748b');
     }
 
+    // Mercador do Bastião: capuz verde, avental e bolsa de moedas em pixel art.
+    else if (entityType === 'merchant') {
+      const bob = frame === 1 ? 1 : 0;
+      pixelPart(15,31+bob,6,8,'#4b3326','#9a6741','#231b17');
+      pixelPart(25,31-bob,6,8,'#4b3326','#9a6741','#231b17');
+      pixelPart(12,17,23,18,'#456146','#7a9762','#223c29');
+      pixelPart(15,22,17,13,'#b58a52','#edc186','#6d492c');
+      pixelPart(8,19,8,13,'#496b45','#8ca76a','#28392c');
+      pixelPart(32,19,8,13,'#496b45','#8ca76a','#28392c');
+      pixelPart(16,6,16,13,'#c49b73','#ffe0a6','#75533b');
+      pixelPart(13,4,22,7,'#394b32','#93a56b','#182c21');
+      ctxTarget.fillStyle='#2f211a';
+      if (dir!=='up') {
+        ctxTarget.fillRect(dir==='left'?17:20,14,2,2);
+        ctxTarget.fillRect(dir==='right'?29:26,14,2,2);
+      }
+      pixelPart(30,23,10,10,'#926331','#f0bf68','#4a311b');
+      ctxTarget.fillStyle='#ffd05c';ctxTarget.fillRect(33,26,4,3);
+    }
+
     // =========================================================================
     // 2. ANCIÃO KAELEN / SACERDOTISA (Mage / Noble Robe com Barba e Cajado)
     // =========================================================================
@@ -1321,6 +1362,14 @@
       hp: 100,
       maxHp: 100,
       dialog: 'Que a chama eterna do Bastião purifique as cinzas da sua armadura e restaure seu sangue e mana!'
+    });
+
+    // Mercador original: permanece no corredor comercial do Bastião.
+    entities.push({
+      id: 'npc_breno', name: 'Breno (Mercador das Cinzas)', type: 'npc',
+      sprite: 'merchant', floor: 0, x: 31, y: 12, renderX: 31, renderY: 12,
+      dir: 'down', hp: 100, maxHp: 100,
+      dialog: 'Bem-vindo ao meu mercado! Tenho poções e provisões para a próxima expedição.'
     });
 
     // Monstros dos Ermos Cinzentos (Floor 0 - Sul do Portão)
@@ -1898,25 +1947,72 @@
     renderOutfitModalPalettes();
   };
 
-  // Interação com NPCs
-  window.talkToNearestNPC = function() {
-    const npc = entities.find(e => e.type === 'npc' && e.floor === player.floor && Math.hypot(e.x - player.x, e.y - player.y) <= 3.5);
+  // Conversas e loja: o clique seleciona o NPC correto, em vez de outro vizinho.
+  window.talkToNearestNPC = function(npcId = null) {
+    const nearby = entities.filter(e => e.type === 'npc' && e.floor === player.floor);
+    const npc = npcId ? nearby.find(e => e.id === npcId) :
+      nearby.sort((a,b) => Math.hypot(a.x-player.x,a.y-player.y) - Math.hypot(b.x-player.x,b.y-player.y))[0];
     if (!npc) {
-      addLog('Aproxime-se de um NPC dentro do Bastião das Cinzas para conversar.', '#aaaaaa');
+      addLog('Nenhum NPC encontrado neste andar.', '#aaaaaa');
       return;
     }
-    addFloatingText(player.floor, player.x, player.y - 0.5, 'Ivo says: hi', '#ff9933', true);
-    setTimeout(() => {
-      addFloatingText(npc.floor, npc.x, npc.y - 0.5, `${npc.name} says: ${npc.dialog}`, '#55ffff', true);
-      addLog(`${npc.name}: "${npc.dialog}"`, '#55ffff', 'default');
-      if (player.hp < player.maxHp || player.mp < player.maxMp) {
-        player.hp = player.maxHp;
-        player.mp = player.maxMp;
-        addSpark(player.floor, player.x, player.y, 'magic');
-        addFloatingText(player.floor, player.x, player.y, 'Curado!', '#33ff33');
-        updateHUD();
-      }
-    }, 300);
+    if (Math.hypot(npc.x - player.x, npc.y - player.y) > 3.5) {
+      player.path = findPathTo(npc.x, npc.y);
+      addLog('Aproxime-se de ' + npc.name + ' para conversar.', '#fbbf24');
+      return;
+    }
+    addFloatingText(player.floor, player.x, player.y - 0.5, 'Ivo diz: olá', '#ff9933', true);
+    // Resposta breve sobre a cabeça; diálogo completo aparece no chat.
+    addFloatingText(npc.floor, npc.x, npc.y - 0.5, 'Olá, aventureiro!', '#55ffff', true);
+    addLog(npc.name + ': "' + npc.dialog + '"', '#55ffff', 'default');
+    if (npc.id === 'npc_healer' && (player.hp < player.maxHp || player.mp < player.maxMp)) {
+      player.hp = player.maxHp;
+      player.mp = player.maxMp;
+      addSpark(player.floor, player.x, player.y, 'magic');
+      addFloatingText(player.floor, player.x, player.y, 'Curado!', '#33ff33');
+      addLog('Sacerdotisa Lyra restaurou sua vida e mana.', '#66ff66');
+      updateHUD();
+    } else if (npc.id === 'npc_breno') {
+      window.openMerchantShop();
+    }
+  };
+
+  window.openMerchantShop = function() {
+    const npc = entities.find(e => e.id === 'npc_breno');
+    if (!npc || player.floor !== 0 || Math.hypot(npc.x-player.x,npc.y-player.y)>3.5) {
+      addLog('Aproxime-se de Breno para negociar.', '#fbbf24');
+      return;
+    }
+    const modal=document.getElementById('merchantModal');
+    modal.classList.remove('hidden'); modal.classList.add('flex');
+    document.getElementById('merchantGold').textContent=player.gold;
+    document.getElementById('merchantFeedback').textContent='Clique em um item para comprar.';
+  };
+  window.closeMerchantShop = function() {
+    const modal=document.getElementById('merchantModal');
+    modal.classList.add('hidden'); modal.classList.remove('flex');
+  };
+  window.buyMerchantItem = function(kind) {
+    const prices={hp:30,mp:30,food:20};
+    if (!Object.hasOwn(prices,kind)) return;
+    const price=prices[kind];
+    const feedback=document.getElementById('merchantFeedback');
+    if(player.gold<price) {
+      feedback.textContent='Ouro insuficiente para esta compra.';
+      addLog('Breno: Você precisa de mais moedas.', '#ff9999');
+      return;
+    }
+    player.gold-=price;
+    if(kind==='hp')player.hpPots++;
+    if(kind==='mp')player.mpPots++;
+    if(kind==='food')player.lootBag.push({
+      id:'food_'+Date.now()+'_'+Math.floor(Math.random()*10000),
+      icon:'🍖',name:'Provisões de Viagem (+35 HP)',type:'food',value:35
+    });
+    feedback.textContent='Compra realizada! Boa viagem, cavaleiro.';
+    document.getElementById('merchantGold').textContent=player.gold;
+    addLog('Breno: Negócio fechado! -'+price+' moedas de ouro.', '#fbbf24');
+    updateHUD(); renderBackpack(); saveProgress();
   };
 
   window.inspectEquip = function(slot) {
@@ -1955,7 +2051,7 @@
 
     if (ent.type === 'npc') {
       player.targetId = null;
-      window.talkToNearestNPC();
+      window.talkToNearestNPC(ent.id);
       return;
     }
 
@@ -1986,7 +2082,7 @@
       const pct = Math.max(0, Math.round((e.hp / e.maxHp) * 100));
       const isTarget = player.targetId === e.id;
       const barCol = e.type === 'npc' ? '#38bdf8' : (pct > 60 ? '#00c000' : pct > 30 ? '#c0c000' : '#c00000');
-      const icon = e.type === 'npc' ? '🧙‍♂️' : (e.sprite === 'rat' ? '🐀' : e.sprite === 'troll' ? '🧌' : e.sprite === 'orc' ? '👹' : e.sprite === 'cyclops' ? '👁️' : '🐉');
+      const icon = e.type === 'npc' ? (e.sprite === 'merchant' ? '🪙' : e.sprite === 'healer' ? '✨' : '🧙‍♂️') : (e.sprite === 'rat' ? '🐀' : e.sprite === 'troll' ? '🧌' : e.sprite === 'orc' ? '👹' : e.sprite === 'cyclops' ? '👁️' : '🐉');
 
       return `
         <div onclick="window.selectTarget('${e.id}')" class="p-1 rounded cursor-pointer border ${isTarget ? 'border-red-500 bg-red-950/40' : 'border-neutral-800 bg-neutral-900/60 hover:bg-neutral-800'} flex flex-col gap-0.5">
