@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>REINOS DAS CINZAS — Laboratório Isométrico</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#111820;color:#f5e5c7;font:15px system-ui,sans-serif}
+header{padding:14px 20px;background:#222b34;border-bottom:1px solid #7e633d}
+h1{font-size:19px;margin:0 0 5px}p{margin:0;color:#cbbda5}
+main{display:grid;grid-template-columns:minmax(0,1fr) 260px;min-height:calc(100vh - 77px)}
+canvas{width:100%;height:calc(100vh - 80px);min-height:420px;display:block;touch-action:none;cursor:crosshair}
+aside{padding:20px;background:#1d252e;border-left:1px solid #564a39;line-height:1.6}
+button{background:#80623b;color:white;border:1px solid #d2b079;border-radius:6px;padding:10px 14px;cursor:pointer}
+strong{color:#f3cf83}@media(max-width:750px){main{grid-template-columns:1fr}canvas{height:58vh;min-height:330px}aside{border-left:0;border-top:1px solid #564a39}}
+</style>
+</head>
+<body>
+<header><h1>REINOS DAS CINZAS · Laboratório isométrico</h1><p>Protótipo independente — não altera o jogo principal nem os saves.</p></header>
+<main><canvas id="scene" aria-label="Mapa isométrico interativo"></canvas>
+<aside><h2>Valdoria — estudo visual</h2><p>Clique ou toque em um terreno para mover o aventureiro.</p>
+<p>Posição: <strong id="pos">6, 6</strong></p><p>Destino: <strong id="dest">—</strong></p>
+<p>Construções, praça e caminhos são elementos de demonstração. O próximo marco conecta a projeção ao mapa real.</p>
+<button id="reset">Voltar à praça</button></aside></main>
+<script type="module">
+import {worldToScreen,screenToTile,drawIsoDiamond,tileDrawOrder} from '../src/isometric.js';
+const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d');
+const SIZE=13, TW=58,TH=29;
+const player={x:6,y:6},target={x:6,y:6};
+const buildings=[{x:2,y:2,w:2,h:2,label:'Forja'},{x:9,y:3,w:2,h:2,label:'Armazém'},{x:3,y:9,w:2,h:2,label:'Guilda'}];
+let width=0,height=0,dpr=1,originX=0,originY=0,last=0;
+function resize(){const b=canvas.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);width=b.width;height=b.height;canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);originX=width/2;originY=Math.max(55,(height-SIZE*TH)/2+20);draw();}
+function isBuilding(x,y){return buildings.some(b=>x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h)}
+function terrain(x,y){if((x>=5&&x<=7)||(y>=5&&y<=7))return '#a69a79';return (x+y)%2?'#3f694b':'#497453'}
+function draw(){
+ctx.clearRect(0,0,width,height);
+ctx.fillStyle='#121b22';ctx.fillRect(0,0,width,height);
+const tiles=Array.from({length:SIZE*SIZE},(_,i)=>({x:i%SIZE,y:Math.floor(i/SIZE)})).sort(tileDrawOrder);
+for(const t of tiles){drawIsoDiamond(ctx,t.x,t.y,terrain(t.x,t.y),originX,originY,TW,TH);
+const p=worldToScreen(t.x,t.y,originX,originY,TW,TH);ctx.strokeStyle='#172f29';ctx.lineWidth=.65;ctx.beginPath();ctx.moveTo(p.x,p.y-TH/2);ctx.lineTo(p.x+TW/2,p.y);ctx.lineTo(p.x,p.y+TH/2);ctx.lineTo(p.x-TW/2,p.y);ctx.closePath();ctx.stroke();}
+const objects=[...buildings.map(b=>({depth:b.x+b.y+b.w+b.h,kind:'building',b})),{depth:player.x+player.y+.5,kind:'player'}].sort((a,b)=>a.depth-b.depth);
+for(const o of objects){
+if(o.kind==='building'){const b=o.b,p=worldToScreen(b.x+(b.w-1)/2,b.y+(b.h-1)/2,originX,originY,TW,TH);
+const bw=TW*b.w*.8,bh=TH*b.h*.9;ctx.fillStyle='#584e46';ctx.fillRect(p.x-bw/2,p.y-bh-27,bw,bh+20);ctx.fillStyle='#a56d47';ctx.beginPath();ctx.moveTo(p.x-bw/2-8,p.y-bh-27);ctx.lineTo(p.x,p.y-bh-61);ctx.lineTo(p.x+bw/2+8,p.y-bh-27);ctx.closePath();ctx.fill();ctx.fillStyle='#f4dfb0';ctx.textAlign='center';ctx.font='12px system-ui';ctx.fillText(b.label,p.x,p.y-bh-67);}
+else{const p=worldToScreen(player.x,player.y,originX,originY,TW,TH);ctx.fillStyle='#0008';ctx.beginPath();ctx.ellipse(p.x,p.y+2,11,5,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#e6c187';ctx.beginPath();ctx.arc(p.x,p.y-19,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#456f9a';ctx.fillRect(p.x-8,p.y-13,16,19);ctx.strokeStyle='#d3b56d';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(p.x+10,p.y-10);ctx.lineTo(p.x+18,p.y-24);ctx.stroke();}
+}
+document.getElementById('pos').textContent=player.x+', '+player.y;
+}
+canvas.addEventListener('pointerdown',e=>{const r=canvas.getBoundingClientRect(),p=screenToTile(e.clientX-r.left,e.clientY-r.top,originX,originY,TW,TH);
+if(p.x<0||p.y<0||p.x>=SIZE||p.y>=SIZE||isBuilding(p.x,p.y))return;
+target.x=p.x;target.y=p.y;document.getElementById('dest').textContent=p.x+', '+p.y;});
+document.getElementById('reset').onclick=()=>{target.x=player.x=6;target.y=player.y=6;draw();};
+function tick(t){if(t-last>140){last=t;if(player.x!==target.x||player.y!==target.y){const nx=player.x+Math.sign(target.x-player.x),ny=player.y+Math.sign(target.y-player.y);
+if(!isBuilding(nx,ny)){player.x=nx;player.y=ny;}else if(!isBuilding(player.x,ny))player.y=ny;else if(!isBuilding(nx,player.y))player.x=nx;else{target.x=player.x;target.y=player.y;}draw();}}
+requestAnimationFrame(tick);}
+new ResizeObserver(resize).observe(canvas);requestAnimationFrame(tick);
+</script>
+</body></html>
