@@ -4447,8 +4447,11 @@
         } else if (t === TILE.HOUSE_WALL) {
           const h=houseAt(gx,gy);
           if(h && gx===h.x && gy===h.y+h.h-1){
-            ctx.globalAlpha=houseRevealed(h)?0.30:1;
+            // Fachadas externas nunca ficam translúcidas por proximidade.
+            // A regra antiga de 30% era feita para paredes internas e apagava
+            // justamente a construção que deveria aparecer ao redor do jogador.
             const building=spriteCache['town_building_'+h.id];
+            ctx.globalAlpha=1;
             if(building)ctx.drawImage(building,px-10,py-(h.h-1)*48-76);
             ctx.globalAlpha=1;
           }
