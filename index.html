@@ -695,8 +695,9 @@
     CRYPT_FLOOR: 25, CRYPT_WALL: 26, STAIR_DOWN: 27,
     STAIR_UP: 28, MOSS_FLOOR: 29, BRIDGE: 30, CHEST: 31,
     PORTAL_EXIT: 32, PORTAL_RETURN: 33, CAMP_FIRE: 34, TENT: 35,
-    SIGNPOST: 36, FARM: 37, WILD_FLOWERS: 38,
-    FERN: 39, MUSHROOM: 40, CLIFF: 41, ROCK: 42, REEDS: 43
+     SIGNPOST: 36, FARM: 37, WILD_FLOWERS: 38,
+    FERN: 39, MUSHROOM: 40, CLIFF: 41, ROCK: 42, REEDS: 43,
+    BARREL: 44, CRATE: 45, BENCH: 46
   };
 
   // Estado do Jogador (Ivo - Cavaleiro das Cinzas)
@@ -1775,6 +1776,11 @@
     maps[0][16][24] = TILE.LANTERN;
     maps[0][18][20] = TILE.SIGNPOST;
     maps[0][18][24] = TILE.SIGNPOST;
+
+    // Mobiliário urbano: áreas de descanso, carga e abastecimento dos bairros.
+    [[12,13],[31,13],[12,20],[31,20],[12,27],[31,27]].forEach(([x,y])=>maps[0][y][x]=TILE.BARREL);
+    [[12,14],[31,14]].forEach(([x,y])=>maps[0][y][x]=TILE.CRATE);
+    [[18,20],[25,20],[18,27],[25,27]].forEach(([x,y])=>maps[0][y][x]=TILE.BENCH);
     [[11,10],[18,10],[25,10],[32,10],[11,17],[18,17],[25,17],[32,17],
       [11,24],[18,24],[25,24],[32,24],[11,32],[18,32],[25,32],[32,32]]
       .forEach(([x,y]) => { if (maps[0][y][x]===TILE.DIRT_ROAD) maps[0][y][x]=TILE.LANTERN; });
@@ -1998,6 +2004,36 @@
     ].forEach(n=>entities.push({...n,type:'npc',floor:0,renderX:n.x,renderY:n.y,
       dir:'down',hp:100,maxHp:100}));
 
+    // Moradores em circulação: a cidade mantém movimento mesmo sem o jogador interagir.
+    const townPatrols=[
+      {id:'npc_ada',name:'Alda (Moradora)',sprite:'innkeeper',route:[[12,10],[13,10],[14,10],[15,10],[16,10],[17,10]],
+       dialog:'A praça fica mais bonita ao amanhecer. Os carregadores chegam cedo para abastecer as lojas.'},
+      {id:'npc_bram',name:'Bram (Carregador)',sprite:'merchant',route:[[19,10],[20,10],[21,10],[22,10],[23,10],[24,10]],
+       dialog:'Levo mercadorias entre os bairros. O depósito recebe ferramentas e provisões durante todo o dia.'},
+      {id:'npc_timo',name:'Timo (Guarda de Ronda)',sprite:'guard',route:[[26,10],[27,10],[28,10],[29,10],[30,10],[31,10]],
+       dialog:'A ronda norte está tranquila. Mantenha as armas guardadas dentro das muralhas.'},
+      {id:'npc_nira',name:'Nira (Aprendiz)',sprite:'healer',route:[[12,17],[13,17],[14,17],[15,17],[16,17],[17,17]],
+       dialog:'Aprendo a preparar bálsamos com a Sacerdotisa Lyra. Um dia vou cuidar de todos os viajantes.'},
+      {id:'npc_olen',name:'Olen (Mensageiro)',sprite:'scribe',route:[[19,17],[20,17],[21,17],[22,17],[23,17],[24,17]],
+       dialog:'Levo avisos entre o arquivo, o templo e o salão dos contratos. Sempre há notícias chegando.'},
+      {id:'npc_ves',name:'Vessa (Comerciante)',sprite:'merchant',route:[[26,17],[27,17],[28,17],[29,17],[30,17],[31,17]],
+       dialog:'As caravanas trazem tecidos, ferramentas e especiarias. O mercado nunca fica parado por muito tempo.'},
+      {id:'npc_darek',name:'Darek (Patrulheiro)',sprite:'guard',route:[[12,24],[13,24],[14,24],[15,24],[16,24],[17,24]],
+       dialog:'Patrulho o bairro residencial. Se ouvir o sino do portão, procure o quartel imediatamente.'},
+      {id:'npc_mirael',name:'Mirael (Patrulheira)',sprite:'guard',route:[[26,24],[27,24],[28,24],[29,24],[30,24],[31,24]],
+       dialog:'As muralhas são antigas, mas continuam firmes. A guarda conhece cada passagem do Bastião.'},
+      {id:'npc_pavo',name:'Pavo (Escriba)',sprite:'scribe',route:[[12,32],[13,32],[14,32],[15,32],[16,32],[17,32]],
+       dialog:'Registro nomes de viajantes que partem pelo portão sul. Alguns retornam com histórias incríveis.'},
+      {id:'npc_eron_city',name:'Eron (Caravaneiro)',sprite:'merchant',route:[[26,32],[27,32],[28,32],[29,32],[30,32],[31,32]],
+       dialog:'Minha carroça segue para o Vale das Lanternas. A estrada sul é segura durante o dia.'}
+    ];
+    townPatrols.forEach((n,i)=>{
+      const [x,y]=n.route[0];
+      entities.push({...n,type:'npc',floor:0,x,y,renderX:x,renderY:y,dir:'down',
+        hp:100,maxHp:100,ambient:true,patrolRoute:n.route.map(([px,py])=>({x:px,y:py})),
+        patrolIndex:0,patrolDirection:1,patrolDelay:1550+(i%3)*220,lastMove:0});
+    });
+
     // Vila das Lanternas: habitantes com profissões, comerciantes e diálogos únicos.
     [
       {id:'npc_ayla',name:'Ayla (Guardiã do Vale)',sprite:'guard',x:24,y:12,
@@ -2147,6 +2183,7 @@
       t === TILE.MARKET_STALL || t === TILE.CRYPT_WALL ||
       t === TILE.TENT || t === TILE.CAMP_FIRE ||
       t === TILE.SIGNPOST ||
+      t === TILE.BARREL || t === TILE.CRATE || t === TILE.BENCH ||
       t === TILE.CLIFF ||
       t === TILE.WATER ||
       t === TILE.ALTAR ||
@@ -2218,6 +2255,7 @@
     if(t===TILE.LANTERN||t===TILE.CAMP_FIRE)return '#e6a647';
     if(t===TILE.CHEST)return '#fbbf24';
     if(t===TILE.TENT)return '#a6815c';
+    if(t===TILE.BARREL||t===TILE.CRATE||t===TILE.BENCH)return '#8d765d';
     return '#426b36';
   }
   function renderWorldMap(){
@@ -2644,6 +2682,14 @@
     }
   };
 
+  function cityDistrictLabel(x,y){
+    if(y<=10)return x<=18?'Distrito do Saber':x>=26?'Distrito da Guarda':'Avenida Norte';
+    if(y<=16)return x<=17?'Bairro da Estalagem':x>=26?'Mercado Oriental':'Praça das Cinzas';
+    if(y<=23)return x<=17?'Bairro Residencial':x>=26?'Distrito das Guildas':'Avenida dos Artesãos';
+    if(y<=30)return x<=17?'Bairro dos Cartógrafos':x>=26?'Distrito das Caravanas':'Rua dos Contratos';
+    return 'Portão Sul';
+  }
+
   function updateZoneUI() {
     const inPZ = isProtectionZone(player.floor, player.x, player.y);
     const badge = document.getElementById('pzBadge');
@@ -2672,7 +2718,7 @@
     } else if (inPZ) {
       badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-emerald-300 font-bold shadow-lg';
       const building=houseAt(player.x,player.y);
-      label.textContent = building ? building.name+' (Interior)' : 'Bastião das Cinzas (Zona Segura)';
+      label.textContent = building ? building.name+' (Interior)' : cityDistrictLabel(player.x,player.y)+' • Zona Segura';
     } else {
       badge.className = 'absolute top-3 left-3 px-2.5 py-1 tibia-panel flex items-center gap-1.5 text-[11px] text-red-400 font-bold shadow-lg';
       label.textContent = player.x <= 14 && player.y >= 28
@@ -3461,6 +3507,30 @@
   }
 
   // Loop de Jogo e Inteligência Artificial Tibiana
+  function updateAmbientTownNPCs(now){
+    if(player.floor!==0)return;
+    for(const e of entities){
+      if(!e.ambient||e.floor!==0||!e.patrolRoute||e.patrolRoute.length<2)continue;
+      if(now-(e.lastMove||0)<e.patrolDelay)continue;
+      e.lastMove=now;
+      if(Math.max(Math.abs(e.x-player.x),Math.abs(e.y-player.y))<=3.5)continue;
+      let nextIndex=e.patrolIndex+e.patrolDirection;
+      if(nextIndex<0||nextIndex>=e.patrolRoute.length){
+        e.patrolDirection*=-1;
+        nextIndex=e.patrolIndex+e.patrolDirection;
+      }
+      const next=e.patrolRoute[nextIndex];
+      if(!next||isTileBlocked(e.floor,next.x,next.y,e.id)){
+        e.patrolDirection*=-1;
+        continue;
+      }
+      const dx=next.x-e.x,dy=next.y-e.y;
+      e.x=next.x;e.y=next.y;e.patrolIndex=nextIndex;
+      e.dir=dx<0?'left':dx>0?'right':dy<0?'up':'down';
+      e.walkFrame=e.walkFrame===1?2:1;
+    }
+  }
+
   function updateGameLogic(now) {
     for (let s = 1; s <= 4; s++) {
       const cdEl = document.getElementById(`cd${s}`);
@@ -3640,6 +3710,9 @@
       }
     });
 
+    // Moradores e guardas percorrem as ruas do Bastião sem atravessar paredes ou o jogador.
+    updateAmbientTownNPCs(now);
+
     // Interpolação suave entre os SQMs
     player.renderX += (player.x - player.renderX) * 0.34;
     player.renderY += (player.y - player.renderY) * 0.34;
@@ -3752,7 +3825,8 @@
           }
         } else if (t === TILE.SEWER_GRATE) {
           ctx.drawImage(spriteCache['sewer_grate'], px, py);
-        } else if (t === TILE.STONE_FLOOR || t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.ALTAR || t === TILE.HOUSE_WALL || t === TILE.LANTERN || t === TILE.FOUNTAIN || t === TILE.MARKET_STALL || t === TILE.CLIFF) {
+        } else if (t === TILE.STONE_FLOOR || t === TILE.CASTLE_WALL || t === TILE.TORCH_WALL || t === TILE.ALTAR || t === TILE.HOUSE_WALL || t === TILE.LANTERN || t === TILE.FOUNTAIN || t === TILE.MARKET_STALL || t === TILE.CLIFF || t === TILE.BARREL ||
+                   t === TILE.CRATE || t === TILE.BENCH) {
           ctx.drawImage(spriteCache[`stone_${variant}`], px, py);
         } else if (t === TILE.DIRT_ROAD || t === TILE.GATE_ARCH || t === TILE.PORTAL_EXIT || t === TILE.PORTAL_RETURN || t === TILE.SIGNPOST) {
           ctx.drawImage(spriteCache[`dirt_${variant % 3}`], px, py);
@@ -3860,6 +3934,27 @@
             ctx.fillStyle = cols[f % cols.length];
             ctx.fillRect(px + 14 + (f * 5) % 18, py + 14 + ((f * 7) % 16), 4, 4);
           }
+        }
+        if(t===TILE.BARREL){
+          ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(px+10,py+35,29,7);
+          ctx.fillStyle='#4b2c1c';ctx.fillRect(px+12,py+13,25,26);
+          ctx.fillStyle='#80502d';ctx.fillRect(px+15,py+14,19,23);
+          ctx.fillStyle='#bd8a4c';ctx.fillRect(px+12,py+16,25,4);ctx.fillRect(px+12,py+30,25,4);
+          ctx.fillStyle='#4b2c1c';ctx.fillRect(px+14,py+22,21,3);
+          ctx.fillStyle='#d7ad6d';ctx.fillRect(px+17,py+18,2,10);ctx.fillRect(px+30,py+18,2,10);
+        }else if(t===TILE.CRATE){
+          ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(px+8,py+36,32,6);
+          ctx.fillStyle='#3f291c';ctx.fillRect(px+10,py+13,29,27);
+          ctx.fillStyle='#986238';ctx.fillRect(px+13,py+16,23,21);
+          ctx.strokeStyle='#d0a06a';ctx.lineWidth=3;ctx.strokeRect(px+13,py+16,23,21);
+          ctx.beginPath();ctx.moveTo(px+14,py+17);ctx.lineTo(px+35,py+36);ctx.moveTo(px+35,py+17);ctx.lineTo(px+14,py+36);ctx.stroke();
+        }else if(t===TILE.BENCH){
+          ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(px+7,py+35,35,7);
+          ctx.fillStyle='#3b271b';ctx.fillRect(px+13,py+24,5,13);ctx.fillRect(px+31,py+24,5,13);
+          ctx.fillStyle='#714324';ctx.fillRect(px+9,py+16,31,8);
+          ctx.fillStyle='#b17a43';ctx.fillRect(px+10,py+17,29,3);
+          ctx.fillStyle='#4a2d1c';ctx.fillRect(px+9,py+10,31,5);
+          ctx.fillStyle='#a96d39';ctx.fillRect(px+10,py+11,29,2);
         }
       }
     }
@@ -4127,7 +4222,8 @@
           dir: e.dir || 'down',
           frame: isMoving ? e.walkFrame : 0
         });
-        drawTibiaNameAndBar(px, py, e.name, e.hp / e.maxHp, e.type === 'npc');
+        if(!e.ambient||Math.hypot(e.x-player.x,e.y-player.y)<=5.5)
+          drawTibiaNameAndBar(px, py, e.name, e.hp / e.maxHp, e.type === 'npc');
       });
 
       // Jogador (Ivo - Cavaleiro de Valdoria)
@@ -4159,9 +4255,17 @@
         const rw=h.w*TILE_SIZE,rh=h.h*TILE_SIZE;
         if(rx>canvas.width+36 || ry>canvas.height+36 || rx+rw<0 || ry+rh<0)continue;
         const vale=(h.floor??0)===1;
+        const roofStyles={
+          stone:{edge:'#30383c',light:'#b1b8b5',mid:'#69777a',dark:'#3d4a4d',ridge:'#d0d0c2'},
+          slate:{edge:'#202b3d',light:'#a8b8d0',mid:'#536982',dark:'#33465d',ridge:'#d0dced'},
+          brick:{edge:'#4c251e',light:'#e6a076',mid:'#ad563c',dark:'#733928',ridge:'#f1c38a'},
+          timber:{edge:'#352319',light:'#c59a69',mid:'#765034',dark:'#4b3022',ridge:'#d6b17d'},
+          plaster:{edge:'#55352c',light:'#e6c59a',mid:'#b9815b',dark:'#81533e',ridge:'#f2d7ad'},
+          moss:{edge:'#293b2b',light:'#a4b982',mid:'#647d52',dark:'#40583b',ridge:'#c7d6a3'}
+        };
         const palette=vale ?
           {edge:'#292a47',light:'#a7a2cc',mid:'#545774',dark:'#383852',ridge:'#bcc5dd'}:
-          {edge:'#4c251e',light:'#e6a076',mid:'#ad563c',dark:'#733928',ridge:'#f1c38a'};
+          (roofStyles[h.style]||roofStyles.brick);
         ctx.fillStyle='rgba(0,0,0,.32)';ctx.fillRect(rx+9,ry+10,rw-10,rh+9);
         ctx.fillStyle=palette.edge;ctx.fillRect(rx-5,ry-21,rw+10,rh+26);
         // Telhado colonial do Bastião / ardósia cinza-azulada do Vale.
@@ -4396,6 +4500,7 @@
         else if (t === TILE.DUNGEON_FLOOR || t === TILE.CRYPT_FLOOR) mctx.fillStyle = '#3f3f46';
         else if (t === TILE.CRYPT_WALL) mctx.fillStyle = '#182322';
         else if (t === TILE.MOSS_FLOOR) mctx.fillStyle = '#36533a';
+        else if (t === TILE.BARREL || t === TILE.CRATE || t === TILE.BENCH) mctx.fillStyle = '#8d765d';
         else if (t === TILE.HOUSE_WALL) mctx.fillStyle = '#aa6247';
         else if (t === TILE.CHEST) mctx.fillStyle = '#fbbf24';
         else if (t === TILE.WOOD_FLOOR || t === TILE.HOUSE_DOOR || t === TILE.FURNITURE) mctx.fillStyle = '#9e7048';
