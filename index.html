@@ -5102,8 +5102,27 @@
     }
     const previewCtx = isoPreviewCanvas.getContext('2d');
     previewCtx.clearRect(0,0,isoPreviewCanvas.width,isoPreviewCanvas.height);
+    const previewPlayer = {x:player.renderX,y:player.renderY};
+    const nearbyEntities = entities.filter(e => e.floor === player.floor &&
+      Number.isFinite(e.x) && Number.isFinite(e.y) &&
+      Math.abs(e.x-player.x) <= 18 && Math.abs(e.y-player.y) <= 18);
     isoPreviewRenderer.draw(previewCtx,maps[player.floor],
-      {x:player.renderX,y:player.renderY},isoPreviewCanvas.width,isoPreviewCanvas.height);
+      previewPlayer,isoPreviewCanvas.width,isoPreviewCanvas.height,
+      nearbyEntities,(target,entity,screen) => {
+        const isNpc = entity.type === 'npc';
+        target.fillStyle = isNpc ? '#86d6ff' : '#ef8e7c';
+        target.strokeStyle = '#171b20';
+        target.lineWidth = 2;
+        target.beginPath();
+        target.arc(screen.x,screen.y-10,isNpc?6:7,0,Math.PI*2);
+        target.fill();target.stroke();
+        if (isNpc && Math.abs(entity.x-player.x) <= 5 && Math.abs(entity.y-player.y) <= 5) {
+          target.fillStyle = '#f5efdd';
+          target.font = '10px sans-serif';
+          target.textAlign = 'center';
+          target.fillText(entity.name,screen.x,screen.y-23);
+        }
+      });
     const x=isoPreviewCanvas.width/2,y=isoPreviewCanvas.height/2;
     previewCtx.fillStyle='#ffd67d';
     previewCtx.beginPath();previewCtx.arc(x,y-11,8,0,Math.PI*2);previewCtx.fill();
