@@ -12,7 +12,7 @@ import {
  collectTileLayers,worldToTile,tileToWorld,visibleActor
 } from './live-world-contract.js';
 import {
- GAMEPLAY_ZOOM,clampZoom,shouldHideRoof,shouldShowHouseLabel,
+ GAMEPLAY_ZOOM,clampZoom,shouldHideRoofFromCamera,shouldShowHouseLabel,
  shouldShowActorLabel,isWorldNearby
 } from './live-world-visibility.js';
 
@@ -246,18 +246,53 @@ function figure({player=false,monster=false,role='npc',name=''}){
   addBox(l,.23,.62,.23,0,-.28,0,leg);
   legs.push(l);
  }
- let weapon=null;
+ let weapon=null,shield=null;
+ const arms=[],armorPieces=[];
  if(player){
-  const cape=addBox(body,.74,1.05,.1,0,1.03,-.29,MAT.scarlet);
-  cape.rotation.x=.16;
-  weapon=addBox(body,.1,.82,.09,.55,1.0,.16,MAT.gold);
-  weapon.rotation.z=.23;
+  // Armadura medieval original modelada por primitivas para a versão jogável.
+  // O modelo acompanha a classe e permanece legível mesmo na câmera mobile.
+  const cuirass=addBox(body,.78,.75,.49,0,1.11,.03,MAT.metal);
+  armorPieces.push(cuirass);
+  addBox(body,.20,.34,.085,0,1.11,.297,MAT.gold,false);
+  addBox(body,.09,.44,.11,0,1.13,.35,MAT.window,false);
+  addBox(body,.86,.17,.56,0,.65,.03,MAT.timber);
+  addBox(body,.27,.13,.59,0,.70,.06,MAT.gold);
+  const cape=addBox(body,.82,1.18,.10,0,.96,-.32,MAT.scarlet);
+  cape.rotation.x=.12;
+  const crest=addBox(body,.13,.32,.55,0,2.30,0,MAT.gold);
+  crest.rotation.z=.08;
+  addBox(body,.70,.17,.52,0,1.91,.01,MAT.iron);
+  addBox(body,.62,.12,.55,0,1.79,.1,MAT.gold);
+  for(const side of [-1,1]){
+   const arm=new THREE.Group();
+   arm.position.set(side*.50,1.43,.02);body.add(arm);
+   const upper=addBox(arm,.30,.46,.40,side*.03,-.18,0,MAT.iron);
+   const shoulder=addShape(arm,UNIT_SPHERE,MAT.metal,side*.025,.04,0,[.29,.20,.27]);
+   armorPieces.push(shoulder);
+   addBox(arm,.31,.26,.35,side*.04,-.50,.02,MAT.gold);
+   addBox(arm,.24,.22,.31,side*.04,-.70,.02,MAT.iron);
+   arms.push(arm);
+  }
+  // Escudo preso ao antebraço esquerdo, com centro dourado e borda de ferro.
+  shield=new THREE.Group();arms[0].add(shield);
+  shield.position.set(-.32,-.45,.27);
+  addBox(shield,.55,.81,.12,0,-.02,0,MAT.metal);
+  addBox(shield,.42,.67,.15,0,-.02,.09,MAT.roofBlue);
+  addShape(shield,UNIT_SPHERE,MAT.gold,0,-.02,.18,[.14,.16,.065]);
+  // Espada visível e animável no braço direito.
+  weapon=new THREE.Group();arms[1].add(weapon);
+  weapon.position.set(.12,-.78,.15);
+  addBox(weapon,.10,.28,.11,0,-.03,0,MAT.timber);
+  addBox(weapon,.44,.10,.16,0,.16,0,MAT.gold);
+  addBox(weapon,.15,.85,.08,0,.60,0,MAT.wallLight);
+  const tip=addShape(weapon,UNIT_CONE,MAT.wallLight,0,1.12,0,[.10,.28,.065]);
+  tip.rotation.z=Math.PI;
  }
  if(name){
   const badge=labelSprite(name,player?'#ffe7a2':monster?'#ffc0ae':'#cef5f9');
   badge.position.y=player?2.85:2.65;body.add(badge);
  }
- return {group:body,legs,mesh:torso,weapon};
+ return {group:body,legs,mesh:torso,weapon,shield,arms,armorPieces};
 }
 export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
  if(!canvas||typeof onSelectTile!=='function'||!TILE)throw new TypeError('Parâmetros inválidos');
@@ -285,13 +320,15 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
  const point=vec(0,0,0);
  const floorGroups=new Map(),actorCache=new Map();
  const hero=figure({player:true,name:'Ivo'});scene.add(hero.group);
+ // Só o protagonista recebe escala extra; NPCs continuam no tamanho de seus tiles.
+ hero.group.scale.setScalar(isTouch?1.26:1.16);
  const heroRing=new THREE.Mesh(
   new THREE.RingGeometry(.50,.64,40),
   new THREE.MeshBasicMaterial({color:'#e8c179',transparent:true,opacity:.91,depthWrite:false,side:THREE.DoubleSide})
  );
  heroRing.rotation.x=-Math.PI/2;
  heroRing.renderOrder=15;scene.add(heroRing);
- const heroGlow=new THREE.PointLight('#ffda91',1.2,5,2);
+ const heroGlow=new THREE.PointLight('#ffda91',1.5,5,2);
  scene.add(heroGlow);
  let activeFloor=null,activeLayer=null,disposed=false,frame=0;
  let cameraAt=vec(22,0,14),lastSizeW=0,lastSizeH=0,mouseStart=null;
@@ -449,11 +486,12 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
   renderer.setSize(w,h,false);
  }
  function cameraFollow(player,now){
-  const goal=vec(player.renderX??player.x,0,player.renderY??player.y);
-  cameraAt.lerp(goal,.18);
-  const eye=vec(Math.sin(azimuth)*zoom*1.55,zoom*1.7,Math.cos(azimuth)*zoom*1.55);
+  // O foco é o tronco do herói, não o chão; câmera baixa melhora leitura de armaduras.
+  const goal=vec(player.renderX??player.x,.85,player.renderY??player.y);
+  cameraAt.lerp(goal,.19);
+  const eye=vec(Math.sin(azimuth)*zoom*1.58,zoom*1.15,Math.cos(azimuth)*zoom*1.58);
   camera.position.copy(cameraAt).add(eye);
-  camera.lookAt(cameraAt.x,0,cameraAt.z);
+  camera.lookAt(cameraAt.x,cameraAt.y,cameraAt.z);
   sun.position.set(cameraAt.x+12,26,cameraAt.z+17);
   sun.target.position.set(cameraAt.x,0,cameraAt.z);
   sun.target.updateMatrixWorld();
@@ -464,23 +502,30 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
   resize();frame++;
   hero.group.position.set(player.renderX??player.x,0,player.renderY??player.y);
   hero.group.rotation.y=player.dir==='up'?Math.PI:player.dir==='left'?-Math.PI/2:player.dir==='right'?Math.PI/2:0;
-  hero.mesh.material=CLASS_COATS[player.classId]||MAT.roofRed;
+  const armorColor=CLASS_COATS[player.classId]||MAT.roofRed;
+  hero.mesh.material=armorColor;
+  for(const piece of hero.armorPieces)piece.material=armorColor;
   const magic=['arcanista','devota','tecelao'].includes(player.classId);
+  const heavy=player.classId==='colosso';
   if(hero.weapon){
-    hero.weapon.scale.set(magic?.12:player.classId==='colosso'?.25:.1,
-      magic?1.43:.82,.09);
-    hero.weapon.position.y=magic?1.2:1.0;
+    hero.weapon.scale.set(heavy?1.38:magic?.95:1,magic?1.24:1,1);
+    hero.weapon.rotation.z=player.attackAnimUntil>now?-.9:0;
   }
+  if(hero.shield)hero.shield.visible=!magic&&player.classId!=='vigia'&&player.classId!=='espectro';
   const movement=Math.abs(player.x-(player.renderX??player.x))+Math.abs(player.y-(player.renderY??player.y));
   const stride=movement>.03?Math.sin(frame*.22)*.42:0;
   hero.legs[0].rotation.x=stride;hero.legs[1].rotation.x=-stride;
-  hero.group.position.y=movement>.03?Math.abs(Math.sin(frame*.22))*.07:0;
+  if(hero.arms.length===2){
+    hero.arms[0].rotation.x=-stride*.58;
+    hero.arms[1].rotation.x=player.attackAnimUntil>now?-1.45:stride*.58;
+  }
+  hero.group.position.y=movement>.03?Math.abs(Math.sin(frame*.22))*.06:0;
   heroRing.position.set(player.renderX??player.x,.075,player.renderY??player.y);
   heroGlow.position.set((player.renderX??player.x)+.3,2.3,(player.renderY??player.y)+.2);
   for(const {roof,house,sign} of activeLayer.roofs){
-   const near=shouldHideRoof(house,player);
-   roof.visible=!near;
-   sign.visible=!near&&shouldShowHouseLabel(house,player,isTouch?5:8);
+   const occluding=shouldHideRoofFromCamera(house,player,azimuth);
+   roof.visible=!occluding;
+   sign.visible=!occluding&&shouldShowHouseLabel(house,player,isTouch?4:7);
   }
   updateDoors(floor,openDoors);
   actorsSnapshot(entities,floor,player.x,player.y);
