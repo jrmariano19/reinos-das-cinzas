@@ -1203,6 +1203,124 @@
     });
     spriteCache['house_wall']=spriteCache['house_wall_brick'];
 
+    // Edifícios completos: cada casa é composta como uma construção única,
+    // em vez de repetir a mesma pequena fachada em cada SQM.
+    houses.forEach(h=>{
+      const p=housePalettes[h.style]||housePalettes.brick;
+      const w=h.w*48+20, height=h.h*48+76, ground=height-10;
+      const c=createOffscreen(w,height),g=c.getContext('2d');
+      const cx=w/2;
+      g.imageSmoothingEnabled=false;
+      g.fillStyle='rgba(0,0,0,.38)';
+      g.beginPath();g.ellipse(cx,ground-1,w*.49,13,0,0,Math.PI*2);g.fill();
+
+      // Alicerce de pedra e paredes laterais.
+      g.fillStyle='#332b25';g.fillRect(9,ground-150,w-18,145);
+      g.fillStyle=p.base;g.fillRect(13,ground-151,w-26,143);
+      g.fillStyle=p.wall;g.fillRect(18,ground-145,w-36,130);
+      g.fillStyle='rgba(255,255,255,.16)';g.fillRect(20,ground-143,w-40,3);
+      g.fillStyle=p.post;g.fillRect(13,ground-151,8,143);g.fillRect(w-21,ground-151,8,143);
+      g.fillStyle=p.trim;g.fillRect(10,ground-16,w-20,9);
+      g.fillStyle=p.light;g.fillRect(12,ground-17,w-24,3);
+      for(let by=ground-135;by<ground-24;by+=25){
+        g.fillStyle='rgba(45,31,25,.14)';g.fillRect(22,by,w-44,1);
+      }
+
+      // Frontão triangular e telhado de duas águas com telhas individualizadas.
+      g.beginPath();g.moveTo(8,ground-148);g.lineTo(cx,ground-276);g.lineTo(w-8,ground-148);g.closePath();
+      g.fillStyle=p.wall;g.fill();g.strokeStyle=p.trim;g.lineWidth=4;g.stroke();
+      g.beginPath();g.moveTo(4,ground-145);g.lineTo(cx,ground-282);g.lineTo(w-4,ground-145);
+      g.lineTo(w-12,ground-126);g.lineTo(cx,ground-246);g.lineTo(12,ground-126);g.closePath();
+      g.fillStyle=p.roof;g.fill();g.strokeStyle=p.dark;g.lineWidth=4;g.stroke();
+      g.beginPath();g.moveTo(cx,ground-280);g.lineTo(cx,ground-247);g.lineTo(12,ground-126);
+      g.lineTo(4,ground-145);g.closePath();g.fillStyle=p.light;g.globalAlpha=.28;g.fill();g.globalAlpha=1;
+      for(let row=0;row<7;row++){
+        const yy=ground-252+row*17;
+        const inset=row*5;
+        g.strokeStyle='rgba(25,20,19,.34)';g.lineWidth=2;
+        g.beginPath();g.moveTo(12+inset,yy);g.lineTo(cx,yy+18);g.lineTo(w-12-inset,yy);g.stroke();
+        for(let col=0;col<8;col++){
+          const xx=18+col*28+(row%2)*8;
+          if(xx>w-20)continue;
+          g.fillStyle=col%3===0?'rgba(255,255,255,.16)':'rgba(0,0,0,.10)';
+          g.fillRect(xx,yy+3,13,3);
+        }
+      }
+      g.fillStyle=p.trim;g.fillRect(cx-4,ground-280,8,36);
+      g.fillStyle=p.light;g.fillRect(cx-2,ground-276,3,25);
+
+      // Janelas profundas, vitrais, peitoris e floreiras.
+      const windowXs=[34,w-78];
+      windowXs.forEach((wx,i)=>{
+        const wy=ground-113;
+        g.fillStyle=p.trim;g.fillRect(wx-3,wy-3,48,48);
+        g.fillStyle='#292a2a';g.fillRect(wx,wy,42,39);
+        g.fillStyle=h.style==='slate'?'#8bc1d1':h.id==='templo'?'#9b8bd0':'#6f9ba0';
+        g.fillRect(wx+4,wy+4,34,30);
+        g.fillStyle='rgba(225,246,239,.55)';g.fillRect(wx+7,wy+6,5,25);
+        g.fillStyle=p.trim;g.fillRect(wx+19,wy+3,3,33);g.fillRect(wx+3,wy+18,36,3);
+        g.fillStyle=p.base;g.fillRect(wx-5,wy+38,52,6);
+        g.fillStyle=p.light;g.fillRect(wx-4,wy+38,50,2);
+        if(h.id==='templo'||h.id==='arquivo'){
+          g.fillStyle=p.trim;g.beginPath();g.arc(wx+21,wy+18,7,0,Math.PI*2);g.fill();
+          g.fillStyle=p.light;g.fillRect(wx+19,wy+11,4,15);g.fillRect(wx+14,wy+16,14,4);
+        }
+      });
+
+      // Portal de entrada, arco em pedra e placa própria de cada estabelecimento.
+      const doorX=Math.max(18,Math.min(w-62,(h.door-h.x)*48+2));
+      g.fillStyle=p.trim;g.fillRect(doorX-8,ground-91,58,91);
+      g.fillStyle=p.light;g.fillRect(doorX-5,ground-88,52,4);
+      g.fillStyle='#201b19';g.fillRect(doorX,ground-80,42,80);
+      g.fillStyle=p.post;g.fillRect(doorX+4,ground-76,34,76);
+      g.fillStyle=p.dark;g.fillRect(doorX+8,ground-70,26,70);
+      g.fillStyle=p.light;g.fillRect(doorX+10,ground-68,3,63);
+      g.fillStyle=p.trim;g.fillRect(doorX+28,ground-67,3,62);
+      g.fillStyle='#e1bd70';g.fillRect(doorX+30,ground-37,4,5);
+      g.fillStyle=p.base;g.fillRect(doorX-10,ground-99,62,13);
+      g.fillStyle=p.light;g.fillRect(doorX-7,ground-97,56,3);
+      g.fillStyle='#2d211b';g.fillRect(doorX-1,ground-94,44,7);
+      g.fillStyle=p.trim;g.fillRect(doorX+5,ground-92,32,3);
+
+      // Brasão e elementos arquitetônicos exclusivos por função.
+      g.fillStyle=p.trim;g.fillRect(cx-17,ground-207,34,25);
+      g.fillStyle=p.light;g.fillRect(cx-14,ground-204,28,19);
+      g.fillStyle=p.dark;g.fillRect(cx-11,ground-201,22,13);
+      g.fillStyle=h.id==='forja'?'#f28a35':h.id==='templo'?'#d7c2ff':h.id==='quartel'?'#d9b96b':'#e5c27d';
+      g.beginPath();g.arc(cx,ground-195,5,0,Math.PI*2);g.fill();
+      g.fillStyle=p.trim;g.fillRect(14,ground-155, w-28,5);
+      g.fillStyle=p.light;g.fillRect(15,ground-153,w-30,2);
+
+      if(['forja','laboratorio','reliquias'].includes(h.id)){
+        g.fillStyle='#51443b';g.fillRect(w-58,ground-270,23,95);
+        g.fillStyle='#82705b';g.fillRect(w-62,ground-278,31,12);
+        g.fillStyle='rgba(75,78,79,.5)';
+        for(let q=0;q<3;q++){g.beginPath();g.arc(w-47+q*5,ground-290-q*7,7+q*2,0,Math.PI*2);g.fill();}
+        if(h.id==='forja'){g.fillStyle='#f18a36';g.fillRect(w-54,ground-190,12,9);}
+      }
+      if(['estalagem','taverna','guilda','caravanas'].includes(h.id)){
+        g.fillStyle=p.trim;g.fillRect(doorX-9,ground-128,60,19);
+        for(let q=0;q<6;q++){
+          g.fillStyle=q%2?'#e8d7b7':p.roof;g.fillRect(doorX-7+q*10,ground-126,10,15);
+        }
+        g.fillStyle=p.light;g.fillRect(doorX-7,ground-128,58,3);
+      }
+      if(h.id==='templo'){
+        g.fillStyle='#e5d5ad';g.fillRect(cx-2,ground-235,4,27);g.fillRect(cx-10,ground-226,20,4);
+      }
+      if(h.id==='quartel'||h.id==='arsenal'){
+        g.fillStyle='#b13f32';g.fillRect(cx-5,ground-238,10,28);
+        g.fillStyle='#e6c47c';g.fillRect(cx-2,ground-233,4,18);
+      }
+
+      // Pequenas pedras de acabamento na base.
+      for(let i=0;i<Math.floor(w/24);i++){
+        g.fillStyle=i%2?'#8c8271':'#b2a58e';
+        g.fillRect(17+i*24,ground-7,18,4);
+      }
+      spriteCache['town_building_'+h.id]=c;
+    });
+
     // Postes e mobiliário próprios, sem recurso gráfico protegido.
     const lamp = createOffscreen(48,64), lg = lamp.getContext('2d');
     lg.fillStyle = '#151316'; lg.fillRect(21,19,7,43);
@@ -1765,11 +1883,17 @@
     });
     chests.forEach(ch => { maps[ch.floor??0][ch.y][ch.x] = TILE.CHEST; });
 
-    // Praça do mercado: fonte, bancas, iluminação e placas de orientação.
+    // Praça do mercado: um largo pavimentado com fonte, bancas e quatro acessos.
+    // O eixo central permanece livre para a circulação e para o início do jogador.
+    for(let y=12;y<=16;y++)for(let x=18;x<=25;x++){
+      if(maps[0][y][x]===TILE.STONE_FLOOR||maps[0][y][x]===TILE.DIRT_ROAD)maps[0][y][x]=TILE.STONE_FLOOR;
+    }
     maps[0][13][19] = TILE.FOUNTAIN;
     maps[0][13][25] = TILE.MARKET_STALL;
     maps[0][15][25] = TILE.MARKET_STALL;
     maps[0][15][19] = TILE.FLOWERS;
+    [[18,12],[20,12],[18,16],[20,16]].forEach(([x,y])=>maps[0][y][x]=TILE.FLOWERS);
+    [[25,12],[18,14],[20,15],[25,16]].forEach(([x,y])=>maps[0][y][x]=TILE.LANTERN);
     maps[0][12][20] = TILE.LANTERN;
     maps[0][16][20] = TILE.LANTERN;
     maps[0][12][24] = TILE.LANTERN;
@@ -4184,6 +4308,16 @@
           }
         }
 
+        // Mosaico da praça: filetes de bronze e desenho radial na pedra clara.
+        if(player.floor===0 && gx>=18 && gx<=25 && gy>=12 && gy<=16 &&
+           t!==TILE.FOUNTAIN && t!==TILE.MARKET_STALL && t!==TILE.LANTERN && t!==TILE.FLOWERS){
+          ctx.strokeStyle='rgba(190,157,99,.34)';ctx.lineWidth=1;
+          ctx.strokeRect(px+3,py+3,42,42);
+          ctx.fillStyle='rgba(224,198,145,.16)';
+          if((gx+gy)%2===0){ctx.fillRect(px+7,py+7,3,3);ctx.fillRect(px+38,py+38,3,3);}
+          if(gx===21||gx===22){ctx.fillStyle='rgba(49,76,79,.18)';ctx.fillRect(px+22,py+4,4,40);}
+        }
+
         // Elementos centrais redesenhados como objetos de cenário, não apenas ícones de tile.
         if(t===TILE.FOUNTAIN){
           ctx.fillStyle='rgba(0,0,0,.34)';ctx.beginPath();ctx.ellipse(px+24,py+39,21,7,0,0,Math.PI*2);ctx.fill();
@@ -4312,9 +4446,12 @@
           ctx.fillStyle='#b5a58d';ctx.fillRect(px+5,py+34,40,3);
         } else if (t === TILE.HOUSE_WALL) {
           const h=houseAt(gx,gy);
-          ctx.globalAlpha=h&&houseRevealed(h)?0.30:1;
-          ctx.drawImage(spriteCache['house_wall_'+(h?.style||'brick')]||spriteCache['house_wall'],px,py-16);
-          ctx.globalAlpha=1;
+          if(h && gx===h.x && gy===h.y+h.h-1){
+            ctx.globalAlpha=houseRevealed(h)?0.30:1;
+            const building=spriteCache['town_building_'+h.id];
+            if(building)ctx.drawImage(building,px-10,py-(h.h-1)*48-76);
+            ctx.globalAlpha=1;
+          }
         } else if (t === TILE.HOUSE_DOOR) {
           const opened=openDoors.has(doorKey(gx,gy));
           ctx.fillStyle = '#462b21'; ctx.fillRect(px+3,py-18,42,37);
@@ -4425,12 +4562,18 @@
           ctx.fillStyle='#e1c293';ctx.fillRect(px+12,py+9,5,3);
           ctx.fillRect(px+33,py+15,4,3);
         } else if (t === TILE.GATE_ARCH) {
-          ctx.fillStyle = '#a8a29e';
-          ctx.fillRect(px - 2, py - 18, 52, 64);
-          ctx.fillStyle = '#1c1917';
-          ctx.fillRect(px + 10, py + 4, 28, 42);
-          ctx.fillStyle = '#78350f';
-          ctx.fillRect(px - 4, py - 20, 56, 8);
+          // Torres laterais do grande portão do Bastião.
+          ctx.fillStyle='rgba(0,0,0,.34)';ctx.fillRect(px+3,py+37,43,8);
+          ctx.fillStyle='#514d45';ctx.fillRect(px+5,py-18,38,64);
+          ctx.fillStyle='#aaa391';ctx.fillRect(px+8,py-23,32,12);
+          ctx.fillStyle='#77756c';ctx.fillRect(px+9,py-11,30,52);
+          ctx.fillStyle='#c2b9a4';ctx.fillRect(px+9,py-11,5,49);
+          ctx.fillStyle='#4a4640';ctx.fillRect(px+16,py-5,17,42);
+          ctx.fillStyle='#2a2420';ctx.fillRect(px+18,py-2,13,39);
+          ctx.fillStyle='#9c7544';ctx.fillRect(px+6,py-26,36,5);
+          ctx.fillStyle='#d6b879';ctx.fillRect(px+9,py-25,30,2);
+          ctx.fillStyle='#6f3028';ctx.fillRect(px+20,py-19,8,9);
+          ctx.fillStyle='#e2c16f';ctx.fillRect(px+23,py-18,2,7);
         } else if (t === TILE.ALTAR) {
           ctx.fillStyle = '#94a3b8';
           ctx.fillRect(px + 6, py + 6, 36, 36);
