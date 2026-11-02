@@ -6,7 +6,19 @@
  document.querySelector('.viewport-container')?.appendChild(hud);document.body.appendChild(hint);
  hud.querySelectorAll('[data-skill]').forEach(b=>b.addEventListener('pointerdown',e=>{e.preventDefault();window.triggerHotkey?.(Number(b.dataset.skill));}));
  hud.querySelector('[data-action="map"]').addEventListener('click',()=>window.openWorldMap?.());
- hud.querySelector('[data-action="inventory"]').addEventListener('click',()=>{const sidebar=document.querySelector('#sidebar-backpack');if(sidebar){sidebar.open=true;sidebar.scrollIntoView({block:'nearest'});} });
+
+ // Reparent the live backpack rather than copying its contents: existing item listeners remain intact.
+ const inventory=document.createElement('section');inventory.id='mobileInventory';inventory.setAttribute('role','dialog');inventory.setAttribute('aria-label','Inventário');inventory.setAttribute('aria-modal','true');
+ inventory.innerHTML='<div id="mobileInventoryHeader"><span>🎒 Inventário</span><button id="mobileInventoryClose" type="button" aria-label="Fechar inventário">✕</button></div><div id="mobileInventoryBody"></div>';
+ hud.appendChild(inventory);
+ const backpack=document.getElementById('sidebar-backpack');
+ const originalParent=backpack?.parentNode, originalNext=backpack?.nextSibling;
+ function closeInventory(){inventory.classList.remove('is-open');if(backpack&&originalParent){originalParent.insertBefore(backpack,originalNext&&originalNext.parentNode===originalParent?originalNext:null);} }
+ function openInventory(){if(!backpack)return;backpack.open=true;inventory.querySelector('#mobileInventoryBody').appendChild(backpack);inventory.classList.add('is-open');}
+ hud.querySelector('[data-action="inventory"]').onclick=()=>inventory.classList.contains('is-open')?closeInventory():openInventory();
+ inventory.querySelector('#mobileInventoryClose').addEventListener('click',closeInventory);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeInventory();});
+ window.addEventListener('orientationchange',closeInventory);
  const pad=hud.querySelector('.mobile-controls'),stick=hud.querySelector('.mobile-stick');
  let pointer=null,dx=0,dy=0,last=0;
  function stop(){pointer=null;dx=dy=0;stick.style.transform='translate(0px,0px)';}
