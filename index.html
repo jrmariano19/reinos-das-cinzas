@@ -3768,8 +3768,11 @@
       mage:{coat:'#553b82',light:'#aa8bd0',dark:'#281d4c',metal:'#8b79b0',trim:'#e5c879',skin:'#c99a7b',hair:'#e0d6c4'},
       healer:{coat:'#386c88',light:'#a5d0d7',dark:'#1e3d59',metal:'#8faeb3',trim:'#e5d6a6',skin:'#d5a486',hair:'#805b4a'}
     };
-    const p=palettes[entityType]||palettes.merchant;
+    const p={...(palettes[entityType]||palettes.merchant)};
     const outfit=opts.outfit||{};
+    const seedText=String(opts.seed||entityType);
+    const seedValue=seedText.split('').reduce((a,ch)=>(a*33+ch.charCodeAt(0))>>>0,5381);
+    p.skin=['#e5b995','#c9906c','#a96f52','#d7a17d','#b9805f'][(seedValue>>>2)%5];
     if(entityType==='knight'){
       p.coat=outfit.primary||p.coat;p.metal=outfit.secondary||p.metal;
       p.trim=outfit.head||p.trim;p.dark=outfit.detail||p.dark;
@@ -3842,6 +3845,22 @@
     limb(16,19,-.26-armMotion,p.coat,p.light,6.4,10,false);
     limb(32,19,.26+armMotion,p.coat,p.light,6.4,10,false);
 
+    // Equipamentos de combate acompanham o braço e reagem ao ataque.
+    if(entityType==='knight'||entityType==='guard'||entityType==='commander'){
+      target.beginPath();target.moveTo(8,22);target.quadraticCurveTo(3,25,6,35);
+      target.lineTo(12,38);target.lineTo(16,34);target.lineTo(14,23);target.closePath();
+      strokePath(entityType==='knight'?'#294b83':'#3e5c78');
+      target.strokeStyle='#e8c66f';target.lineWidth=1.5;
+      target.beginPath();target.moveTo(10,25);target.lineTo(10,34);target.moveTo(7,29);target.lineTo(13,29);target.stroke();
+      const attack=opts.isAttacking?Math.sin(Math.max(0,Math.min(1,opts.attackProgress||.5))*Math.PI)*1.15:armMotion*.25;
+      target.save();target.translate(35,24);target.rotate(-.45-attack);
+      target.strokeStyle='#493020';target.lineWidth=3;target.beginPath();target.moveTo(0,0);target.lineTo(0,10);target.stroke();
+      target.strokeStyle='#d7a84e';target.lineWidth=2;target.beginPath();target.moveTo(-4,2);target.lineTo(4,2);target.stroke();
+      target.beginPath();target.moveTo(-2,0);target.lineTo(0,-19);target.lineTo(2,0);target.closePath();strokePath('#d9e0e4','#59636c',1);
+      target.strokeStyle='#fff4c4';target.lineWidth=1;target.beginPath();target.moveTo(0,-17);target.lineTo(0,-3);target.stroke();
+      target.restore();
+    }
+
     // Acessórios funcionais identificam cada profissão.
     if(entityType==='merchant'){
       target.beginPath();target.moveTo(30,22);target.quadraticCurveTo(39,23,38,34);
@@ -3871,9 +3890,13 @@
     target.fillStyle=p.skin;target.fillRect(21,13,6,6);
     target.beginPath();target.ellipse(24,9.3,7.1,8.1,0,0,Math.PI*2);
     strokePath(grad(17,3,31,17,p.skin,'#edc29c'));
-    const hair=entityType==='mage'?'#d9d2c2':entityType==='innkeeper'?'#713d37':
-      entityType==='healer'?'#8a604c':entityType==='smith'?'#40312a':
-      entityType==='scribe'?'#60442f':'#493126';
+    const hairSet=entityType==='mage'?['#d9d2c2','#b9b1a1','#8d8171']:
+      entityType==='innkeeper'?['#713d37','#9a5b45','#382a2c']:
+      entityType==='healer'?['#8a604c','#c2a078','#574137']:
+      entityType==='smith'?['#40312a','#665044','#a09a8b']:
+      entityType==='scribe'?['#60442f','#9b7048','#40352f']:
+      ['#493126','#a36d3e','#292b2c','#b5a17c'];
+    const hair=hairSet[seedValue%hairSet.length];
     if(dir==='up'){
       target.beginPath();target.moveTo(17,9);target.quadraticCurveTo(14,0,24,0);
       target.quadraticCurveTo(34,0,31,11);target.quadraticCurveTo(29,17,24,17);
@@ -4498,8 +4521,9 @@
         drawLivingHumanoidSprite(ctx,px,py,'knight',{
           dir:player.dir,frame:isMoving?player.walkFrame:0,moving:isMoving,
           time:now,phase:livingCharacterPhase(player.name||'Ivo'),seed:player.name,
-          isAttacking:now<player.attackAnimUntil,outfit:player.outfit,
-          legendary:player.legendarySword,forgedTier:player.weaponTier||0,
+          isAttacking:now<player.attackAnimUntil,
+          attackProgress:Math.max(0,Math.min(1,1-(player.attackAnimUntil-now)/280)),
+          outfit:player.outfit,legendary:player.legendarySword,forgedTier:player.weaponTier||0,
           shieldWall:now<player.shieldWallUntil
         });
         drawTibiaNameAndBar(px, py, player.name, player.hp / player.maxHp, false);
