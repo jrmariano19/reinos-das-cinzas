@@ -36,6 +36,23 @@ test('descanso in-game preserva protecoes, movimento e save antigo',()=>{
  assert.doesNotThrow(()=>new Script(scripts[0][1],{filename:'index.html'}));
 });
 
+test('Atlas ilustrado preserva destinos e distingue rotas existentes de planejadas',()=>{
+ assert.match(atlas,/id="links"/);
+ assert.match(atlas,/id="locations"/);
+ assert.match(atlas,/id="worldLinks"/);
+ assert.match(atlas,/id="all"/);
+ assert.match(atlas,/id="playable"/);
+ assert.match(atlas,/class="map-legend"/);
+ assert.match(atlas,/id="peak"/);
+ assert.match(atlas,/id="crystal"/);
+ assert.match(atlas,/id="pine"/);
+ assert.match(atlas,/Mapa ilustrativo de fantasia/);
+ assert.match(atlas,/não teletransporta/);
+ assert.match(atlas,/preview\.href='\.\/valdoria-3d\.html'/);
+ assert.match(atlas,/game\.href='\.\.\/index\.html'/);
+ assert.match(atlas,/if\(city\.status==='playable'\)/);
+});
+
 test('Atlas nao introduz salvamento proprio ou teleporte para locais inexistentes',()=>{
  assert.doesNotMatch(atlas,/localStorage\.(setItem|removeItem|clear)/);
  assert.doesNotMatch(atlas,/window\.location\.href=/);
