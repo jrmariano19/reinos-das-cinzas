@@ -40,6 +40,7 @@ test('monstros geram saques de material e itens com RNG isolado',()=>{
 test('item equipado impacta ataque, defesa e absorcao',()=>{
  assert.match(html,/gearBonuses\(\)\.attack/);
  assert.match(html,/gearBonuses\(\)\.defense/);
- assert.match(html,/gearBonuses\(\)\.absorption\*\.02/);
+ assert.match(html,/equippedStats\.absorption\*\.02/);
+ assert.match(html,/equippedStats\.block\/100/);
  assert.ok(Object.keys(GEAR_TEMPLATES).length>=8);
 });
