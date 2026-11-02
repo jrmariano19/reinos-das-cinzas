@@ -38,6 +38,17 @@ button.active{background:#917143;color:#111b24}
 <div id="loading"><div>Construindo Valdoria em 3D…</div><small>Um protótipo original, sem assets de outros jogos.</small></div>
 <div id="error" role="alert"><h2>Não foi possível carregar a cena 3D</h2><p>Verifique sua conexão e se o navegador permite módulos 3D/WebGL.</p></div>
 <canvas id="scene" aria-label="Cena tridimensional de Valdoria"></canvas>
+<script>
+window.addEventListener('error',function(event){
+  if(event && event.target && event.target.tagName==='IMG') return;
+  document.getElementById('loading')?.remove();
+  const error=document.getElementById('error');if(error)error.style.display='grid';
+});
+window.addEventListener('unhandledrejection',function(){
+  document.getElementById('loading')?.remove();
+  const error=document.getElementById('error');if(error)error.style.display='grid';
+});
+</script>
 <div class="hud top">
   <div class="logo"><div class="eyebrow">Reinos das Cinzas · Estudo de direção de arte</div><h1>Valdoria, a Fortaleza de Brasa</h1><p>Um primeiro cenário 3D com edifícios, praça, muralhas, comércio e iluminação. Ainda não é a cidade final do jogo.</p></div>
   <div class="status">◆ Nova direção visual · Cenário original</div>
@@ -173,7 +184,7 @@ function makeBuilding(key,x,z,w,d,h,roof,kind){
   sh.moveTo(points[0][0],points[0][1]);sh.lineTo(points[1][0],points[1][1]);sh.lineTo(points[2][0],points[2][1]);sh.closePath();
   const geom=new THREE.ShapeGeometry(sh);
   const face=addMesh(geom,plaster,root,0,0,front*(d/2+.015));
-  if(front===-1)face.rotation.y=Math.PI;
+  face.material.side=THREE.DoubleSide;
  }
  // Doors, visible portal surrounds and a shallow stair.
  block(root,2.8,4.8,.37,0,3,d/2+.25,oak);
@@ -293,9 +304,9 @@ function wall(x,z,w,d){block(scene,w,8,d,x,4,z,wallLine);
   block(scene,across?1.45:d,1.8,across?d:1.45,x+(across?t:0),8.9,z+(across?0:t),stone);
  }
 }
-wall(-52,-54,115,3);wall(-52,54,38,3);wall(52,54,38,3);
+wall(0,-54,110,3);
+wall(-35,54,40,3);wall(35,54,40,3);
 wall(-57,0,3,108);wall(57,0,3,108);
-wall(-52,54,36,3);wall(52,54,36,3);
 function watchTower(x,z){
  cylinder(scene,5,5.5,14,x,7,z,stone,8);
  cylinder(scene,5.3,5.3,.9,x,14.3,z,darkStone,8);
