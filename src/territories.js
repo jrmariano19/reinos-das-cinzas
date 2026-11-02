@@ -125,7 +125,7 @@ export function regenerateVitals(vitals,{seconds,idle,safe}){
   vitals.hp>vitals.maxHp || vitals.mp>vitals.maxMp){
    throw new TypeError('Atributos de regeneração inválidos');
  }
- if(!Number.isFinite(seconds) || seconds<0 || seconds>.25){
+ if(!Number.isFinite(seconds) || seconds<0 || seconds>1){
    throw new RangeError('Janela de simulação inválida');
  }
  if(!idle || seconds===0)return {...vitals};
