@@ -261,8 +261,9 @@ function figure({player=false,monster=false,role='npc',name=''}){
 }
 export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
  if(!canvas||typeof onSelectTile!=='function'||!TILE)throw new TypeError('Parâmetros inválidos');
+ const isTouch=window.matchMedia('(pointer:coarse)').matches;
  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
- renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,isTouch?1.2:1.6));
  renderer.setClearColor('#34494e');
  renderer.outputColorSpace=THREE.SRGBColorSpace;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -273,7 +274,7 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
  scene.background=hex('#66808a');scene.fog=new THREE.FogExp2('#66808a',.013);
  const hemisphere=new THREE.HemisphereLight('#e0e9ed','#3d473c',2.2);scene.add(hemisphere);
  const sun=new THREE.DirectionalLight('#ffddad',2.65);
- sun.position.set(12,27,19);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+ sun.position.set(12,27,19);sun.castShadow=true;sun.shadow.mapSize.set(isTouch?512:1024,isTouch?512:1024);
  sun.shadow.camera.left=-28;sun.shadow.camera.right=28;
  sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;
  sun.shadow.bias=-.0003;scene.add(sun);
@@ -415,7 +416,7 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
    actor.entity=e;
    actor.group.visible=true;
    actor.group.position.set(e.renderX??e.x,0,e.renderY??e.y);
-   if(actor.badge)actor.badge.visible=shouldShowActorLabel(e,{x:px,y:pz});
+   if(actor.badge)actor.badge.visible=shouldShowActorLabel(e,{x:px,y:pz},isTouch?3.3:6);
    if(e.type==='monster'){
     actor.group.rotation.y=(e.dir==='left'?-Math.PI/2:e.dir==='up'?Math.PI:e.dir==='right'?Math.PI/2:0);
    }else{
@@ -479,7 +480,7 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
   for(const {roof,house,sign} of activeLayer.roofs){
    const near=shouldHideRoof(house,player);
    roof.visible=!near;
-   sign.visible=!near&&shouldShowHouseLabel(house,player);
+   sign.visible=!near&&shouldShowHouseLabel(house,player,isTouch?5:8);
   }
   updateDoors(floor,openDoors);
   actorsSnapshot(entities,floor,player.x,player.y);
