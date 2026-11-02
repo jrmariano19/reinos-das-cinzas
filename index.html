@@ -3160,6 +3160,24 @@
       if (mob.sprite === 'dragon' || mob.sprite === 'cyclops') {
         corpseItems.push({ icon: '💎', name: 'Rubi de Brasa Ancestral (+120 Gold)', type: 'treasure', value: 120 });
       }
+      // Saques de materiais e equipamentos: drop ocorre uma vez, somente no abate.
+      if(equipmentApi){
+        if(mob.isBoss || Math.random()<.18){
+          corpseItems.push({id:'core-brasa',icon:'💠',name:'Núcleo de Brasa',
+            type:'material',value:0,qty:mob.isBoss?2:1,stackable:true});
+        }
+        if(Math.random()<(mob.isBoss?.76:.12)){
+          const classWeapon=equipmentApi.CLASS_START_WEAPONS[player.classId]||'espada';
+          const templateId=Math.random()<.30
+            ?(player.classId==='arcanista'||player.classId==='devota'||player.classId==='tecelao'?'manto':'armadura')
+            :classWeapon;
+          const id='loot-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+          corpseItems.push(equipmentApi.rollEquipment({
+            templateId,level:Math.max(1,Math.min(120,player.level)),
+            classId:player.classId,id
+          }));
+        }
+      }
 
       if (mob.floor === -2 && Math.random() < 0.55) {
         corpseItems.push({ icon: '🔮', name: 'Essencia Ecoante (+90 Gold)', type: 'treasure', value: 90 });
@@ -4015,6 +4033,9 @@
         if (now < player.shieldWallUntil) {
           finalDmg = Math.floor(finalDmg * 0.5);
         }
+        // Absorção limitada a 35%, aplicada depois da defesa e dos escudos temporários.
+        const absorption=Math.min(.35,gearBonuses().absorption*.02);
+        finalDmg=Math.max(0,Math.floor(finalDmg*(1-absorption)));
 
         if (finalDmg <= 1 || Math.random() < 0.25) {
           addSpark(player.floor, player.x, player.y, 'puff');
@@ -5608,6 +5629,17 @@
     initEntities();
     const restored = restoreProgress();
     normalizeLootBag();
+    equipmentReadyPromise.then(api=>{
+      if(!api)return;
+      // Nunca confiar em dados armazenados sem validar a estrutura do equipamento.
+      const gear=player.equippedGear||{};
+      player.equippedGear={
+        weapon:api.isValidEquipment(gear.weapon)?gear.weapon:null,
+        armor:api.isValidEquipment(gear.armor)?gear.armor:null
+      };
+      grantStarterGearIfNeeded();
+      updateHUD();
+    });
     syncTalentPoints();
     saveProgress();
     fitGameViewport();
