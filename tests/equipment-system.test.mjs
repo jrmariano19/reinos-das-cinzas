@@ -96,3 +96,14 @@ test('mixing consome materiais uma unica vez e aplica bonus fixo',()=>{
  assert.equal(totalGearBonuses(result.state.equippedGear,'sentinela').attack,
  itemBonuses(result.state.equippedGear.weapon,'sentinela').attack);
 });
+
+test('escudos usam slot de protecao e oferecem bloqueio real',()=>{
+ const shield=rollEquipment({templateId:'escudo',level:1,classId:'sentinela',id:'shield-1'},()=>.55);
+ assert.equal(shield.slot,'armor');
+ assert.ok(shield.stats.block>=8);
+ assert.ok(itemBonuses(shield,'sentinela').block>=8);
+ const state={level:1,gold:1000,lootBag:[shield],equippedGear:{weapon:null,armor:null}};
+ const equipped=equipFromBag(state,0);
+ assert.equal(equipped.equippedGear.armor.id,'shield-1');
+ assert.equal(state.equippedGear.armor,null);
+});
