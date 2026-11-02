@@ -179,6 +179,7 @@
     @media(max-width:767px){
       #live3dToggle{left:auto!important;right:12px!important;bottom:82px!important;font-size:11px!important;padding:5px 8px!important}
       #isoPreviewToggle{left:auto!important;right:12px!important;bottom:118px!important;font-size:10px!important;padding:4px 7px!important}
+      #live3dCameraControls{bottom:157px!important;right:12px!important}
     }
   </style>
 </head>
@@ -191,6 +192,11 @@
     <canvas id="isoPreviewCanvas" aria-label="Vista isométrica antiga" style="display:none;position:absolute;inset:0;width:100%;height:100%;z-index:12;pointer-events:none;touch-action:none;cursor:crosshair;background:#101a18"></canvas>
     <canvas id="live3dCanvas" aria-label="Mundo 3D jogável, sincronizado com o personagem e as missões" style="display:none;position:absolute;inset:0;width:100%;height:100%;z-index:13;pointer-events:none;touch-action:none;cursor:crosshair;background:#203940"></canvas>
     <button id="live3dToggle" type="button" aria-pressed="false" style="position:absolute;left:12px;bottom:12px;z-index:25;background:#416044;color:#e0ffe3;border:1px solid #9bca8c;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:700">⛰ Mundo 3D jogável</button>
+    <div id="live3dCameraControls" aria-label="Controles da câmera 3D" style="display:none;position:absolute;right:12px;bottom:46px;z-index:25;gap:5px;align-items:center;padding:5px;background:#101f25da;border:1px solid #af956d;border-radius:8px">
+      <button id="live3dZoomIn" type="button" aria-label="Aproximar câmera 3D" title="Aproximar câmera 3D" style="color:#ffe2a4;padding:4px 10px;font-size:16px;border:1px solid #aa8752;border-radius:5px;background:#3a4b4d">+</button>
+      <button id="live3dZoomOut" type="button" aria-label="Afastar câmera 3D" title="Afastar câmera 3D" style="color:#ffe2a4;padding:4px 10px;font-size:16px;border:1px solid #aa8752;border-radius:5px;background:#3a4b4d">−</button>
+      <button id="live3dZoomReset" type="button" aria-label="Restaurar câmera 3D" title="Restaurar zoom e orientação da câmera" style="color:#ffe2a4;padding:5px 10px;font-size:11px;border:1px solid #aa8752;border-radius:5px;background:#3a4b4d">Centralizar</button>
+    </div>
     <button id="isoPreviewToggle" type="button" aria-pressed="false" style="position:absolute;left:12px;bottom:53px;z-index:25;background:#352b1e;color:#ffe1a1;border:1px solid #a7864b;border-radius:6px;padding:6px 10px;font-size:11px">◇ Vista 2.5D antiga</button>
     <div id="contextHint" class="absolute bottom-3 right-3 pointer-events-none tibia-panel px-2 py-1 text-[10px] text-amber-200 shadow-lg max-w-[320px]">
       Explore casas • Clique nas portas e baús • [E] Interagir
@@ -5532,12 +5538,14 @@
   let isoPreviewRenderer = null;
   const live3dCanvas=document.getElementById('live3dCanvas');
   const live3dToggle=document.getElementById('live3dToggle');
+  const live3dCameraControls=document.getElementById('live3dCameraControls');
   let live3dWorld=null,live3dEnabled=false,live3dLoading=false;
   const contextHint=document.getElementById('contextHint');
   function disableLive3D(){
     live3dEnabled=false;
     live3dCanvas.style.display='none';
     live3dCanvas.style.pointerEvents='none';
+    live3dCameraControls.style.display='none';
     live3dToggle.setAttribute('aria-pressed','false');
     live3dToggle.textContent='⛰ Mundo 3D jogável';
     contextHint.textContent='Explore casas • Clique nas portas e baús • [E] Interagir';
@@ -5567,9 +5575,10 @@
       live3dEnabled=true;
       live3dCanvas.style.display='block';
       live3dCanvas.style.pointerEvents='auto';
+      live3dCameraControls.style.display='flex';
       live3dToggle.setAttribute('aria-pressed','true');
       live3dToggle.textContent='◀ Voltar ao 2D';
-      contextHint.textContent='Mundo real em 3D • Clique para andar • WASD • [E] Interagir';
+      contextHint.textContent='Clique: andar / NPC • Roda: zoom • Botão direito + arrastar: girar • [E] Interagir';
       addLog('Mundo 3D conectado: mesmo personagem, mapas, missões e itens do modo clássico.', '#a4f3bf');
       return true;
     }catch(error){
@@ -5583,6 +5592,15 @@
     }
   };
   live3dToggle.addEventListener('click',()=>window.enableLive3D(!live3dEnabled));
+  document.getElementById('live3dZoomIn').addEventListener('click',()=>{
+    if(live3dEnabled)live3dWorld?.zoomIn();
+  });
+  document.getElementById('live3dZoomOut').addEventListener('click',()=>{
+    if(live3dEnabled)live3dWorld?.zoomOut();
+  });
+  document.getElementById('live3dZoomReset').addEventListener('click',()=>{
+    if(live3dEnabled)live3dWorld?.resetCamera();
+  });
   const isoPreviewCanvas = document.getElementById('isoPreviewCanvas');
   const isoPreviewToggle = document.getElementById('isoPreviewToggle');
   let isoHoverTile = null;
