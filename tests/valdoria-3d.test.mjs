@@ -47,6 +47,17 @@ test('moradores 3D possuem rotas, personagens animados e interações',()=>{
  assert.match(file,/id="citizens"/);
 });
 
+test('pavimentação e câmera não repetem o defeito do piso listrado',()=>{
+ assert.match(moduleBody,/function textureEarth\(/);
+ assert.match(moduleBody,/const foundation=block\(scene,86,\.65,88,0,-\.1,0,earth,false\)/);
+ assert.match(moduleBody,/const northSouth=block\(scene,9,\.18,111,0,\.39,0,northRoad,false\)/);
+ assert.match(moduleBody,/const eastWest=block\(scene,111,\.18,9,0,\.39,0,eastRoad,false\)/);
+ assert.match(moduleBody,/const centerPlaza=cylinder\(scene,18\.8,18\.8,\.24,0,\.49,0,plazaPaving,56\)/);
+ assert.match(moduleBody,/camera\.position\.set\(45,33,52\)/);
+ assert.match(moduleBody,/scene\.fog=new THREE\.FogExp2\('#a4b6bc',\.0026\)/);
+ assert.doesNotMatch(moduleBody,/const foundation=block\(scene,70,\.65,71,0,-\.05,0,cobble,false\)/);
+});
+  
 test('arte de estudo não altera o jogo principal',()=>{
  assert.doesNotMatch(file,/reinos-das-cinzas-save-v1/);
  assert.doesNotMatch(file,/localStorage\.setItem/);
