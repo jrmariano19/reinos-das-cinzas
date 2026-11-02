@@ -5123,6 +5123,42 @@
           target.fillText(entity.name,screen.x,screen.y-23);
         }
       });
+    // Volumes arquitetônicos simples para distinguir paredes, portas e árvores.
+    const camera = isoPreviewRenderer.cameraFor(previewPlayer,isoPreviewCanvas.width,isoPreviewCanvas.height);
+    const map = maps[player.floor];
+    const scenery = [];
+    for (let gy=0;gy<map.length;gy++) for (let gx=0;gx<map[gy].length;gx++) {
+      const tile=map[gy][gx];
+      if (![TILE.CASTLE_WALL,TILE.HOUSE_WALL,TILE.HOUSE_DOOR,TILE.TREE,TILE.PINE].includes(tile)) continue;
+      const sx=(gx-gy)*32+camera.x,sy=(gx+gy)*16+camera.y;
+      if(sx < -70 || sx > isoPreviewCanvas.width+70 || sy < -90 || sy > isoPreviewCanvas.height+70) continue;
+      scenery.push({gx,gy,tile,sx,sy});
+    }
+    scenery.sort((a,b)=>(a.gx+a.gy)-(b.gx+b.gy)||a.gy-b.gy);
+    for(const item of scenery) {
+      const {tile,sx,sy}=item;
+      const tree=tile===TILE.TREE||tile===TILE.PINE;
+      if(tree) {
+        previewCtx.fillStyle='#614630';
+        previewCtx.fillRect(sx-4,sy-38,8,36);
+        previewCtx.fillStyle='#285d43';
+        previewCtx.beginPath();previewCtx.moveTo(sx,sy-76);
+        previewCtx.lineTo(sx-23,sy-25);previewCtx.lineTo(sx+23,sy-25);
+        previewCtx.closePath();previewCtx.fill();
+      } else {
+        const door=tile===TILE.HOUSE_DOOR;
+        previewCtx.fillStyle=door?'#704c32':'#776d61';
+        previewCtx.fillRect(sx-19,sy-35,38,34);
+        previewCtx.fillStyle=door?'#c6a36a':'#a79b88';
+        previewCtx.beginPath();previewCtx.moveTo(sx-23,sy-35);
+        previewCtx.lineTo(sx,sy-49);previewCtx.lineTo(sx+23,sy-35);
+        previewCtx.closePath();previewCtx.fill();
+        if(door) {
+          previewCtx.fillStyle='#241b17';
+          previewCtx.fillRect(sx-7,sy-25,14,24);
+        }
+      }
+    }
     const x=isoPreviewCanvas.width/2,y=isoPreviewCanvas.height/2;
     previewCtx.fillStyle='#ffd67d';
     previewCtx.beginPath();previewCtx.arc(x,y-11,8,0,Math.PI*2);previewCtx.fill();
