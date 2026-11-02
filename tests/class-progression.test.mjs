@@ -61,7 +61,11 @@ test('motor atual tem modal, persiste classId e habilita a tecla de classe',()=>
  assert.match(html,/classReadyPromise\.then\(api=>/);
  assert.match(html,/\x27contract\x27,\x27contractsCompleted\x27,\x27cameraRows\x27,\x27classId\x27/);
  assert.match(html,/const SAVE_KEY = 'reinos-das-cinzas-save-v1'/);
- assert.match(html,/if\(slot===1 && player\.classId\)/);
+ assert.match(html,/if\(player\.classId && slot>=1 && slot<=4\)/);
+ assert.match(html,/if\(player\.level<ability\.unlockLevel\)/);
+ assert.match(html,/else addLog\(ability\.name\+' \(Tier '\+slot\+'\) ainda está em desenvolvimento\.'/);
+ assert.match(html,/slot\.setAttribute\('aria-disabled',String\(!implemented\)\)/);
+ assert.match(html,/if\(player\.classId\)refreshClassSkillLabel\(\)/);
  const inline=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
  assert.equal(inline.length,1);
  assert.doesNotThrow(()=>new Script(inline[0][1]));
@@ -70,4 +74,15 @@ test('laboratório solicita confirmação no jogo sem modificar save sozinho',()
  const lab=readFileSync(new URL('../preview/classes.html',import.meta.url),'utf8');
  assert.match(lab,/index\.html\?chooseClass=/);
  assert.doesNotMatch(lab,/localStorage\.(setItem|removeItem|clear)/);
+});
+
+test('classe escolhida não executa mais golpes legados nos slots 2–4',()=>{
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const handler=html.slice(html.indexOf('window.triggerHotkey = function(slot)'),html.indexOf('function castTierOneClassSkill(now)'));
+ assert.ok(handler.includes('player.classId && slot>=1 && slot<=4'));
+ assert.ok(handler.includes('return;'));
+ // Os consumíveis 5 e 6 continuam acessíveis por fora da guarda de classes.
+ assert.match(html,/else if \(slot === 5\)/);
+ assert.match(html,/else if \(slot === 6\)/);
+ assert.match(html,/const savedFields = \[/);
 });
