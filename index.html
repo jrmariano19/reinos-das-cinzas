@@ -4012,6 +4012,34 @@ function drawLivingHumanoidSprite(target,px,py,entityType,opts={}){
       target.lineTo(31,7);target.lineTo(17,7);target.closePath();strokePath('#405339');
       target.fillStyle='#d9bd7d';target.fillRect(21,3,6,1);
     }
+    // Silhuetas profissionais legíveis em telas pequenas.
+    if(entityType==='smith'){
+      target.fillStyle='#4a2b1f';target.fillRect(20,24,9,12);
+      target.fillStyle='#b88752';target.fillRect(21,25,7,2);
+      target.fillStyle='#87929a';target.fillRect(35,27,10,5);
+      target.fillStyle='#5c4030';target.fillRect(39,31,3,10);
+    }else if(entityType==='merchant'){
+      target.fillStyle='#70502f';target.fillRect(34,24,10,13);
+      target.fillStyle='#c5a36c';target.fillRect(35,25,8,2);
+      target.fillStyle='#d4ba79';target.fillRect(38,29,3,4);
+    }else if(entityType==='scribe'){
+      target.fillStyle='#e2d1a7';target.fillRect(35,24,9,12);
+      target.fillStyle='#77523b';target.fillRect(36,27,6,1);
+      target.fillRect(36,30,6,1);
+    }else if(entityType==='healer'){
+      target.fillStyle='#e9e4cf';target.fillRect(21,22,6,10);
+      target.fillStyle='#55c4c7';target.fillRect(23,24,2,6);
+      target.fillRect(21,27,6,2);
+    }else if(entityType==='guard'||entityType==='commander'){
+      target.fillStyle='#778b99';target.fillRect(36,18,4,21);
+      target.fillStyle='#d8ba79';target.fillRect(33,22,10,3);
+      target.fillStyle=entityType==='commander'?'#d5a44e':'#3a79a1';
+      target.fillRect(20,19,8,3);
+    }else if(entityType==='alchemist'){
+      target.fillStyle='#4b353b';target.fillRect(35,25,8,11);
+      target.fillStyle='#42c4b8';target.fillRect(36,27,6,6);
+      target.fillStyle='#d9d7b5';target.fillRect(37,24,4,2);
+    }
     target.restore();
   }
 
