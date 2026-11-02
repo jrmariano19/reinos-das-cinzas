@@ -182,13 +182,21 @@
       #live3dCameraControls{bottom:157px!important;right:12px!important}
     }
   </style>
+  <link rel="stylesheet" href="./src/mobile-game.css" />
 </head>
 <body>
 
+<button id="mobileSidebarBackdrop" type="button" aria-label="Fechar painel lateral"></button>
 <div class="client-grid">
   <!-- ÁREA CENTRAL/ESQUERDA SUPERIOR: VIEWPORT ADAPTÁVEL -->
   <div class="viewport-container tibia-panel">
     <canvas id="gameCanvas" width="720" height="528"></canvas>
+    <div id="mobileVitals" aria-label="Status do personagem">
+      <div id="mobileHeroTitle">Ivo • Nv 1</div>
+      <div class="mobile-vital-row"><label>HP</label><div class="mobile-vital-track"><div id="mobileHPFill" class="mobile-vital-fill"></div></div><span id="mobileHPText">180/180</span></div>
+      <div class="mobile-vital-row"><label>MP</label><div class="mobile-vital-track"><div id="mobileMPFill" class="mobile-vital-fill"></div></div><span id="mobileMPText">80/80</span></div>
+    </div>
+    <button id="mobilePanelsButton" type="button" aria-controls="gameSidebar" aria-expanded="false">☰ Mochila / Painéis</button>
     <canvas id="isoPreviewCanvas" aria-label="Vista isométrica antiga" style="display:none;position:absolute;inset:0;width:100%;height:100%;z-index:12;pointer-events:none;touch-action:none;cursor:crosshair;background:#101a18"></canvas>
     <canvas id="live3dCanvas" aria-label="Mundo 3D jogável, sincronizado com o personagem e as missões" style="display:none;position:absolute;inset:0;width:100%;height:100%;z-index:13;pointer-events:none;touch-action:none;cursor:crosshair;background:#203940"></canvas>
     <button id="live3dToggle" type="button" aria-pressed="false" style="position:absolute;left:12px;bottom:12px;z-index:25;background:#416044;color:#e0ffe3;border:1px solid #9bca8c;border-radius:6px;padding:7px 12px;font-size:12px;font-weight:700">⛰ Mundo 3D jogável</button>
@@ -209,7 +217,7 @@
     </div>
 
     <!-- Rastreador da Quest "O Primeiro Sangue" -->
-    <div class="absolute top-3 right-3 px-2.5 py-1.5 tibia-panel flex flex-col gap-0.5 text-[10px] shadow-lg max-w-[235px]">
+    <div id="questTracker" class="absolute top-3 right-3 px-2.5 py-1.5 tibia-panel flex flex-col gap-0.5 text-[10px] shadow-lg max-w-[235px]">
       <div class="flex items-center justify-between gap-2 text-amber-300 font-bold">
         <span id="questTitle">📜 Missão: O Primeiro Sangue</span>
         <span id="questCounter" class="text-white bg-amber-900/80 px-1.5 rounded">0/6</span>
@@ -220,7 +228,7 @@
     </div>
 
     <!-- Controles D-Pad Mobile (visíveis apenas em telas touch/pequenas) -->
-    <div class="md:hidden absolute bottom-3 left-3 grid grid-cols-3 gap-1 w-24 h-24 opacity-80">
+    <div id="touchDpad" class="md:hidden absolute bottom-3 left-3 grid grid-cols-3 gap-1 w-24 h-24 opacity-80" aria-label="Controles de movimento por toque">
       <div></div>
       <button class="tibia-btn rounded flex items-center justify-center font-bold" onclick="window.movePlayer(0,-1)">▲</button>
       <div></div>
@@ -234,9 +242,9 @@
   </div>
 
   <!-- ÁREA INFERIOR: HOTKEYS (1 a 6) + CONSOLE DE LOG TIBIANO -->
-  <div class="tibia-panel flex flex-col p-1.5 gap-1.5 overflow-hidden" style="grid-column: 1; grid-row: 2;">
+  <div id="actionConsole" class="tibia-panel flex flex-col p-1.5 gap-1.5 overflow-hidden" style="grid-column: 1; grid-row: 2;">
     <!-- Barra de Hotkeys Clássica + Botão Correr -->
-    <div class="flex items-center gap-1.5 flex-wrap">
+    <div id="skillBar" class="flex items-center gap-1.5 flex-wrap">
       <button id="hk1" onclick="window.triggerHotkey(1)" class="tibia-btn px-2 py-1 flex items-center gap-1.5 text-[10px] relative overflow-hidden">
         <span class="text-amber-400 font-bold">[1]</span>
         <span>⚔️ Golpe Brutal</span>
@@ -277,7 +285,8 @@
         <span id="mpPotCount" class="text-sky-400 font-bold">×5</span>
       </button>
 
-      <div class="ml-auto hidden lg:flex items-center gap-2 text-[10px] text-gray-400 pr-1">
+      <button id="mobileLogToggle" type="button" aria-expanded="false" aria-controls="chatLog">📜 Log</button>
+      <div class="skillHelp ml-auto hidden lg:flex items-center gap-2 text-[10px] text-gray-400 pr-1">
         <span>Andar: <b class="text-gray-200">WASD / Setas / Clique no Chão</b></span>
         <span>•</span>
         <span>Atacar: <b class="text-red-400">Clique no Monstro / Battle</b></span>
@@ -285,7 +294,7 @@
     </div>
 
     <!-- Abas do Console de Chat -->
-    <div class="flex items-center justify-between border-b border-neutral-700 pb-0.5 text-[10px]">
+    <div id="chatTabsBar" class="flex items-center justify-between border-b border-neutral-700 pb-0.5 text-[10px]">
       <div class="flex gap-1">
         <button onclick="window.switchChatTab('all')" id="tab-all" class="tibia-btn active px-2.5 py-0.5 font-bold text-amber-300">Server Log</button>
         <button onclick="window.switchChatTab('default')" id="tab-default" class="tibia-btn px-2.5 py-0.5">Default Chat</button>
@@ -304,6 +313,7 @@
     <!-- Cabeçalho do Jogo -->
     <div class="tibia-inset px-2 py-1 text-center flex items-center justify-between">
       <span class="text-amber-400 font-bold tracking-wider text-[10px] text-shadow-black">🔥 REINOS DAS CINZAS</span>
+      <button id="mobilePanelsClose" type="button" aria-label="Fechar painel">✕</button>
       <span id="floorBadge" class="text-[9px] bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-600 text-amber-200 font-bold">Andar: 0 (Térreo)</span>
     </div>
 
