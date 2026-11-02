@@ -20,12 +20,14 @@ export function shouldHideRoof(house,player){
  return distanceToHouse(house,player.x,player.y)<=3.7;
 }
 /** Etiquetas só aparecem na vizinhança, não sobre toda a capital. */
-export function shouldShowHouseLabel(house,player){
- return distanceToHouse(house,player.x,player.y)<=8;
+export function shouldShowHouseLabel(house,player,radius=8){
+ if(!Number.isFinite(radius)||radius<0)throw new RangeError('Raio inválido');
+ return distanceToHouse(house,player.x,player.y)<=radius;
 }
-export function shouldShowActorLabel(actor,player){
+export function shouldShowActorLabel(actor,player,radius=6){
  if(!actor||!player)return false;
- return Math.hypot(actor.x-player.x,actor.y-player.y)<=6;
+ if(!Number.isFinite(radius)||radius<0)throw new RangeError('Raio inválido');
+ return Math.hypot(actor.x-player.x,actor.y-player.y)<=radius;
 }
 export function isWorldNearby(actor,player,radius=15){
  if(!actor||!player)return false;
