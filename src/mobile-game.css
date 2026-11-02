@@ -1,0 +1,154 @@
+/*
+ * REINOS DAS CINZAS — HUD mobile 0.3.
+ * Aplicação APENAS para dispositivos touch/pequenos.
+ * Desktop preserva o layout clássico, e este CSS não modifica estado do jogo.
+ */
+#mobilePanelsButton,#mobilePanelsClose,#mobileVitals,#mobileSidebarBackdrop,#mobileLogToggle{display:none}
+@media screen and (max-width:1250px) and (pointer:coarse),screen and (max-width:680px){
+  html,body{width:100%!important;height:100dvh!important;overflow:hidden;overscroll-behavior:none}
+  .client-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+    grid-template-rows:minmax(0,1fr) 76px!important;
+    height:100dvh!important;
+    width:100vw!important;
+    min-width:0!important
+  }
+  .viewport-container{
+    grid-column:1!important;grid-row:1!important;
+    min-width:0!important;min-height:0!important;padding:0!important;
+    border-width:0!important;touch-action:manipulation
+  }
+  #gameCanvas{height:100%!important;max-height:100%!important;max-width:100%!important;border:0!important}
+  #live3dCanvas,#isoPreviewCanvas{inset:0!important;width:100%!important;height:100%!important}
+  #actionConsole{
+    grid-column:1!important;grid-row:2!important;
+    min-width:0;min-height:0;
+    padding:5px 6px!important;gap:0!important;position:relative
+  }
+  #skillBar{
+    display:flex!important;flex-wrap:nowrap!important;gap:6px!important;
+    overflow-x:auto!important;overflow-y:hidden!important;
+    min-height:57px;align-items:center;justify-content:flex-start;
+    scrollbar-width:none;touch-action:pan-x;
+    overscroll-behavior-x:contain
+  }
+  #skillBar::-webkit-scrollbar{display:none}
+  #skillBar button[id^="hk"]{
+    flex:0 0 auto;min-height:51px;min-width:67px;
+    padding:6px 9px!important;border-radius:8px!important;
+    display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:3px!important;
+    font-size:11px!important;white-space:nowrap
+  }
+  #skillBar button[id^="hk"] > span:nth-child(3){display:none}
+  #skillBar button[id^="hk"] > span:nth-child(2){font-size:10px;max-width:94px;overflow:hidden;text-overflow:ellipsis}
+  #skillBar .skillHelp{display:none!important}
+  #chatTabsBar,#chatLog{display:none!important}
+  #mobileLogToggle{
+    display:block;flex:0 0 auto;min-height:49px;padding:8px 12px;
+    background:#283440;color:#efcf94;border:1px solid #af8b57;border-radius:8px;
+    font-weight:700
+  }
+  body.mobile-log-open .client-grid{grid-template-rows:minmax(0,1fr) min(48dvh,270px)!important}
+  body.mobile-log-open #actionConsole{gap:4px!important}
+  body.mobile-log-open #skillBar{flex:0 0 57px}
+  body.mobile-log-open #chatTabsBar{display:flex!important;flex:0 0 auto}
+  body.mobile-log-open #chatLog{display:block!important;flex:1 1 auto;min-height:45px}
+  #gameSidebar{
+    position:fixed!important;z-index:82!important;top:0!important;right:0!important;bottom:0!important;
+    width:min(340px,89vw)!important;height:100dvh!important;max-height:100dvh!important;
+    grid-row:auto!important;grid-column:auto!important;
+    padding:12px!important;box-shadow:-15px 0 42px #000c!important;
+    transform:translateX(108%);transition:transform .22s ease;
+    overflow:hidden!important;pointer-events:none
+  }
+  body.mobile-panels-open #gameSidebar{
+    transform:translateX(0);pointer-events:auto
+  }
+  #mobileSidebarBackdrop{
+    display:block;position:fixed;z-index:80;inset:0;
+    border:0;background:#000b;opacity:0;pointer-events:none;
+    transition:opacity .22s ease
+  }
+  body.mobile-panels-open #mobileSidebarBackdrop{
+    opacity:1;pointer-events:auto
+  }
+  #mobilePanelsButton{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    position:absolute;top:8px;right:8px;z-index:32;
+    border:1px solid #dfb976;border-radius:10px;padding:9px 12px;
+    color:#ffe5b9;background:#14232de8;
+    box-shadow:0 3px 15px #000a;font-size:12px;font-weight:750
+  }
+  #mobilePanelsClose{
+    display:block;flex-shrink:0;padding:7px 12px;border-radius:7px;
+    border:1px solid #bf9663;color:#f9e4c8;background:#4a3829;font-size:12px
+  }
+  #mobileVitals{
+    display:flex;flex-direction:column;gap:3px;
+    position:absolute;left:8px;top:8px;z-index:26;
+    padding:7px 10px;width:175px;max-width:42vw;
+    color:#f2dfb4;background:#101d28d9;border:1px solid #9c8359;
+    border-radius:9px;font-size:11px;box-shadow:0 3px 14px #000a;
+    pointer-events:none
+  }
+  #mobileHeroTitle{font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mobile-vital-row{display:flex;align-items:center;gap:5px;font-size:9px}
+  .mobile-vital-row label{width:19px;flex:0 0 19px;font-weight:750}
+  .mobile-vital-track{flex:1 1 auto;min-width:15px;height:7px;border-radius:5px;background:#101116;overflow:hidden}
+  .mobile-vital-fill{height:100%;width:100%;transition:width .15s}
+  #mobileHPFill{background:linear-gradient(90deg,#942b30,#f16f65)}
+  #mobileMPFill{background:linear-gradient(90deg,#2563a0,#6dc6f7)}
+  #mobileHPText,#mobileMPText{min-width:36px;text-align:right;font-variant-numeric:tabular-nums}
+  #pzBadge{
+    top:73px!important;left:8px!important;
+    font-size:10px!important;max-width:42vw!important;
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+    padding:5px 7px!important
+  }
+  #questTracker{
+    top:55px!important;right:8px!important;
+    max-width:min(38vw,214px)!important;
+    font-size:10px!important;padding:5px 7px!important
+  }
+  #questDesc{display:none!important}
+  #contextHint{display:none!important}
+  #live3dToggle{
+    left:auto!important;right:8px!important;top:111px!important;bottom:auto!important;
+    padding:7px 9px!important;font-size:11px!important;white-space:nowrap;
+    box-shadow:0 3px 13px #000a
+  }
+  #isoPreviewToggle{display:none!important}
+  #live3dCameraControls{
+    left:auto!important;right:8px!important;top:151px!important;bottom:auto!important;
+    padding:4px!important;gap:4px!important;
+    box-shadow:0 3px 13px #000a
+  }
+  #live3dCameraControls button{padding:4px 8px!important;font-size:12px!important;min-height:31px}
+  #touchDpad{
+    display:grid!important;position:absolute;z-index:29;
+    bottom:9px!important;left:9px!important;
+    width:116px!important;height:116px!important;
+    gap:3px!important;opacity:.82;pointer-events:auto;touch-action:none
+  }
+  #touchDpad button{
+    border-radius:8px!important;background:#1a2734d9;
+    border:1px solid #bb9a67!important;
+    color:#ffe6b9;font-size:14px!important;
+    min-width:35px;min-height:35px;touch-action:manipulation
+  }
+  .sidebar-summary{font-size:12px!important;padding:9px 8px!important}
+  #sidebarMain{gap:5px!important}
+  #sidebarDock{max-height:38%}
+  #mobilePanelsButton:focus-visible,#mobilePanelsClose:focus-visible,
+  #live3dCameraControls button:focus-visible,#mobileLogToggle:focus-visible,
+  #touchDpad button:focus-visible{outline:2px solid #ffe4ab;outline-offset:2px}
+}
+@media screen and (max-width:600px) and (orientation:portrait){
+  #mobileVitals{width:150px}
+  #questTracker{top:59px!important;right:8px!important;max-width:45vw!important}
+  #pzBadge{top:82px!important;max-width:44vw!important}
+  #live3dToggle{top:114px!important}
+  #live3dCameraControls{top:150px!important}
+  #touchDpad{width:105px!important;height:105px!important}
+}
