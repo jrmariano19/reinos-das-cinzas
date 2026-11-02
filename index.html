@@ -4379,6 +4379,53 @@
           ctx.fillStyle='#3c3636';ctx.fillRect(sx,sy+1,2,14);
           ctx.fillStyle=palette.ridge;ctx.fillRect(sx-18,sy-8,38,4);
         }
+
+        // Fachada frontal ornamentada: vigas, janelas com venezianas e floreiras.
+        const fy=ry+rh-25;
+        const facade=h.style==='stone'?'#8a8879':h.style==='slate'?'#647b88':
+          h.style==='timber'?'#805536':h.style==='plaster'?'#c49b70':
+          h.style==='moss'?'#71815a':'#a65d42';
+        ctx.fillStyle='rgba(0,0,0,.28)';ctx.fillRect(rx+3,fy+18,rw-6,8);
+        ctx.fillStyle=facade;ctx.fillRect(rx+5,fy,rw-10,22);
+        ctx.fillStyle=palette.edge;ctx.fillRect(rx+5,fy,rw-10,4);
+        ctx.fillStyle=palette.ridge;ctx.fillRect(rx+5,fy+4,rw-10,2);
+        ctx.fillStyle='#4b3021';ctx.fillRect(rx+8,fy+7,rw-16,3);
+        // Janelas laterais com moldura, vidro e venezianas.
+        const windowXs=[rx+14,rx+rw-38];
+        windowXs.forEach((wx,wi)=>{
+          ctx.fillStyle='#38271e';ctx.fillRect(wx-2,fy-13,26,22);
+          ctx.fillStyle='#d5b98b';ctx.fillRect(wx,fy-11,22,18);
+          ctx.fillStyle=vale?'#7fb4c6':'#638d9b';ctx.fillRect(wx+3,fy-8,16,12);
+          ctx.fillStyle='#e5d1a8';ctx.fillRect(wx+10,fy-8,2,12);
+          ctx.fillRect(wx+3,fy-2,16,2);
+          ctx.fillStyle=palette.dark;ctx.fillRect(wx-5,fy-14,32,4);
+          ctx.fillRect(wx-5,fy+7,32,4);
+          ctx.fillStyle=palette.edge;ctx.fillRect(wx-4,fy-9,4,15);
+          ctx.fillRect(wx+22,fy-9,4,15);
+          ctx.fillStyle='#45613e';ctx.fillRect(wx-2,fy+12,25,3);
+          for(let fl=0;fl<4;fl++){
+            ctx.fillStyle=['#d66b58','#e5c56d','#c77ca8','#8ebc72'][fl];
+            ctx.fillRect(wx+fl*6,fy+8-(fl%2)*2,4,4);
+          }
+        });
+        // Placa suspensa e brasão variam conforme a função do edifício.
+        const signX=rx+rw*.5-13;
+        ctx.fillStyle='#38251a';ctx.fillRect(signX,fy-28,26,17);
+        ctx.fillStyle=h.id==='forja'?'#bd633d':h.id==='templo'?'#d8c89c':
+          h.id==='mercado'?'#b78a43':h.id==='quartel'?'#667b8d':'#986c43';
+        ctx.fillRect(signX+2,fy-26,22,13);
+        ctx.strokeStyle='#e5c995';ctx.lineWidth=1;ctx.strokeRect(signX+2,fy-26,22,13);
+        ctx.fillStyle='#f4e2bd';ctx.fillRect(signX+11,fy-23,4,7);
+        ctx.fillStyle='#4a3020';ctx.fillRect(signX+12,fy-30,2,4);
+        // Fachadas comerciais recebem toldo próprio, sem repetir a mesma paleta.
+        if(['mercado','estalagem','ferreiro','forja','botica'].some(k=>(h.id||'').includes(k))){
+          const awY=fy-2;
+          for(let aw=0;aw<Math.max(3,Math.floor(rw/13));aw++){
+            ctx.fillStyle=aw%2===0?'#a94336':'#ead7ad';
+            ctx.fillRect(rx+8+aw*13,awY,12,9);
+            ctx.fillStyle='rgba(0,0,0,.2)';ctx.fillRect(rx+8+aw*13,awY+7,12,2);
+          }
+        }
       }
     }
 
