@@ -741,6 +741,8 @@
     name: 'Ivo',
     title: 'Cavaleiro das Cinzas',
     classId: null,
+    equippedGear: {weapon:null,armor:null},
+    starterEquipmentGranted: false,
     level: 1,
     floor: 0, // 0 = Superfície (Bastião das Cinzas / Ermos Cinzentos), -1 = Subsolo (Catacumbas de Brasa)
     x: 22,
@@ -815,6 +817,30 @@
     addLog('Sistema de classes indisponível nesta sessão.', '#ff9c80');
     return null;
   });
+  let equipmentApi=null;
+  const equipmentReadyPromise=import('./src/equipment-system.js').then(api=>{
+    equipmentApi=api;
+    return api;
+  }).catch(error=>{
+    console.error('Sistema de equipamentos indisponível',error);
+    addLog('Forja rúnica temporariamente indisponível.', '#ffa577');
+    return null;
+  });
+  const gearBonuses=()=>equipmentApi
+    ?equipmentApi.totalGearBonuses(player.equippedGear,player.classId)
+    :{attack:0,defense:0,absorption:0,block:0};
+  function grantStarterGearIfNeeded(){
+    if(!equipmentApi || !player.classId || player.starterEquipmentGranted)return;
+    const templateId=equipmentApi.CLASS_START_WEAPONS[player.classId];
+    if(!templateId)return;
+    const starter=equipmentApi.rollEquipment({
+      templateId,level:1,classId:player.classId,id:'starter-'+player.classId+'-v1'
+    },()=>.6);
+    addItemToBag(starter);
+    player.starterEquipmentGranted=true;
+    addLog('Novo equipamento inicial: '+starter.name+'! Abra a mochila e clique para equipar.','#f0c775');
+    renderBackpack();saveProgress();
+  }
 
   // Inventário por pilhas: itens equivalentes se agrupam até 100 unidades.
   const MAX_ITEM_STACK=100;
@@ -2441,10 +2467,10 @@
   ];
   const FORGE_COSTS=[450,900,1500,2400];
   const FORGE_MIN_LEVEL=[4,8,12,16];
-  const effectiveAttack=()=>Math.round((player.atk+(player.weaponTier||0)*6)*
-    (1+(player.talentRanks?.fury||0)*0.06));
+  const effectiveAttack=()=>Math.round((player.atk+(player.weaponTier||0)*6+
+    gearBonuses().attack)*(1+(player.talentRanks?.fury||0)*0.06));
   const effectiveDefense=()=>player.def+(player.weaponTier||0)*2+
-    (player.talentRanks?.bulwark||0)*2;
+    (player.talentRanks?.bulwark||0)*2+gearBonuses().defense;
   const effectiveStepDelay=()=>Math.max(105,player.moveSpeedMs-
     (player.talentRanks?.stride||0)*12);
   function tallyTalents(){
@@ -2819,6 +2845,7 @@
     catch(error){document.getElementById('classChoiceStatus').textContent=error.message;return;}
     for(const field of ['classId','title','maxHp','maxMp','hp','mp','atk','def'])player[field]=next[field];
     cooldowns[1]=0;
+    grantStarterGearIfNeeded();
     refreshClassSkillLabel();
     updateHUD();saveProgress();
     addLog('Classe definida: '+chosen.name+'. Primeira habilidade disponível na tecla [1].', '#f8d58d');
@@ -5248,7 +5275,7 @@
     'cryptKills','cryptGoal','cryptCompleted','openedChests',
     'cityQuestGoal','cityQuestCompleted','valeKills','valeGoal','valeCompleted','brumaDefeated',
     'lootBag','outfit','stance','chase','weaponTier','talentRanks','talentPoints','dynamicLight',
-    'contract','contractsCompleted','cameraRows','classId'
+    'contract','contractsCompleted','cameraRows','classId','equippedGear','starterEquipmentGranted'
   ];
   function saveProgress() {
     try {
@@ -5273,6 +5300,8 @@
         if ((k === 'outfit'||k==='talentRanks') && (!data[k] || typeof data[k] !== 'object' || Array.isArray(data[k]))) continue;
         if (k==='contract' && data[k]!==null && (!data[k] || typeof data[k]!=='object' || !CONTRACTS.some(c=>c.id===data[k].id)))continue;
         if (k==='classId' && data[k]!==null && !['sentinela','colosso','vigia','artifice','arcanista','devota','tecelao','espectro'].includes(data[k]))continue;
+        if (k==='equippedGear' && (!data[k]||typeof data[k]!=='object'||Array.isArray(data[k])))continue;
+        if (k==='starterEquipmentGranted' && typeof data[k]!=='boolean')continue;
         player[k] = data[k];
       }
       if (![0,1,-1,-2].includes(player.floor)) player.floor = 0;
@@ -5487,6 +5516,7 @@
       const current=api.availableClasses().find(c=>c.id===player.classId);
       if(player.classId && !current)player.classId=null;
       if(current)player.title=current.name;
+      equipmentReadyPromise.then(()=>{grantStarterGearIfNeeded();updateHUD();});
       refreshClassSkillLabel();
       updateHUD();
       const wanted=new URLSearchParams(window.location.search).get('chooseClass');
