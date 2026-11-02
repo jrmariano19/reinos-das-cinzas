@@ -6,7 +6,7 @@ import { createIsometricWorldRenderer } from '../src/isometric-world.js';
 import { worldToScreen } from '../src/isometric.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const scriptMatches = [...html.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/g)];
+const scriptMatches = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
 
 test('script principal do jogo permanece sintaticamente válido', () => {
   assert.equal(scriptMatches.length, 1);
@@ -14,11 +14,11 @@ test('script principal do jogo permanece sintaticamente válido', () => {
 });
 
 test('cliques clássico e isométrico compartilham seleção e salvamento não muda', () => {
-  assert.match(html, /function handleWorldTileSelection\\(tileX, tileY\\)/);
-  assert.match(html, /canvas\\.addEventListener\\('mousedown',[\\s\\S]*?handleWorldTileSelection\\(tileX, tileY\\)/);
-  assert.match(html, /isoPreviewCanvas\\.addEventListener\\('pointerdown',[\\s\\S]*?handleWorldTileSelection\\(tile\\.x,tile\\.y\\)/);
+  assert.match(html, /function handleWorldTileSelection\(tileX, tileY\)/);
+  assert.match(html, /canvas\.addEventListener\('mousedown',[\s\S]*?handleWorldTileSelection\(tileX, tileY\)/);
+  assert.match(html, /isoPreviewCanvas\.addEventListener\('pointerdown',[\s\S]*?handleWorldTileSelection\(tile\.x,tile\.y\)/);
   assert.match(html, /const SAVE_KEY = 'reinos-das-cinzas-save-v1'/);
-  assert.match(html, /isoPreviewCanvas\\.style\\.pointerEvents = isoPreviewEnabled/);
+  assert.match(html, /isoPreviewCanvas\.style\.pointerEvents = isoPreviewEnabled/);
 });
 
 test('a projeção de cliques funciona para coordenadas fora do centro', () => {
