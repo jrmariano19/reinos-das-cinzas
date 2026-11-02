@@ -4666,6 +4666,30 @@
           ctx.fillStyle=palette.ridge;ctx.fillRect(sx-18,sy-8,38,4);
         }
 
+        // Contrafortes e arcos góticos: profundidade na fachada sem colisão adicional.
+        if(!vale && rw>=240){
+          const baseY=ry+rh-31;
+          for(const bx of [rx+22,rx+rw-24]){
+            ctx.fillStyle='#202a32';
+            ctx.beginPath();ctx.moveTo(bx-10,baseY+31);
+            ctx.lineTo(bx-8,baseY-31);ctx.lineTo(bx,baseY-45);
+            ctx.lineTo(bx+8,baseY-31);ctx.lineTo(bx+10,baseY+31);
+            ctx.closePath();ctx.fill();
+            ctx.fillStyle='#68737a';ctx.fillRect(bx-10,baseY-19,20,4);
+            ctx.fillStyle='#a79a81';ctx.fillRect(bx-11,baseY+23,22,5);
+            ctx.fillStyle='#d5a35b';ctx.fillRect(bx-2,baseY-15,4,12);
+          }
+          const archX=rx+rw/2, archY=baseY+12;
+          ctx.fillStyle='#1b222c';
+          ctx.beginPath();ctx.moveTo(archX-19,archY+17);
+          ctx.lineTo(archX-19,archY-7);
+          ctx.lineTo(archX,archY-30);
+          ctx.lineTo(archX+19,archY-7);
+          ctx.lineTo(archX+19,archY+17);ctx.closePath();ctx.fill();
+          ctx.strokeStyle='#a38d6a';ctx.lineWidth=3;ctx.stroke();
+          ctx.fillStyle='#795238';ctx.fillRect(archX-13,archY-2,26,19);
+          ctx.fillStyle='#d7a65d';ctx.fillRect(archX-2,archY+7,3,3);
+        }
         // Fachada frontal ornamentada: vigas, janelas com venezianas e floreiras.
         const fy=ry+rh-25;
         const facade=h.style==='stone'?'#8a8879':h.style==='slate'?'#647b88':
