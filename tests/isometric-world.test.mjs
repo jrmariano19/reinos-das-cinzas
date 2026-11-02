@@ -30,7 +30,7 @@ test('renderiza terreno do mapa real sem alterar a matriz', () => {
   };
   const snapshot=JSON.stringify(map);
   renderer.draw(ctx,map,{x:28,y:20},720,528,[{x:28,y:20}],()=>objects++);
-  assert.equal(fills,56*56);
+  assert.ok(fills > 0 && fills < 56*56, 'desenha somente os terrenos visíveis');
   assert.equal(objects,1);
   assert.equal(JSON.stringify(map),snapshot);
 });
