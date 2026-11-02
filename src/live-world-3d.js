@@ -140,6 +140,15 @@ function makeDecoration(group,x,z,kind,tile,TILE){
   addBox(g,.5,.22,.5,0,1.4,0,MAT.gold);
   const glow=addShape(g,UNIT_CONE,MAT.amber,0,1.73,0,[.18,.53,.18]);
   glow.castShadow=false;
+ }else if(kind==='portal'){
+  addShape(g,UNIT_CYL,MAT.stone,0,.12,0,[.58,.20,.58]);
+  addShape(g,UNIT_CYL,MAT.gold,0,.23,0,[.46,.10,.46]);
+  const core=addShape(g,UNIT_SPHERE,MAT.window,0,.37,0,[.29,.11,.29]);
+  core.castShadow=false;
+  if(tile===TILE.PORTAL_EXIT||tile===TILE.PORTAL_RETURN){
+    for(const side of [-1,1])addBox(g,.14,1.6,.14,side*.48,.86,0,MAT.gold);
+    addBox(g,1.15,.18,.26,0,1.65,0,MAT.stone);
+  }
  }else if(kind==='fountain'){
   addShape(g,UNIT_CYL,MAT.stone,0,.31,0,[.54,.52,.54]);
   addShape(g,UNIT_CYL,MAT.water,0,.62,0,[.42,.07,.42]);
@@ -302,13 +311,18 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
     }
    }
   }
+  const doorLayer=obstacles.get('door')||[];
+  const doors={tiles:doorLayer.map(([x,z])=>[x,z]),mesh:null,lastStates:new Map()};
+  layer.traverse(child=>{
+    if(child.isInstancedMesh && child.material===MAT.door)doors.mesh=child;
+  });
   const roofs=[];
   for(const h of houses){
    if((h.floor??0)!==floor)continue;
    const built=buildHouse(h);
    layer.add(built.group);roofs.push(built);
   }
-  floorGroups.set(floor,{group:layer,roofs,map});
+  floorGroups.set(floor,{group:layer,roofs,map,doors});
   return floorGroups.get(floor);
  }
  function setFloor(floor,map,houses){
@@ -322,7 +336,45 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
   }
   actorCache.clear();
   actorPickables.length=0;
+  for(const marker of corpseMarkers.values())scene.remove(marker);
+  corpseMarkers.clear();
   onStatus?.('Mundo 3D conectado ao andar '+floor);
+ }
+ function updateDoors(floor,openDoors){
+  if(!openDoors || !activeLayer?.doors?.mesh)return;
+  const {tiles,mesh,lastStates}=activeLayer.doors;
+  let changed=false;
+  for(let i=0;i<tiles.length;i++){
+   const [x,z]=tiles[i];
+   const open=openDoors.has(floor+':'+x+':'+z);
+   if(lastStates.get(i)===open)continue;
+   lastStates.set(i,open);
+   setInstance(mesh,i,x,open?.13:1.05,z,1,open?.20:2.1,open?.22:1);
+   changed=true;
+  }
+  if(changed)mesh.instanceMatrix.needsUpdate=true;
+ }
+ const corpseMarkers=new Map();
+ function renderCorpses(corpses,floor,px,pz){
+  const current=new Set();
+  for(const corpse of corpses||[]){
+   if(corpse.floor!==floor||Math.abs(corpse.x-px)>15||Math.abs(corpse.y-pz)>15)continue;
+   const id=String(corpse.id??(corpse.x+':'+corpse.y+':'+floor));
+   current.add(id);
+   let marker=corpseMarkers.get(id);
+   if(!marker){
+    marker=new THREE.Group();
+    addShape(marker,UNIT_SPHERE,MAT.monsterDark,0,.20,0,[.5,.18,.35]);
+    const label=labelSprite('LOOT','#efce8c');
+    label.position.y=.9;marker.add(label);
+    corpseMarkers.set(id,marker);
+    scene.add(marker);
+   }
+   marker.position.set(corpse.x,0,corpse.y);
+  }
+  for(const [id,obj] of corpseMarkers){
+   if(!current.has(id)){scene.remove(obj);corpseMarkers.delete(id)}
+  }
  }
  function actorsSnapshot(entities,floor,px,pz){
   const active=new Set();
@@ -384,7 +436,7 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
   sun.target.position.set(cameraAt.x,0,cameraAt.z);
   sun.target.updateMatrixWorld();
  }
- function update({map,floor,player,entities,houses,now}){
+ function update({map,floor,player,entities,houses,corpses,openDoors,now}){
   if(disposed||!map)return;
   if(activeFloor!==floor)setFloor(floor,map,houses);
   resize();frame++;
@@ -400,7 +452,9 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
    roof.visible=!inside;
    sign.visible=!inside;
   }
+  updateDoors(floor,openDoors);
   actorsSnapshot(entities,floor,player.x,player.y);
+  renderCorpses(corpses,floor,player.x,player.y);
   cameraFollow(player,now);
   renderer.render(scene,camera);
  }
