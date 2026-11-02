@@ -11,6 +11,10 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.m
 import {
  collectTileLayers,worldToTile,tileToWorld,visibleActor
 } from './live-world-contract.js';
+import {
+ GAMEPLAY_ZOOM,clampZoom,shouldHideRoof,shouldShowHouseLabel,
+ shouldShowActorLabel,isWorldNearby
+} from './live-world-visibility.js';
 
 const vec=(x,y,z)=>new THREE.Vector3(x,y,z);
 const hex=(v)=>new THREE.Color(v);
@@ -274,12 +278,20 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
  sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;
  sun.shadow.bias=-.0003;scene.add(sun);
  const camera=new THREE.OrthographicCamera(-13,13,13,-13,.1,180);
- let zoom=9.5, azimuth=Math.PI/4;
+ let zoom=GAMEPLAY_ZOOM, azimuth=Math.PI/4;
  const plane=new THREE.Plane(vec(0,1,0),0);
  const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
  const point=vec(0,0,0);
  const floorGroups=new Map(),actorCache=new Map();
  const hero=figure({player:true,name:'Ivo'});scene.add(hero.group);
+ const heroRing=new THREE.Mesh(
+  new THREE.RingGeometry(.50,.64,40),
+  new THREE.MeshBasicMaterial({color:'#e8c179',transparent:true,opacity:.91,depthWrite:false,side:THREE.DoubleSide})
+ );
+ heroRing.rotation.x=-Math.PI/2;
+ heroRing.renderOrder=15;scene.add(heroRing);
+ const heroGlow=new THREE.PointLight('#ffda91',1.2,5,2);
+ scene.add(heroGlow);
  let activeFloor=null,activeLayer=null,disposed=false,frame=0;
  let cameraAt=vec(22,0,14),lastSizeW=0,lastSizeH=0,mouseStart=null;
  const actorPickables=[];
@@ -387,12 +399,13 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
   const active=new Set();
   for(const e of entities){
    if(!visibleActor(e,floor))continue;
-   if(Math.abs(e.x-px)>17||Math.abs(e.y-pz)>17)continue;
+   if(!isWorldNearby(e,{x:px,y:pz},15))continue;
    const id=String(e.id);
    active.add(id);
    let actor=actorCache.get(id);
    if(!actor){
     actor=figure({monster:e.type==='monster',role:e.type,name:e.name||''});
+    actor.badge=actor.group.children.find(part=>part.isSprite)||null;
     actor.group.userData.actorId=id;
     actor.group.traverse(part=>{
      if(part.isMesh){part.userData.actorId=id;actorPickables.push(part);}
@@ -402,6 +415,7 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
    actor.entity=e;
    actor.group.visible=true;
    actor.group.position.set(e.renderX??e.x,0,e.renderY??e.y);
+   if(actor.badge)actor.badge.visible=shouldShowActorLabel(e,{x:px,y:pz});
    if(e.type==='monster'){
     actor.group.rotation.y=(e.dir==='left'?-Math.PI/2:e.dir==='up'?Math.PI:e.dir==='right'?Math.PI/2:0);
    }else{
@@ -460,11 +474,12 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
   const stride=movement>.03?Math.sin(frame*.22)*.42:0;
   hero.legs[0].rotation.x=stride;hero.legs[1].rotation.x=-stride;
   hero.group.position.y=movement>.03?Math.abs(Math.sin(frame*.22))*.07:0;
+  heroRing.position.set(player.renderX??player.x,.075,player.renderY??player.y);
+  heroGlow.position.set((player.renderX??player.x)+.3,2.3,(player.renderY??player.y)+.2);
   for(const {roof,house,sign} of activeLayer.roofs){
-   const inside=player.x>=house.x&&player.x<house.x+house.w
-    &&player.y>=house.y&&player.y<house.y+house.h;
-   roof.visible=!inside;
-   sign.visible=!inside;
+   const near=shouldHideRoof(house,player);
+   roof.visible=!near;
+   sign.visible=!near&&shouldShowHouseLabel(house,player);
   }
   updateDoors(floor,openDoors);
   actorsSnapshot(entities,floor,player.x,player.y);
@@ -480,8 +495,8 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
   raycaster.setFromCamera(pointer,camera);
   const picked=raycaster.intersectObjects(actorPickables,false)[0];
   if(picked?.object?.userData?.actorId){
-   const e=actorCache.get(String(picked.object.userData.actorId))?.entity;
-   if(e){onSelectTile(e.x,e.y);return;}
+   const actor=actorCache.get(String(picked.object.userData.actorId))?.entity;
+   if(actor){onSelectTile(actor.x,actor.y);return;}
   }
   const intersection=raycaster.ray.intersectPlane(plane,point);
   if(!intersection)return;
@@ -489,34 +504,52 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
   if(tile)onSelectTile(tile.x,tile.y);
  }
  function pointerDown(event){
-  mouseStart={x:event.clientX,y:event.clientY,button:event.button};
+  mouseStart={x:event.clientX,y:event.clientY,button:event.button,
+   previousX:event.clientX,dragged:false};
+ }
+ function pointerMove(event){
+  if(!mouseStart||mouseStart.button!==2)return;
+  const delta=event.clientX-mouseStart.previousX;
+  mouseStart.previousX=event.clientX;
+  if(Math.abs(delta)>0){
+   mouseStart.dragged=true;
+   azimuth+=delta*.008;
+  }
  }
  function pointerUp(event){
   if(!mouseStart)return;
   const distance=Math.hypot(event.clientX-mouseStart.x,event.clientY-mouseStart.y);
   const start=mouseStart;mouseStart=null;
-  if(start.button!==0||distance>8)return;
+  if(start.button!==0||distance>8||start.dragged)return;
   groundClick(event);
  }
  function wheel(event){
   event.preventDefault();
-  zoom=Math.max(7,Math.min(20,zoom+(event.deltaY>0?1:-1)*1.25));
+  zoom=clampZoom(zoom+(event.deltaY>0?1:-1)*.9);
   lastSizeW=0;resize();
  }
+ const contextMenu=event=>event.preventDefault();
  canvas.addEventListener('pointerdown',pointerDown);
+ canvas.addEventListener('pointermove',pointerMove);
  canvas.addEventListener('pointerup',pointerUp);
+ canvas.addEventListener('pointercancel',()=>{mouseStart=null;});
  canvas.addEventListener('wheel',wheel,{passive:false});
- canvas.addEventListener('contextmenu',e=>e.preventDefault());
+ canvas.addEventListener('contextmenu',contextMenu);
  function dispose(){
   if(disposed)return;
   disposed=true;
   canvas.removeEventListener('pointerdown',pointerDown);
+  canvas.removeEventListener('pointermove',pointerMove);
   canvas.removeEventListener('pointerup',pointerUp);
   canvas.removeEventListener('wheel',wheel);
+  canvas.removeEventListener('contextmenu',contextMenu);
   renderer.dispose();
   for(const a of actorCache.values())scene.remove(a.group);
   actorCache.clear();
  }
- return {update,dispose,zoomIn(){zoom=Math.max(7,zoom-1);lastSizeW=0;},
-  zoomOut(){zoom=Math.min(20,zoom+1);lastSizeW=0;},get floor(){return activeFloor;}};
+ return {update,dispose,
+  zoomIn(){zoom=clampZoom(zoom-1);lastSizeW=0;},
+  zoomOut(){zoom=clampZoom(zoom+1);lastSizeW=0;},
+  resetCamera(){zoom=GAMEPLAY_ZOOM;azimuth=Math.PI/4;lastSizeW=0;},
+  get floor(){return activeFloor;},get zoom(){return zoom;}};
 }
