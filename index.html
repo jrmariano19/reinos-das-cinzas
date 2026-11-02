@@ -3935,6 +3935,66 @@
             ctx.fillRect(px + 14 + (f * 5) % 18, py + 14 + ((f * 7) % 16), 4, 4);
           }
         }
+
+        // Acabamento de cidade: calçamento irregular e detalhes artesanais por SQM.
+        if(player.floor===0 && gx>=7 && gx<=37 && gy>=7 && gy<=35 &&
+           (t===TILE.DIRT_ROAD || t===TILE.STONE_FLOOR)){
+          const seed=(gx*92821+gy*68917)>>>0;
+          if(t===TILE.DIRT_ROAD){
+            ctx.fillStyle='rgba(62,43,27,.24)';ctx.fillRect(px,py+43,48,5);
+            for(let p=0;p<7;p++){
+              const ox=(seed+p*17)%43,oy=(seed*3+p*11)%40;
+              const w=5+(p%3)*3,h=3+(p%2)*2;
+              ctx.fillStyle=['#9b7950','#b18a5c','#80613f','#c09a68'][p%4];
+              ctx.fillRect(px+ox,py+oy,w,h);
+              ctx.fillStyle='rgba(239,204,151,.26)';ctx.fillRect(px+ox,py+oy,w,1);
+            }
+          }else{
+            ctx.strokeStyle='rgba(34,39,39,.34)';ctx.lineWidth=1;
+            ctx.beginPath();
+            ctx.moveTo(px+1,py+12);ctx.lineTo(px+47,py+12);
+            ctx.moveTo(px+1,py+36);ctx.lineTo(px+47,py+36);
+            ctx.moveTo(px+14,py+1);ctx.lineTo(px+14,py+12);
+            ctx.moveTo(px+35,py+12);ctx.lineTo(px+35,py+36);
+            ctx.stroke();
+            if(seed%5===0){ctx.fillStyle='rgba(91,116,75,.5)';ctx.fillRect(px+7,py+7,3,2);}
+          }
+        }
+
+        // Elementos centrais redesenhados como objetos de cenário, não apenas ícones de tile.
+        if(t===TILE.FOUNTAIN){
+          ctx.fillStyle='rgba(0,0,0,.34)';ctx.beginPath();ctx.ellipse(px+24,py+39,21,7,0,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='#5a5147';ctx.fillRect(px+5,py+17,38,23);
+          ctx.fillStyle='#b9a58a';ctx.fillRect(px+7,py+15,34,7);
+          ctx.fillStyle='#777d78';ctx.fillRect(px+10,py+22,28,14);
+          ctx.fillStyle='#397f91';ctx.fillRect(px+12,py+23,24,10);
+          ctx.fillStyle='#8ed0cf';ctx.fillRect(px+15,py+24,8,2);ctx.fillRect(px+27,py+29,6,2);
+          ctx.fillStyle='#d4c3a2';ctx.fillRect(px+20,py+5,8,15);
+          ctx.fillStyle='#9c8a70';ctx.fillRect(px+17,py+4,14,4);
+          ctx.fillStyle='#e2d2b2';ctx.fillRect(px+21,py+2,6,3);
+          ctx.fillStyle='rgba(147,220,235,.55)';ctx.fillRect(px+23,py-2,2,8);
+        }else if(t===TILE.MARKET_STALL){
+          ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(px+5,py+35,40,7);
+          ctx.fillStyle='#563b28';ctx.fillRect(px+8,py+17,32,21);
+          ctx.fillStyle='#9a6b3f';ctx.fillRect(px+5,py+25,38,11);
+          ctx.fillStyle='#d4ad70';ctx.fillRect(px+7,py+25,34,3);
+          ctx.fillStyle='#593a27';ctx.fillRect(px+5,py+8,38,5);
+          for(let aw=0;aw<6;aw++){
+            ctx.fillStyle=aw%2===0?'#a94336':'#e8d7b1';
+            ctx.fillRect(px+6+aw*6,py+12,6,12);
+            ctx.fillStyle='rgba(0,0,0,.2)';ctx.fillRect(px+6+aw*6,py+22,6,2);
+          }
+          ctx.fillStyle='#d8b77d';ctx.fillRect(px+7,py+7,34,2);
+          ctx.fillStyle='#d6c29a';ctx.fillRect(px+12,py+29,7,4);ctx.fillRect(px+23,py+28,8,5);
+        }else if(t===TILE.LANTERN){
+          ctx.fillStyle='rgba(255,174,65,.12)';ctx.beginPath();ctx.arc(px+24,py+22,22,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='#33291f';ctx.fillRect(px+21,py+12,6,31);
+          ctx.fillStyle='#70502f';ctx.fillRect(px+17,py+8,14,18);
+          ctx.fillStyle='#e6b45e';ctx.fillRect(px+19,py+10,10,13);
+          ctx.fillStyle='#fff0b3';ctx.fillRect(px+22,py+12,4,8);
+          ctx.fillStyle='#3a2b20';ctx.fillRect(px+15,py+7,18,3);ctx.fillRect(px+18,py+25,12,3);
+          ctx.fillStyle='#a58a5e';ctx.fillRect(px+19,py+42,10,3);
+        }
         if(t===TILE.BARREL){
           ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(px+10,py+35,29,7);
           ctx.fillStyle='#4b2c1c';ctx.fillRect(px+12,py+13,25,26);
@@ -4267,8 +4327,16 @@
           {edge:'#292a47',light:'#a7a2cc',mid:'#545774',dark:'#383852',ridge:'#bcc5dd'}:
           (roofStyles[h.style]||roofStyles.brick);
         ctx.fillStyle='rgba(0,0,0,.32)';ctx.fillRect(rx+9,ry+10,rw-10,rh+9);
-        ctx.fillStyle=palette.edge;ctx.fillRect(rx-5,ry-21,rw+10,rh+26);
-        // Telhado colonial do Bastião / ardósia cinza-azulada do Vale.
+        // Silhueta de telhado com duas águas: cada bairro ganha um perfil arquitetônico.
+        ctx.fillStyle=palette.edge;
+        ctx.beginPath();ctx.moveTo(rx-7,ry+2);ctx.lineTo(rx+rw*.5,ry-34);
+        ctx.lineTo(rx+rw+7,ry+2);ctx.lineTo(rx+rw+7,ry+rh+8);
+        ctx.lineTo(rx-7,ry+rh+8);ctx.closePath();ctx.fill();
+        ctx.save();
+        ctx.beginPath();ctx.moveTo(rx-5,ry+1);ctx.lineTo(rx+rw*.5,ry-32);
+        ctx.lineTo(rx+rw+5,ry+1);ctx.lineTo(rx+rw+5,ry+rh+5);
+        ctx.lineTo(rx-5,ry+rh+5);ctx.closePath();ctx.clip();
+        // Telhas em fiadas alternadas, com brilho e sombra para criar volume.
         for(let yy=0;yy<rh+6;yy+=14){
           const offset=(Math.floor(yy/14)%2)*10;
           for(let xx=-offset;xx<rw+8;xx+=20){
@@ -4282,8 +4350,13 @@
             }
           }
         }
+        ctx.restore();
         // Cumeeira elevada, beiral e duas águas.
-        ctx.fillStyle=palette.dark;ctx.fillRect(rx-9,ry-27,rw+18,8);
+        ctx.fillStyle=palette.dark;
+        ctx.beginPath();ctx.moveTo(rx-9,ry+2);ctx.lineTo(rx+rw*.5,ry-38);
+        ctx.lineTo(rx+rw+9,ry+2);ctx.lineTo(rx+rw+3,ry+7);
+        ctx.lineTo(rx+rw*.5,ry-30);ctx.lineTo(rx-3,ry+7);ctx.closePath();ctx.fill();
+        ctx.fillStyle=palette.ridge;ctx.fillRect(rx+rw*.5-2,ry-37,4,10);
         ctx.fillStyle=palette.ridge;ctx.fillRect(rx-7,ry-26,rw+14,3);
         ctx.fillStyle=palette.edge;ctx.fillRect(rx-9,ry+rh-10,rw+18,13);
         ctx.fillStyle=palette.light;ctx.fillRect(rx-8,ry+rh-10,rw+16,3);
