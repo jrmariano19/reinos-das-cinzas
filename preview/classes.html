@@ -81,8 +81,8 @@ footer{padding:0 20px 25px;text-align:center;color:#99a5aa;font-size:12px}
 <ol class="tiers" id="tiers"></ol>
 <div class="label">Papel no grupo</div><p id="group"></p>
 <div class="label">Economia e equipamentos</div><p id="economy"></p>
-<button id="select" type="button">Testar esta escolha</button>
-<p class="note" id="notice" role="status">Esta seleção é apenas para estudo e não altera o personagem salvo no jogo principal.</p>
+<button id="select" type="button">Entrar no jogo com esta classe</button>
+<p class="note" id="notice" role="status">Ao entrar na Preview do jogo, você poderá confirmar a escolha. O save não será modificado sem essa confirmação.</p>
 </div></aside></main>
 <footer>Design autoral inspirado na progressão vertical dos MMORPGs clássicos. Os coeficientes ainda serão balanceados em testes.</footer>
 <script type="module">
@@ -121,7 +121,7 @@ function renderProfile(){
  const cls=getClass(chosen);
  const faction=FACTIONS.find(f=>f.id===cls.faction);
  const level=Number(levelInput.value);
- document.getElementById('select').textContent='Testar esta escolha';
+ document.getElementById('select').textContent='Entrar no jogo com esta classe';
  document.getElementById('portraitName').textContent=cls.name;
  renderPortrait();
  document.getElementById('factionTag').textContent=faction.name+' · '+faction.home;
@@ -140,13 +140,13 @@ function renderProfile(){
  document.getElementById('tiers').innerHTML=cls.skills.map(s=>
   '<li class="'+(available.has(s.id)?'':'locked')+'"><strong>Tier '+s.tier+' · '+escapeHTML(s.name)+'</strong><span>Lv '+s.unlockLevel+'</span></li>').join('');
  document.getElementById('notice').textContent='Pontos previstos no nível '+level+': '+attributePointsForLevel(level)+
- ' atributos e '+skillPointsForLevel(level)+' habilidades. Esta seleção não altera o save do jogo principal.';
+ ' atributos e '+skillPointsForLevel(level)+' habilidades. A classe só será salva após confirmação dentro do jogo.';
 }
 levelInput.addEventListener('input',renderProfile);
 document.getElementById('select').addEventListener('click',()=>{
  const cls=getClass(chosen);
- document.getElementById('notice').textContent=cls.name+' escolhida neste laboratório. Ainda não afeta o combate nem os saves do jogo oficial.';
- document.getElementById('select').textContent='✓ '+cls.name;
+ // Navega para a Preview do jogo, onde a escolha só se torna permanente após confirmação.
+ window.location.href='../index.html?chooseClass='+encodeURIComponent(cls.id);
 });
 renderFactions();renderCards();renderProfile();
 window.addEventListener('resize',renderPortrait);
