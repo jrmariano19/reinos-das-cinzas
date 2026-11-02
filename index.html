@@ -3856,6 +3856,19 @@
   };
 
   function updateHUD() {
+    // A HUD móvel é apenas uma visualização do mesmo estado usado no desktop.
+    // Nenhum atributo ou save paralelo é criado.
+    const mobileTitle=document.getElementById('mobileHeroTitle');
+    if(mobileTitle)mobileTitle.textContent=player.name+' • Nv '+player.level+
+      (player.classId?' • '+player.title:'');
+    const mobileHpFill=document.getElementById('mobileHPFill');
+    if(mobileHpFill)mobileHpFill.style.width=Math.max(0,Math.min(100,player.hp/player.maxHp*100))+'%';
+    const mobileMpFill=document.getElementById('mobileMPFill');
+    if(mobileMpFill)mobileMpFill.style.width=Math.max(0,Math.min(100,player.mp/player.maxMp*100))+'%';
+    const mobileHpText=document.getElementById('mobileHPText');
+    if(mobileHpText)mobileHpText.textContent=Math.floor(player.hp)+'/'+player.maxHp;
+    const mobileMpText=document.getElementById('mobileMPText');
+    if(mobileMpText)mobileMpText.textContent=Math.floor(player.mp)+'/'+player.maxMp;
     const vitals=document.getElementById('sidebarVitals');
     if(vitals)vitals.textContent='HP '+Math.round(player.hp/player.maxHp*100)+'% • MP '+Math.round(player.mp/player.maxMp*100)+'%'+
       (isRestingInSafeZone(performance.now())?' • Descanso ×2':'');
@@ -5546,6 +5559,55 @@
   // Prévia experimental: usa o mapa ativo e não interfere em cliques, combate ou salvamento.
   let isoPreviewEnabled = false;
   let isoPreviewRenderer = null;
+  // Mobile: gaveta de inventário acessível sob demanda, sem reduzir o mundo jogável.
+  const mobileSidebar=document.getElementById('gameSidebar');
+  const mobilePanelsButton=document.getElementById('mobilePanelsButton');
+  const mobilePanelsClose=document.getElementById('mobilePanelsClose');
+  const mobileBackdrop=document.getElementById('mobileSidebarBackdrop');
+  const mobileLogToggle=document.getElementById('mobileLogToggle');
+  const isMobileLayout=()=>window.matchMedia('(pointer:coarse) and (max-width:1250px), (max-width:680px)').matches;
+  function setMobilePanels(open=false){
+    const allowed=isMobileLayout();
+    const visible=allowed&&!!open;
+    document.body.classList.toggle('mobile-panels-open',visible);
+    mobilePanelsButton.setAttribute('aria-expanded',String(visible));
+    mobileSidebar.inert=allowed&&!visible;
+    if(visible)mobilePanelsClose.focus();
+    else if(allowed&&open===false&&document.activeElement===mobilePanelsClose)mobilePanelsButton.focus();
+    return visible;
+  }
+  function setMobileLog(open=false){
+    const visible=isMobileLayout()&&!!open;
+    document.body.classList.toggle('mobile-log-open',visible);
+    mobileLogToggle.setAttribute('aria-expanded',String(visible));
+    mobileLogToggle.textContent=visible?'✕ Fechar log':'📜 Log';
+    return visible;
+  }
+  function syncMobileLayout(){
+    if(!isMobileLayout()){
+      setMobilePanels(false);
+      setMobileLog(false);
+      mobileSidebar.inert=false;
+    }else{
+      const expanded=document.body.classList.contains('mobile-panels-open');
+      mobileSidebar.inert=!expanded;
+    }
+    fitGameViewport();
+  }
+  mobilePanelsButton.addEventListener('click',()=>setMobilePanels(
+    !document.body.classList.contains('mobile-panels-open')
+  ));
+  mobilePanelsClose.addEventListener('click',()=>setMobilePanels(false));
+  mobileBackdrop.addEventListener('click',()=>setMobilePanels(false));
+  mobileLogToggle.addEventListener('click',()=>setMobileLog(
+    !document.body.classList.contains('mobile-log-open')
+  ));
+  window.addEventListener('resize',syncMobileLayout);
+  window.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&document.body.classList.contains('mobile-panels-open')){
+      setMobilePanels(false);
+    }
+  });
   const live3dCanvas=document.getElementById('live3dCanvas');
   const live3dToggle=document.getElementById('live3dToggle');
   const live3dCameraControls=document.getElementById('live3dCameraControls');
@@ -5791,6 +5853,7 @@
   window.onload = function() {
     fitGameViewport();
     setupSidebar();
+    syncMobileLayout();
     buildTileSprites();
     initWorldMap();
     initEntities();
