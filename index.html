@@ -4076,6 +4076,27 @@
             ctx.fillRect(px + ox, py + oy, 5, 2);
           }
         }
+        // Bastião: praça de pedra com moldura ornamental e mosaicos.
+        // Decoração por SQM: não altera o mapa, colisões ou entidades.
+        if(player.floor===0 && gx>=19 && gx<=36 && gy>=17 && gy<=27 &&
+           (t===TILE.STONE_FLOOR || t===TILE.DIRT_ROAD)){
+          const border=(gx===19||gx===36||gy===17||gy===27);
+          if(border){
+            ctx.fillStyle='rgba(17,25,31,.38)';
+            ctx.fillRect(px+2,py+2,44,44);
+            ctx.strokeStyle='#aa8754';ctx.lineWidth=2;
+            ctx.strokeRect(px+5,py+5,38,38);
+            ctx.strokeStyle='rgba(225,185,112,.45)';ctx.lineWidth=1;
+            ctx.strokeRect(px+9,py+9,30,30);
+          } else if((gx+gy)%4===0){
+            ctx.strokeStyle='rgba(186,151,97,.45)';ctx.lineWidth=2;
+            ctx.beginPath();ctx.moveTo(px+24,py+7);ctx.lineTo(px+41,py+24);
+            ctx.lineTo(px+24,py+41);ctx.lineTo(px+7,py+24);
+            ctx.closePath();ctx.stroke();
+            ctx.fillStyle='rgba(23,35,43,.28)';
+            ctx.fillRect(px+21,py+21,6,6);
+          }
+        }
         if (t === TILE.STAIR_UP || t === TILE.STAIR_DOWN) {
           ctx.fillStyle = '#211d24'; ctx.fillRect(px + 6, py + 5, 36, 38);
           ctx.fillStyle = '#9d8874';
