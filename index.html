@@ -174,6 +174,8 @@
   <!-- ÁREA CENTRAL/ESQUERDA SUPERIOR: VIEWPORT ADAPTÁVEL -->
   <div class="viewport-container tibia-panel">
     <canvas id="gameCanvas" width="720" height="528"></canvas>
+    <canvas id="isoPreviewCanvas" aria-label="Prévia isométrica experimental" style="display:none;position:absolute;inset:0;width:100%;height:100%;z-index:12;pointer-events:none;background:#101a18"></canvas>
+    <button id="isoPreviewToggle" type="button" style="position:absolute;left:12px;bottom:12px;z-index:25;background:#352b1e;color:#ffe1a1;border:1px solid #a7864b;border-radius:6px;padding:6px 10px;font-size:12px">◇ Prévia isométrica</button>
     <div id="contextHint" class="absolute bottom-3 right-3 pointer-events-none tibia-panel px-2 py-1 text-[10px] text-amber-200 shadow-lg max-w-[320px]">
       Explore casas • Clique nas portas e baús • [E] Interagir
     </div>
@@ -5059,11 +5061,65 @@
   window.addEventListener('pagehide',saveProgress);
   window.saveGame = saveProgress;
 
+  // Prévia experimental: usa o mapa ativo e não interfere em cliques, combate ou salvamento.
+  let isoPreviewEnabled = false;
+  let isoPreviewRenderer = null;
+  const isoPreviewCanvas = document.getElementById('isoPreviewCanvas');
+  const isoPreviewToggle = document.getElementById('isoPreviewToggle');
+  isoPreviewToggle.addEventListener('click', async () => {
+    if (!isoPreviewRenderer) {
+      isoPreviewToggle.disabled = true;
+      try {
+        const module = await import('./src/isometric-world.js');
+        isoPreviewRenderer = module.createIsometricWorldRenderer({
+          getTileColor(tile) {
+            if ([TILE.WATER].includes(tile)) return '#326b82';
+            if ([TILE.STONE_FLOOR,TILE.ANCIENT_STONE,TILE.CASTLE_WALL,TILE.RUIN_PILLAR].includes(tile)) return '#8c8b7a';
+            if ([TILE.DIRT_ROAD,TILE.FARM].includes(tile)) return '#a18658';
+            if ([TILE.HOUSE_WALL,TILE.WOOD_FLOOR,TILE.HOUSE_DOOR].includes(tile)) return '#866b51';
+            if ([TILE.DUNGEON_FLOOR,TILE.DUNGEON_WALL,TILE.CRYPT_FLOOR,TILE.CRYPT_WALL].includes(tile)) return '#555365';
+            if ([TILE.TREE,TILE.PINE,TILE.FERN].includes(tile)) return '#2d674b';
+            return '#58744e';
+          }
+        });
+      } catch (error) {
+        console.error('Falha ao carregar prévia isométrica',error);
+        isoPreviewToggle.textContent = 'Prévia indisponível';
+        isoPreviewToggle.disabled = false;
+        return;
+      }
+      isoPreviewToggle.disabled = false;
+    }
+    isoPreviewEnabled = !isoPreviewEnabled;
+    isoPreviewCanvas.style.display = isoPreviewEnabled ? 'block' : 'none';
+    isoPreviewToggle.textContent = isoPreviewEnabled ? '◇ Voltar ao jogo' : '◇ Prévia isométrica';
+  });
+  function renderIsoPreview() {
+    if (!isoPreviewEnabled || !isoPreviewRenderer || !maps[player.floor]) return;
+    if (isoPreviewCanvas.width !== canvas.width || isoPreviewCanvas.height !== canvas.height) {
+      isoPreviewCanvas.width = canvas.width;
+      isoPreviewCanvas.height = canvas.height;
+    }
+    const previewCtx = isoPreviewCanvas.getContext('2d');
+    previewCtx.clearRect(0,0,isoPreviewCanvas.width,isoPreviewCanvas.height);
+    isoPreviewRenderer.draw(previewCtx,maps[player.floor],
+      {x:player.renderX,y:player.renderY},isoPreviewCanvas.width,isoPreviewCanvas.height);
+    const x=isoPreviewCanvas.width/2,y=isoPreviewCanvas.height/2;
+    previewCtx.fillStyle='#ffd67d';
+    previewCtx.beginPath();previewCtx.arc(x,y-11,8,0,Math.PI*2);previewCtx.fill();
+    previewCtx.fillStyle='#f5f0df';
+    previewCtx.font='bold 12px sans-serif';previewCtx.textAlign='center';
+    previewCtx.fillText(player.name,x,y-25);
+    previewCtx.font='11px sans-serif';
+    previewCtx.fillText('PRÉVIA VISUAL • controles do jogo permanecem no modo clássico',isoPreviewCanvas.width/2,22);
+  }
+
   let lastSave = 0;
   let lastBattleRefresh = 0;
   function gameLoop(now) {
     updateGameLogic(now);
     renderViewport(now);
+    renderIsoPreview();
 
     if (now - lastSave > 5000) {
       saveProgress();
