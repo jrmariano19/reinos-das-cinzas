@@ -1837,10 +1837,18 @@
       maps[1][y+h-1][door]=TILE.HOUSE_DOOR;
       maps[1][y+1][x+1]=TILE.FURNITURE;maps[1][y+1][x+w-2]=TILE.FURNITURE;
     });
-    maps[1][28][22]=TILE.BRIDGE;maps[1][12][22]=TILE.PORTAL_RETURN;maps[1][6][22]=TILE.PORTAL_EXIT;
-    [[21,13],[23,13],[21,17],[23,17],[15,15],[30,15]].forEach(([x,y])=>{
-      if(maps[1][y][x]===TILE.GRASS)maps[1][y][x]=TILE.FLOWERS;
-    });
+    // Rio Largo atravessa a Vila das Lanternas; a ponte é a passagem obrigatória ao acampamento.
+    for(let y=27;y<=29;y++)for(let x=2;x<=53;x++)maps[1][y][x]=TILE.WATER;
+    for(let y=27;y<=29;y++)for(let x=20;x<=24;x++)maps[1][y][x]=TILE.BRIDGE;
+    for(let y=30;y<=36;y++)for(let x=21;x<=23;x++)maps[1][y][x]=TILE.DIRT_ROAD;
+    for(let y=18;y<=26;y++)for(let x=21;x<=23;x++)maps[1][y][x]=TILE.DIRT_ROAD;
+    maps[1][12][22]=TILE.PORTAL_RETURN;maps[1][6][22]=TILE.PORTAL_EXIT;
+    for(let y=18;y<27;y++)for(let x=1;x<55;x++){
+      if((x*19+y*13)%17===0&&maps[1][y][x]===TILE.GRASS)maps[1][y][x]=TILE.PINE;
+      else if((x*7+y*11)%29===0&&maps[1][y][x]===TILE.GRASS)maps[1][y][x]=TILE.WILD_FLOWERS;
+    }
+    [[21,13],[23,13],[21,17],[23,17],[15,15],[30,15],[18,32],[26,34],[39,31]]
+      .forEach(([x,y])=>{if(maps[1][y][x]===TILE.GRASS)maps[1][y][x]=TILE.FLOWERS;});
   }
 
   // Inicializa NPCs e Criaturas Clássicas do Tibia no Térreo (0) e Subsolo (-1)
@@ -2155,6 +2163,7 @@
       {x:24,y:14,label:'Entrada das Catacumbas'},
       {x:28,y:10,label:'Cidadela Real'},
       {x:8,y:12,label:'Catedral da Chama'},
+      {x:41,y:12,label:'Torre do Vigia Astral'},
       {x:28,y:34,label:'Distrito dos Ofícios'},
       {x:27,y:39,label:'Portão Sul'},
       {x:8,y:46,label:'Lago de Pedra Clara'},
@@ -2164,7 +2173,7 @@
       {x:22,y:12,label:'Vila das Lanternas'},
       {x:22,y:28,label:'Ponte do Rio Largo'},
       {x:34,y:38,label:'Acampamento dos Saqueadores'},
-      {x:22,y:6,label:'Voltar ao Bastião'}
+      {x:22,y:6,label:'Voltar a Valdoria'}
     ],
     '-1':[
       {x:26,y:14,label:'Entrada das Catacumbas'},
@@ -3676,7 +3685,7 @@
       player.mp = player.maxMp;
       player.floor = 0;
       player.x = 22;
-      player.y = 10;
+      player.y = 14;
       player.renderX = 22;
       player.renderY = 10;
       player.targetId = null;
