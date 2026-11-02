@@ -79,6 +79,12 @@ function seededTexture(kind){
  texture.anisotropy=4;
  return texture;
 }
+const CLASS_COATS=Object.freeze({
+ sentinela:material('#455f87'),colosso:material('#9e4e3a'),
+ vigia:material('#557b53'),artifice:material('#94724c'),
+ arcanista:material('#654e9b'),devota:material('#c8a66d'),
+ tecelao:material('#427d82'),espectro:material('#5c597a')
+});
 const tileMaterials=Object.fromEntries(
  ['stone','road','grass','wood','water','dungeon'].map(k=>
   [k,new THREE.MeshStandardMaterial({
@@ -236,17 +242,18 @@ function figure({player=false,monster=false,role='npc',name=''}){
   addBox(l,.23,.62,.23,0,-.28,0,leg);
   legs.push(l);
  }
+ let weapon=null;
  if(player){
   const cape=addBox(body,.74,1.05,.1,0,1.03,-.29,MAT.scarlet);
   cape.rotation.x=.16;
-  const weapon=addBox(body,.1,.82,.09,.55,1.0,.16,MAT.gold);
+  weapon=addBox(body,.1,.82,.09,.55,1.0,.16,MAT.gold);
   weapon.rotation.z=.23;
  }
  if(name){
   const badge=labelSprite(name,player?'#ffe7a2':monster?'#ffc0ae':'#cef5f9');
   badge.position.y=player?2.85:2.65;body.add(badge);
  }
- return {group:body,legs,mesh:torso};
+ return {group:body,legs,mesh:torso,weapon};
 }
 export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
  if(!canvas||typeof onSelectTile!=='function'||!TILE)throw new TypeError('Parâmetros inválidos');
@@ -267,7 +274,7 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
  sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;
  sun.shadow.bias=-.0003;scene.add(sun);
  const camera=new THREE.OrthographicCamera(-13,13,13,-13,.1,180);
- let zoom=14, azimuth=Math.PI/4;
+ let zoom=9.5, azimuth=Math.PI/4;
  const plane=new THREE.Plane(vec(0,1,0),0);
  const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
  const point=vec(0,0,0);
@@ -349,7 +356,7 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
    const open=openDoors.has(floor+':'+x+':'+z);
    if(lastStates.get(i)===open)continue;
    lastStates.set(i,open);
-   setInstance(mesh,i,x,open?.13:1.05,z,1,open?.20:2.1,open?.22:1);
+   setInstance(mesh,i,x,open ? .13 : 1.05,z,1,open ? .20 : 2.1,open ? .22 : 1);
    changed=true;
   }
   if(changed)mesh.instanceMatrix.needsUpdate=true;
@@ -442,6 +449,13 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
   resize();frame++;
   hero.group.position.set(player.renderX??player.x,0,player.renderY??player.y);
   hero.group.rotation.y=player.dir==='up'?Math.PI:player.dir==='left'?-Math.PI/2:player.dir==='right'?Math.PI/2:0;
+  hero.mesh.material=CLASS_COATS[player.classId]||MAT.roofRed;
+  const magic=['arcanista','devota','tecelao'].includes(player.classId);
+  if(hero.weapon){
+    hero.weapon.scale.set(magic?.12:player.classId==='colosso'?.25:.1,
+      magic?1.43:.82,.09);
+    hero.weapon.position.y=magic?1.2:1.0;
+  }
   const movement=Math.abs(player.x-(player.renderX??player.x))+Math.abs(player.y-(player.renderY??player.y));
   const stride=movement>.03?Math.sin(frame*.22)*.42:0;
   hero.legs[0].rotation.x=stride;hero.legs[1].rotation.x=-stride;
@@ -486,7 +500,7 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
  }
  function wheel(event){
   event.preventDefault();
-  zoom=Math.max(8,Math.min(22,zoom+(event.deltaY>0?1:-1)*1.25));
+  zoom=Math.max(7,Math.min(20,zoom+(event.deltaY>0?1:-1)*1.25));
   lastSizeW=0;resize();
  }
  canvas.addEventListener('pointerdown',pointerDown);
@@ -503,6 +517,6 @@ export function createLiveWorld3D({canvas,TILE,onSelectTile,onStatus}){
   for(const a of actorCache.values())scene.remove(a.group);
   actorCache.clear();
  }
- return {update,dispose,zoomIn(){zoom=Math.max(8,zoom-1);lastSizeW=0;},
-  zoomOut(){zoom=Math.min(22,zoom+1);lastSizeW=0;},get floor(){return activeFloor;}};
+ return {update,dispose,zoomIn(){zoom=Math.max(7,zoom-1);lastSizeW=0;},
+  zoomOut(){zoom=Math.min(20,zoom+1);lastSizeW=0;},get floor(){return activeFloor;}};
 }
