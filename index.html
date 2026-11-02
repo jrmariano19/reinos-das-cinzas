@@ -2585,7 +2585,7 @@
       if(!equipmentApi.isValidEquipment(item))return (slot==='weapon'?'Arma':'Armadura')+': slot vazio';
       const stats=equipmentApi.itemBonuses(item,player.classId);
       return item.name+' +'+item.aging+' ('+item.rarity+') · ATQ +'+stats.attack+
-        ', DEF +'+stats.defense+', ABS '+stats.absorption+
+        ', DEF +'+stats.defense+', ABS '+stats.absorption+', BLOQ '+stats.block+'%'+
         (item.mixId?' · Mixing aplicado':'')+
         (item.aging<20?' · Aging '+equipmentApi.agingCost(item)+' ouro':' · máximo +20');
     });
@@ -3195,7 +3195,8 @@
         if(Math.random()<(mob.isBoss?.76:.12)){
           const classWeapon=equipmentApi.CLASS_START_WEAPONS[player.classId]||'espada';
           const templateId=Math.random()<.30
-            ?(player.classId==='arcanista'||player.classId==='devota'||player.classId==='tecelao'?'manto':'armadura')
+            ?(player.classId==='arcanista'||player.classId==='devota'||player.classId==='tecelao'
+              ?'manto':player.classId==='sentinela'&&Math.random()<.45?'escudo':'armadura')
             :classWeapon;
           const id='loot-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
           corpseItems.push(equipmentApi.rollEquipment({
@@ -4059,8 +4060,14 @@
         if (now < player.shieldWallUntil) {
           finalDmg = Math.floor(finalDmg * 0.5);
         }
-        // Absorção limitada a 35%, aplicada depois da defesa e dos escudos temporários.
-        const absorption=Math.min(.35,gearBonuses().absorption*.02);
+        // Bloqueio e absorção permanecem limitados para evitar invulnerabilidade.
+        const equippedStats=gearBonuses();
+        const blockChance=Math.min(.35,equippedStats.block/100);
+        if(blockChance>0 && Math.random()<blockChance){
+          finalDmg=Math.floor(finalDmg*.4);
+          addSpark(player.floor,player.x,player.y,'puff');
+        }
+        const absorption=Math.min(.35,equippedStats.absorption*.02);
         finalDmg=Math.max(0,Math.floor(finalDmg*(1-absorption)));
 
         if (finalDmg <= 1 || Math.random() < 0.25) {
