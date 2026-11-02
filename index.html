@@ -4597,6 +4597,20 @@
         ctx.fillStyle=palette.ridge;ctx.fillRect(rx-7,ry-26,rw+14,3);
         ctx.fillStyle=palette.edge;ctx.fillRect(rx-9,ry+rh-10,rw+18,13);
         ctx.fillStyle=palette.light;ctx.fillRect(rx-8,ry+rh-10,rw+16,3);
+        // Fachada do Bastião: viga de madeira, janela âmbar e luz projetada.
+        // Desenhada na camada do telhado, sem criar obstáculos no mapa.
+        if(!vale && rw>=96 && rh>=96){
+          const wx=rx+Math.round(rw*.26),wy=ry+rh-25;
+          ctx.fillStyle='#211c21';ctx.fillRect(wx-3,wy-3,24,19);
+          ctx.fillStyle='#6b4834';ctx.fillRect(wx-1,wy-1,20,15);
+          ctx.fillStyle='#e2a654';ctx.fillRect(wx+2,wy+2,14,9);
+          ctx.fillStyle='rgba(255,183,81,.16)';
+          ctx.beginPath();ctx.ellipse(wx+9,wy+12,27,13,0,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='#2e2929';ctx.fillRect(wx+8,wy,3,14);
+          ctx.fillRect(wx,wy+6,19,2);
+          ctx.fillStyle='#8b6346';ctx.fillRect(rx+6,ry+rh-7,rw-12,3);
+          ctx.fillStyle='rgba(238,188,107,.28)';ctx.fillRect(rx+6,ry+rh-8,rw-12,1);
+        }
         // Chaminé, dormer e placa de madeira distinguem as profissões.
         if(h.id==='forja'||h.id==='alquimia_vale'||h.id==='laboratorio'){
           const sx=rx+rw-56,sy=ry+rh*.28;
