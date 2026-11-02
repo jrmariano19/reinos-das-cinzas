@@ -831,6 +831,40 @@
     addLog('Sistema de classes indisponível nesta sessão.', '#ff9c80');
     return null;
   });
+  let territoriesApi=null;
+  const territoriesReadyPromise=import('./src/territories.js').then(api=>{
+    territoriesApi=api;
+    return api;
+  }).catch(error=>{
+    console.error('O catálogo de territórios não carregou:',error);
+    return null;
+  });
+  let lastRegenTick=0;
+  function isRestingInSafeZone(now){
+    return !!territoriesApi &&
+      !!territoriesApi.liveSafeSettlement(player.floor,player.x,player.y) &&
+      now-player.moveCooldown>=1500 &&
+      player.path.length===0 &&
+      !player.targetId;
+  }
+  function applyRestingRegeneration(now){
+    if(!lastRegenTick){lastRegenTick=now;return;}
+    if(now-lastRegenTick<1000)return;
+    lastRegenTick=now;
+    if(!territoriesApi)return;
+    const idle=now-player.moveCooldown>=1500&&
+      player.path.length===0&&!player.targetId;
+    if(!idle)return;
+    if(player.hp>=player.maxHp&&player.mp>=player.maxMp)return;
+    const inTown=!!territoriesApi.liveSafeSettlement(player.floor,player.x,player.y);
+    const next=territoriesApi.regenerateVitals(
+      {hp:player.hp,maxHp:player.maxHp,mp:player.mp,maxMp:player.maxMp},
+      {seconds:1,idle,safe:inTown}
+    );
+    player.hp=next.hp;
+    player.mp=next.mp;
+    updateHUD();
+  }
   let equipmentApi=null;
   const equipmentReadyPromise=import('./src/equipment-system.js').then(api=>{
     equipmentApi=api;
@@ -3802,16 +3836,17 @@
 
   function updateHUD() {
     const vitals=document.getElementById('sidebarVitals');
-    if(vitals)vitals.textContent='HP '+Math.round(player.hp/player.maxHp*100)+'% • MP '+Math.round(player.mp/player.maxMp*100)+'%';
+    if(vitals)vitals.textContent='HP '+Math.round(player.hp/player.maxHp*100)+'% • MP '+Math.round(player.mp/player.maxMp*100)+'%'+
+      (isRestingInSafeZone(performance.now())?' • Descanso ×2':'');
     document.getElementById('playerNameTitle').textContent = `${player.name} • Nv ${player.level}`;
     const clsTitle=document.getElementById('playerClassTitle');
     if(clsTitle)clsTitle.textContent=player.title;
     const clsButton=document.getElementById('chooseClassButton');
     if(clsButton)clsButton.textContent=player.classId?'🛡 '+player.title:'🛡 Escolher classe';
     document.getElementById('hpBarFill').style.width = `${(player.hp / player.maxHp) * 100}%`;
-    document.getElementById('hpText').textContent = `${player.hp} / ${player.maxHp}`;
+    document.getElementById('hpText').textContent = `${Math.floor(player.hp)} / ${player.maxHp}`;
     document.getElementById('mpBarFill').style.width = `${(player.mp / player.maxMp) * 100}%`;
-    document.getElementById('mpText').textContent = `${player.mp} / ${player.maxMp}`;
+    document.getElementById('mpText').textContent = `${Math.floor(player.mp)} / ${player.maxMp}`;
     document.getElementById('xpBarFill').style.width = `${(player.xp / player.maxXp) * 100}%`;
     document.getElementById('xpText').textContent = `${player.xp} / ${player.maxXp}`;
     document.getElementById('goldText').textContent = player.gold;
@@ -3896,6 +3931,7 @@
   }
 
   function updateGameLogic(now) {
+    applyRestingRegeneration(now);
     for (let s = 1; s <= 4; s++) {
       const cdEl = document.getElementById(`cd${s}`);
       if (now < cooldowns[s]) {
