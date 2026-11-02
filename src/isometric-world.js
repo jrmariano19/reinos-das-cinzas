@@ -21,17 +21,25 @@ export function createIsometricWorldRenderer({
     if (!Array.isArray(map) || !map.length) return;
     const camera = cameraFor(player, viewportWidth, viewportHeight);
     const terrain = [];
+    const marginX = tileWidth;
+    const marginY = tileHeight;
     for (let y = 0; y < map.length; y++) {
       if (!Array.isArray(map[y])) continue;
-      for (let x = 0; x < map[y].length; x++) terrain.push({ x, y, tile: map[y][x] });
+      for (let x = 0; x < map[y].length; x++) {
+        const screen = worldToScreen(x, y, camera.x, camera.y, tileWidth, tileHeight);
+        if (screen.x < -marginX || screen.x > viewportWidth + marginX ||
+            screen.y < -marginY || screen.y > viewportHeight + marginY) continue;
+        terrain.push({ x, y, tile: map[y][x] });
+      }
     }
     terrain.sort(tileDrawOrder);
     for (const t of terrain) {
       const color = getTileColor(t.tile, t.x, t.y);
       drawIsoDiamond(ctx, t.x, t.y, color, camera.x, camera.y, tileWidth, tileHeight);
     }
-    // Ordenação conjunta dos objetos; o chamador desenha os sprites originais.
-    [...objects].sort(tileDrawOrder).forEach(o => {
+    // Entidades são desenhadas por profundidade, com margem para sprites altos.
+    [...objects].filter(o => Number.isFinite(o.x) && Number.isFinite(o.y))
+      .sort(tileDrawOrder).forEach(o => {
       const p = worldToScreen(o.x, o.y, camera.x, camera.y, tileWidth, tileHeight);
       drawObject(ctx, o, p);
     });
