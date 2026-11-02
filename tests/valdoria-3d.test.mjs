@@ -34,6 +34,19 @@ test('controles interativos e estado de carregamento',()=>{
  assert.match(file,/window\.addEventListener\('unhandledrejection'/);
 });
 
+test('moradores 3D possuem rotas, personagens animados e interações',()=>{
+ assert.match(moduleBody,/import \{createPatrol, advancePatrol\} from '\.\.\/src\/valdoria-citylife\.js'/);
+ assert.match(moduleBody,/function makeResident/);
+ assert.match(moduleBody,/function updateResidents/);
+ assert.match(moduleBody,/advancePatrol\(actor\.patrol,dt\)/);
+ assert.match(moduleBody,/raycaster\.intersectObjects\(pickTargets,false\)/);
+ assert.match(moduleBody,/function updateForgeEffects/);
+ for(const name of ['Capitã Elra','Bran, Ferreiro','Mara, Mercadora','Élio, Mensageiro','Pavo, Escriba']){
+   assert.ok(moduleBody.includes(name),name+' na cena');
+ }
+ assert.match(file,/id="citizens"/);
+});
+
 test('arte de estudo não altera o jogo principal',()=>{
  assert.doesNotMatch(file,/reinos-das-cinzas-save-v1/);
  assert.doesNotMatch(file,/localStorage\.setItem/);
