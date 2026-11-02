@@ -51,19 +51,21 @@ window.addEventListener('unhandledrejection',function(){
 </script>
 <div class="hud top">
   <div class="logo"><div class="eyebrow">Reinos das Cinzas · Estudo de direção de arte</div><h1>Valdoria, a Fortaleza de Brasa</h1><p>Um primeiro cenário 3D com edifícios, praça, muralhas, comércio e iluminação. Ainda não é a cidade final do jogo.</p></div>
-  <div class="status">◆ Nova direção visual · Cenário original</div>
+  <div class="status">◆ Valdoria 3D · Estudo v0.3</div>
 </div>
 <div id="info" class="info"><h2 id="infoTitle">Edifício</h2><p id="infoText"></p><button id="closeInfo">Fechar</button></div>
 <div class="hud bottom"><div class="toolbar">
   <button id="home" title="Centralizar a câmera">Praça central</button>
   <button id="aerial" title="Ver a cidade do alto">Vista aérea</button>
   <button id="street" title="Aproximar dos edifícios">Ver arquitetura</button>
+  <button id="citizens" class="active" aria-pressed="true" title="Mostrar ou ocultar moradores animados">Moradores ON</button>
   <button id="day" class="active">Dia</button>
   <button id="night">Noite</button>
-</div><div class="hint">Arraste para girar • Role para aproximar • Clique nos edifícios para conhecer a cidade</div></div>
+</div><div class="hint">Arraste para girar • Role para aproximar • Clique nos edifícios e moradores para explorar Valdoria</div></div>
 <script type="module">
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {createPatrol, advancePatrol} from '../src/valdoria-citylife.js';
 
 try {
 const canvas=document.getElementById('scene');
@@ -333,6 +335,159 @@ function human(x,z,rot=0,color=navy){
  cone(g,.38,1.1,1.65,7.7,0,iron,5);
 }
 [[-9,20,0],[8,19,1],[1,30,1.8],[-18,-8,1],[-37,8,2],[35,6,-.3]].forEach(([x,z,rot],i)=>human(x,z,rot,i%2?navy:knightSteel));
+// Moradores com animações de caminhada e rotas seguras pela praça e ruas.
+const residents=[];
+const residentCloth={
+  guard:mat('#354b68'), smith:mat('#78614d'), merchant:mat('#6b5045'),
+  scribe:mat('#485d70'), courier:mat('#71805b')
+};
+const bootLeather=mat('#342f2d');
+const capeCloth=mat('#803f39');
+function nameplate(name) {
+  const badge=document.createElement('canvas');
+  badge.width=384;badge.height=82;
+  const c=badge.getContext('2d');
+  c.fillStyle='rgba(16,24,32,.79)';
+  c.beginPath();c.roundRect(5,8,374,61,12);c.fill();
+  c.strokeStyle='#bb9767';c.lineWidth=2;c.stroke();
+  c.textAlign='center';c.font='bold 25px system-ui,sans-serif';
+  c.fillStyle='#f9e5c1';c.fillText(name,192,47,350);
+  const texture=new THREE.CanvasTexture(badge);
+  texture.colorSpace=THREE.SRGBColorSpace;
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({
+    map:texture,transparent:true,depthTest:false,depthWrite:false
+  }));
+  sprite.position.y=8;
+  sprite.scale.set(7.5,1.6,1);
+  return sprite;
+}
+function makeResident({name,role,description,coat,waypoints,speed=2}) {
+  const patrol=createPatrol(waypoints,speed);
+  const root=new THREE.Group();scene.add(root);
+  root.position.set(patrol.x,0,patrol.z);
+  const torso=block(root,1.55,2.12,1.03,0,3.5,0,coat);
+  block(root,1.7,.34,1.15,0,2.58,0,oakLight);
+  block(root,1.54,.14,1.1,0,4.49,0,gold);
+  sphere(root,.73,0,5.17,0,skin,12,9);
+  // Hair, collar, belt buckle and backpack give every role a recognizable outline.
+  const hair=mat(role==='smith'?'#292b2e':'#4e3328');
+  sphere(root,.74,0,5.47,-.15,hair,10,7);
+  block(root,.42,.33,.17,0,2.65,.6,gold);
+  const legs=[],arms=[];
+  for(const side of [-1,1]){
+    const leg=new THREE.Group();
+    leg.position.set(side*.46,2.6,0);root.add(leg);
+    cylinder(leg,.27,.32,1.65,0,-.89,0,bootLeather,8);
+    block(leg,.7,.57,1.03,0,-1.75,.23,bootLeather);
+    legs.push(leg);
+    const arm=new THREE.Group();arm.position.set(side*.98,4.2,0);root.add(arm);
+    cylinder(arm,.28,.3,1.56,0,-.76,0,coat,8);
+    sphere(arm,.3,0,-1.55,0,skin,9,7);
+    arms.push(arm);
+  }
+  if(role==='guard'){
+    cone(root,.9,1.25,0,6.08,0,knightSteel,8);
+    cylinder(root,.14,.14,3.9,1.44,3.4,0,oakLight,8);
+    cone(root,.34,.9,1.44,5.78,0,iron,6);
+    block(root,1.02,1.4,.25,-.98,3.54,.48,knightSteel);
+  } else if(role==='smith'){
+    block(root,1.4,1.5,.16,0,3.55,.57,oak);
+    cylinder(root,.18,.18,2.55,1.02,2.4,.5,oakLight,8);
+    block(root,1.6,.43,.65,1.02,3.68,.5,iron);
+  } else if(role==='merchant'){
+    const pouch=block(root,.75,.9,.55,-.9,2.85,-.44,oakLight);
+    block(root,1.5,.27,1.45,0,5.66,0,oakLight);
+    cylinder(root,.82,.82,.42,0,5.88,0,oakLight,12);
+  } else if(role==='scribe'){
+    block(root,1.25,1.55,.25,1.0,3.1,.42,pale);
+    block(root,1.32,.16,.28,1.0,3.87,.42,gold);
+  } else if(role==='courier'){
+    block(root,1.12,1.65,.58,0,3.35,-.8,oak);
+    block(root,1.4,.23,.8,0,3.55,-1.2,gold);
+    const cape=block(root,1.56,2.4,.16,0,3.39,-.89,capeCloth);
+    cape.rotation.x=.1;
+  }
+  const label=nameplate(name);
+  root.add(label);
+  const info={title:name,desc:description};
+  root.traverse(object=>{if(object.isMesh){
+    object.userData=info;
+    pickTargets.push(object);
+  }});
+  residents.push({root,patrol,legs,arms,label,role,phase:residents.length*1.7});
+}
+makeResident({
+ name:'Capitã Elra',role:'guard',
+ description:'Patrulha da praça. Protege os portões e orienta aventureiros.',
+ coat:residentCloth.guard,speed:2.2,
+ waypoints:[[-14,-2],[-11,-9],[-4,-14],[5,-14],[11,-9],[13,-3]]
+});
+makeResident({
+ name:'Bran, Ferreiro',role:'smith',
+ description:'Mestre da Forja das Cinzas. Especialista em armas e armaduras.',
+ coat:residentCloth.smith,speed:1.5,
+ waypoints:[[-19,-8],[-18,-12],[-14,-14],[-16,-8]]
+});
+makeResident({
+ name:'Mara, Mercadora',role:'merchant',
+ description:'Comerciante do mercado de Valdoria; negocia poções, provisões e equipamentos.',
+ coat:residentCloth.merchant,speed:1.55,
+ waypoints:[[18,12],[15,10],[12,15],[15,19],[19,18]]
+});
+makeResident({
+ name:'Élio, Mensageiro',role:'courier',
+ description:'Leva recados entre bairros, estalagem e guilda.',
+ coat:residentCloth.courier,speed:3.4,
+ waypoints:[[-8,13],[0,15],[11,11],[14,3],[10,-8],[2,-15],[-9,-10],[-15,0]]
+});
+makeResident({
+ name:'Pavo, Escriba',role:'scribe',
+ description:'Registra os juramentos da guilda e as missões dos aventureiros.',
+ coat:residentCloth.scribe,speed:1.3,
+ waypoints:[[19,-9],[14,-12],[14,-17],[19,-17]]
+});
+function updateResidents(now,dt){
+  for(let i=0;i<residents.length;i++){
+    const actor=residents[i];
+    if(!actor.root.visible)continue;
+    advancePatrol(actor.patrol,dt);
+    actor.root.position.x=actor.patrol.x;
+    actor.root.position.z=actor.patrol.z;
+    const shortest=Math.atan2(Math.sin(actor.patrol.heading-actor.root.rotation.y),
+      Math.cos(actor.patrol.heading-actor.root.rotation.y));
+    actor.root.rotation.y+=shortest*Math.min(1,dt*8);
+    const stride=actor.patrol.walking?Math.sin(now*.009*actor.patrol.speed+actor.phase)*.54:0;
+    actor.legs[0].rotation.x=stride;
+    actor.legs[1].rotation.x=-stride;
+    actor.arms[0].rotation.x=-stride*.7;
+    actor.arms[1].rotation.x=stride*.7;
+    actor.root.position.y=actor.patrol.walking?Math.abs(Math.sin(now*.009*actor.patrol.speed+actor.phase))*.10:0;
+  }
+}
+// Forja ativa: fumaça e brasas originais que não exigem sprites externos.
+const plumes=[];
+const smokeMaterial=new THREE.MeshBasicMaterial({
+ color:'#a2a5a9',transparent:true,opacity:.24,depthWrite:false
+});
+const emberMaterial=new THREE.MeshBasicMaterial({color:'#e59b44',transparent:true,opacity:.72,depthWrite:false});
+for(let i=0;i<12;i++){
+ const particle=sphere(scene,.35,-22.15,13.1,-23.35,
+   i<9?smokeMaterial.clone():emberMaterial.clone(),8,6);
+ particle.castShadow=false;particle.receiveShadow=false;
+ plumes.push({mesh:particle,phase:i/12,speed:i<9?.37:.62,ember:i>=9});
+}
+function updateForgeEffects(now){
+ const seconds=now*.001;
+ for(const p of plumes){
+   const progress=(seconds*p.speed+p.phase)%1;
+   p.mesh.position.set(-22.15+Math.sin(seconds*.61+p.phase*7)*progress*3.2,
+     13.1+progress*(p.ember?6:12),
+     -23.35+progress*2.7);
+   const size=(p.ember?.12:.25)+progress*(p.ember?.09:1.15);
+   p.mesh.scale.setScalar(size);
+   p.mesh.material.opacity=(1-progress)*(p.ember?.76:.30);
+ }
+}
 const sun=new THREE.DirectionalLight('#ffe3bc',3.6);sun.position.set(-40,74,48);
 sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
 sun.shadow.camera.left=-85;sun.shadow.camera.right=85;sun.shadow.camera.top=85;sun.shadow.camera.bottom=-85;
@@ -350,6 +505,15 @@ function applyNight(value){
 }
 document.getElementById('day').addEventListener('click',()=>applyNight(false));
 document.getElementById('night').addEventListener('click',()=>applyNight(true));
+let residentsVisible=true;
+document.getElementById('citizens').addEventListener('click',()=>{
+ residentsVisible=!residentsVisible;
+ residents.forEach(actor=>{actor.root.visible=residentsVisible;});
+ const button=document.getElementById('citizens');
+ button.textContent=residentsVisible?'Moradores ON':'Moradores OFF';
+ button.setAttribute('aria-pressed',String(residentsVisible));
+ button.classList.toggle('active',residentsVisible);
+});
 function moveCamera(x,y,z,tx=0,ty=4,tz=0){camera.position.set(x,y,z);controls.target.set(tx,ty,tz);controls.update()}
 document.getElementById('home').addEventListener('click',()=>moveCamera(55,49,63));
 document.getElementById('aerial').addEventListener('click',()=>moveCamera(2,93,4));
@@ -378,8 +542,14 @@ function resize(){
  renderer.setSize(width,height,false);
 }
 window.addEventListener('resize',resize);resize();
+let previousFrame=0;
 function loop(t){
- controls.update();for(let i=0;i<waterSpouts.length;i++)waterSpouts[i].position.y=2.2+Math.sin(t*.002+i)*.09;
+ const dt=previousFrame?Math.min((t-previousFrame)/1000,.05):0;
+ previousFrame=t;
+ controls.update();
+ for(let i=0;i<waterSpouts.length;i++)waterSpouts[i].position.y=2.2+Math.sin(t*.002+i)*.09;
+ updateResidents(t,dt);
+ updateForgeEffects(t);
  renderer.render(scene,camera);requestAnimationFrame(loop);
 }
 document.getElementById('loading').remove();requestAnimationFrame(loop);
