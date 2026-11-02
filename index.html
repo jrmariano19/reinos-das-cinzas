@@ -174,7 +174,7 @@
   <!-- ÁREA CENTRAL/ESQUERDA SUPERIOR: VIEWPORT ADAPTÁVEL -->
   <div class="viewport-container tibia-panel">
     <canvas id="gameCanvas" width="720" height="528"></canvas>
-    <canvas id="isoPreviewCanvas" aria-label="Prévia isométrica experimental" style="display:none;position:absolute;inset:0;width:100%;height:100%;z-index:12;pointer-events:none;background:#101a18"></canvas>
+    <canvas id="isoPreviewCanvas" aria-label="Prévia isométrica experimental" style="display:none;position:absolute;inset:0;width:100%;height:100%;z-index:12;pointer-events:none;touch-action:none;cursor:crosshair;background:#101a18"></canvas>
     <button id="isoPreviewToggle" type="button" style="position:absolute;left:12px;bottom:12px;z-index:25;background:#352b1e;color:#ffe1a1;border:1px solid #a7864b;border-radius:6px;padding:6px 10px;font-size:12px">◇ Prévia isométrica</button>
     <div id="contextHint" class="absolute bottom-3 right-3 pointer-events-none tibia-panel px-2 py-1 text-[10px] text-amber-200 shadow-lg max-w-[320px]">
       Explore casas • Clique nas portas e baús • [E] Interagir
@@ -4951,7 +4951,40 @@
     }
   });
 
-  // Clique no Canvas: Abrir Corpo de Monstro, Selecionar Criatura ou Caminhar até o SQM
+  // Todas as câmeras selecionam coordenadas do mesmo mundo e reutilizam A* / interação.
+  function handleWorldTileSelection(tileX, tileY) {
+    if (!Number.isInteger(tileX) || !Number.isInteger(tileY) ||
+        !maps[player.floor]?.[tileY] || tileX < 0 || tileX >= maps[player.floor][tileY].length) return;
+
+    // 0. Portas e baús interativos (antes de mirar NPCs ou caminhar).
+    if(player.floor===0 || player.floor===1){
+      if(maps[player.floor]?.[tileY]?.[tileX]===TILE.HOUSE_DOOR){
+        window.toggleHouseDoor(tileX,tileY);return;
+      }
+      const chest=chests.find(c=>(c.floor??0)===player.floor && c.x===tileX&&c.y===tileY);
+      if(chest){window.openHouseChest(chest.id);return;}
+    }
+
+    // 1. Verifica se clicou em uma criatura viva ou NPC.
+    const clickedEnt = entities.find(ent => !ent.dead && ent.floor === player.floor && ent.x === tileX && ent.y === tileY);
+    if (clickedEnt) {
+      window.selectTarget(clickedEnt.id);
+      return;
+    }
+
+    // 2. Verifica se clicou em um corpo abatido para abrir a janela de Loot.
+    const clickedCorpse = corpses.find(c => c.floor === player.floor && c.x === tileX && c.y === tileY);
+    if (clickedCorpse) {
+      openCorpseWindow(clickedCorpse);
+      return;
+    }
+
+    // 3. Rota A*: contorna construções e obstáculos.
+    clearPendingInteractions();
+    player.path = findPathTo(tileX, tileY);
+  }
+
+  // Clique no canvas clássico: converte pixels da grade em posição do mundo.
   canvas.addEventListener('mousedown', (e) => {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -4966,32 +4999,7 @@
     const tileX = Math.floor(camX + clickX / TILE_SIZE);
     const tileY = Math.floor(camY + clickY / TILE_SIZE);
 
-    // 0. Portas e baús interativos (antes de mirar NPCs ou caminhar).
-    if(player.floor===0 || player.floor===1){
-      if(maps[player.floor]?.[tileY]?.[tileX]===TILE.HOUSE_DOOR){
-        window.toggleHouseDoor(tileX,tileY);return;
-      }
-      const chest=chests.find(c=>(c.floor??0)===player.floor && c.x===tileX&&c.y===tileY);
-      if(chest){window.openHouseChest(chest.id);return;}
-    }
-
-    // 1. Verifica se clicou em uma criatura viva ou NPC
-    const clickedEnt = entities.find(ent => !ent.dead && ent.floor === player.floor && ent.x === tileX && ent.y === tileY);
-    if (clickedEnt) {
-      window.selectTarget(clickedEnt.id);
-      return;
-    }
-
-    // 2. Verifica se clicou em um corpo abatido para abrir a janela de Loot
-    const clickedCorpse = corpses.find(c => c.floor === player.floor && c.x === tileX && c.y === tileY);
-    if (clickedCorpse) {
-      openCorpseWindow(clickedCorpse);
-      return;
-    }
-
-    // 3. Rota A*: contorna construcoes e obstaculos.
-    clearPendingInteractions();
-    player.path = findPathTo(tileX, tileY);
+    handleWorldTileSelection(tileX, tileY);
   });
 
   minimapCanvas.addEventListener('mousedown', (e) => {
@@ -5066,6 +5074,29 @@
   let isoPreviewRenderer = null;
   const isoPreviewCanvas = document.getElementById('isoPreviewCanvas');
   const isoPreviewToggle = document.getElementById('isoPreviewToggle');
+  let isoHoverTile = null;
+
+  function isoPointerToTile(event) {
+    if (!isoPreviewEnabled || !isoPreviewRenderer || !maps[player.floor]) return null;
+    const rect = isoPreviewCanvas.getBoundingClientRect();
+    if (!rect.width || !rect.height || !isoPreviewCanvas.width || !isoPreviewCanvas.height) return null;
+    const x = (event.clientX - rect.left) * isoPreviewCanvas.width / rect.width;
+    const y = (event.clientY - rect.top) * isoPreviewCanvas.height / rect.height;
+    return isoPreviewRenderer.hitTest(x,y,
+      {x:player.renderX,y:player.renderY},
+      isoPreviewCanvas.width,isoPreviewCanvas.height,maps[player.floor]);
+  }
+
+  isoPreviewCanvas.addEventListener('pointermove', event => {
+    isoHoverTile = isoPointerToTile(event);
+  });
+  isoPreviewCanvas.addEventListener('pointerleave', () => { isoHoverTile = null; });
+  isoPreviewCanvas.addEventListener('pointerdown', event => {
+    if (!isoPreviewEnabled || event.button > 0) return;
+    event.preventDefault();
+    const tile = isoPointerToTile(event);
+    if (tile) handleWorldTileSelection(tile.x,tile.y);
+  });
   isoPreviewToggle.addEventListener('click', async () => {
     if (!isoPreviewRenderer) {
       isoPreviewToggle.disabled = true;
@@ -5092,6 +5123,9 @@
     }
     isoPreviewEnabled = !isoPreviewEnabled;
     isoPreviewCanvas.style.display = isoPreviewEnabled ? 'block' : 'none';
+    isoPreviewCanvas.style.pointerEvents = isoPreviewEnabled ? 'auto' : 'none';
+    isoPreviewToggle.setAttribute('aria-pressed',String(isoPreviewEnabled));
+    isoHoverTile = null;
     isoPreviewToggle.textContent = isoPreviewEnabled ? '◇ Voltar ao jogo' : '◇ Prévia isométrica';
   });
   function renderIsoPreview() {
@@ -5165,14 +5199,23 @@
         }
       }
     }
-    const x=isoPreviewCanvas.width/2,y=isoPreviewCanvas.height/2;
-    previewCtx.fillStyle='#ffd67d';
-    previewCtx.beginPath();previewCtx.arc(x,y-11,8,0,Math.PI*2);previewCtx.fill();
+    if (isoHoverTile) {
+      const hx=(isoHoverTile.x-isoHoverTile.y)*32+camera.x;
+      const hy=(isoHoverTile.x+isoHoverTile.y)*16+camera.y;
+      previewCtx.beginPath();
+      previewCtx.moveTo(hx,hy-16);
+      previewCtx.lineTo(hx+32,hy);
+      previewCtx.lineTo(hx,hy+16);
+      previewCtx.lineTo(hx-32,hy);
+      previewCtx.closePath();
+      previewCtx.strokeStyle='#f6d38c';
+      previewCtx.lineWidth=2;
+      previewCtx.stroke();
+    }
     previewCtx.fillStyle='#f5f0df';
-    previewCtx.font='bold 12px sans-serif';previewCtx.textAlign='center';
-    previewCtx.fillText(player.name,x,y-25);
+    previewCtx.textAlign='center';
     previewCtx.font='11px sans-serif';
-    previewCtx.fillText('PRÉVIA VISUAL • controles do jogo permanecem no modo clássico',isoPreviewCanvas.width/2,22);
+    previewCtx.fillText('Clique para mover • NPCs, loot e portas usam os comandos originais',isoPreviewCanvas.width/2,22);
   }
 
   let lastSave = 0;
