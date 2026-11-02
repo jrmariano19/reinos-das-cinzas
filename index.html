@@ -5739,7 +5739,7 @@
     if(live3dEnabled && live3dWorld){
       try{
         live3dWorld.update({
-          map:maps[player.floor],floor:player.floor,player,entities,houses,now
+          map:maps[player.floor],floor:player.floor,player,entities,houses,corpses,openDoors,now
         });
       }catch(error){
         console.error('O modo 3D falhou. Retornando ao renderizador antigo.',error);
