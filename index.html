@@ -5107,23 +5107,7 @@
       Number.isFinite(e.x) && Number.isFinite(e.y) &&
       Math.abs(e.x-player.x) <= 18 && Math.abs(e.y-player.y) <= 18);
     isoPreviewRenderer.draw(previewCtx,maps[player.floor],
-      previewPlayer,isoPreviewCanvas.width,isoPreviewCanvas.height,
-      nearbyEntities,(target,entity,screen) => {
-        const isNpc = entity.type === 'npc';
-        target.fillStyle = isNpc ? '#86d6ff' : '#ef8e7c';
-        target.strokeStyle = '#171b20';
-        target.lineWidth = 2;
-        target.beginPath();
-        target.arc(screen.x,screen.y-10,isNpc?6:7,0,Math.PI*2);
-        target.fill();target.stroke();
-        if (isNpc && Math.abs(entity.x-player.x) <= 5 && Math.abs(entity.y-player.y) <= 5) {
-          target.fillStyle = '#f5efdd';
-          target.font = '10px sans-serif';
-          target.textAlign = 'center';
-          target.fillText(entity.name,screen.x,screen.y-23);
-        }
-      });
-    // Volumes arquitetônicos simples para distinguir paredes, portas e árvores.
+      previewPlayer,isoPreviewCanvas.width,isoPreviewCanvas.height);
     const camera = isoPreviewRenderer.cameraFor(previewPlayer,isoPreviewCanvas.width,isoPreviewCanvas.height);
     const map = maps[player.floor];
     const scenery = [];
@@ -5135,7 +5119,29 @@
       scenery.push({gx,gy,tile,sx,sy});
     }
     scenery.sort((a,b)=>(a.gx+a.gy)-(b.gx+b.gy)||a.gy-b.gy);
-    for(const item of scenery) {
+    const actors = nearbyEntities.map(entity => ({
+      kind:'actor',gx:entity.renderX ?? entity.x,gy:entity.renderY ?? entity.y,entity
+    }));
+    actors.push({kind:'player',gx:player.renderX,gy:player.renderY});
+    const depthItems = [...scenery.map(item=>({...item,kind:'scenery'})),...actors];
+    depthItems.sort((a,b)=>(a.gx+a.gy)-(b.gx+b.gy)||a.gy-b.gy);
+    for(const item of depthItems) {
+      if(item.kind !== 'scenery') {
+        const sx=(item.gx-item.gy)*32+camera.x;
+        const sy=(item.gx+item.gy)*16+camera.y;
+        const isPlayer=item.kind==='player';
+        const isNpc=item.entity?.type==='npc';
+        previewCtx.fillStyle=isPlayer?'#ffd67d':isNpc?'#86d6ff':'#ef8e7c';
+        previewCtx.strokeStyle='#171b20';previewCtx.lineWidth=2;
+        previewCtx.beginPath();previewCtx.arc(sx,sy-11,isPlayer?8:6,0,Math.PI*2);
+        previewCtx.fill();previewCtx.stroke();
+        if(isPlayer || (isNpc && Math.abs(item.gx-player.x)<=5 && Math.abs(item.gy-player.y)<=5)) {
+          previewCtx.fillStyle='#f5efdd';previewCtx.font='10px sans-serif';
+          previewCtx.textAlign='center';
+          previewCtx.fillText(isPlayer?player.name:item.entity.name,sx,sy-25);
+        }
+        continue;
+      }
       const {tile,sx,sy}=item;
       const tree=tile===TILE.TREE||tile===TILE.PINE;
       if(tree) {
