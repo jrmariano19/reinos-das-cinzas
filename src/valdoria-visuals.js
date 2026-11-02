@@ -62,7 +62,7 @@ export function createValdoriaVisuals({tileWidth=64,tileHeight=32}={}) {
     const indoors=player.floor===(house.floor??0) &&
       player.x>house.x && player.x<house.x+house.w-1 &&
       player.y>house.y && player.y<house.y+house.h-1;
-    ctx.save();ctx.globalAlpha=indoors?.24:1;
+    ctx.save();ctx.globalAlpha=indoors ? 0.24 : 1;
 
     const a=point(x,y,0,camera),b=point(x+w,y,0,camera);
     const c=point(x+w,y+h,0,camera),d=point(x,y+h,0,camera);
