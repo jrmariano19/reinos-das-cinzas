@@ -75,7 +75,6 @@ import {tierForLevel,attributePointsForLevel,skillPointsForLevel} from '../src/c
 const cards=document.getElementById('cards');
 const factions=document.getElementById('factions');
 const levelInput=document.getElementById('level');
-const params=new URLSearchParams(window.location.search);
 let chosen=CLASSES[0].id;
 let filter='all';
 const icons={sentinela:'🛡',colosso:'⚒',vigia:'🏹',artifice:'⚙',arcanista:'✦',devota:'✺',tecelao:'◈',espectro:'⚔'};
@@ -85,7 +84,9 @@ function renderFactions(){
  factions.innerHTML=[{id:'all',name:'Todas as classes'},...FACTIONS].map(f=>
   '<button type="button" data-faction="'+f.id+'" class="'+(f.id===filter?'active':'')+'">'+escapeHTML(f.name)+'</button>').join('');
  factions.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
-   filter=b.dataset.faction;renderFactions();renderCards();
+   filter=b.dataset.faction;
+   if(filter!=='all'&&getClass(chosen)?.faction!==filter)chosen=CLASSES.find(c=>c.faction===filter).id;
+   renderFactions();renderCards();renderProfile();
  }));
 }
 function renderCards(){
@@ -101,6 +102,7 @@ function renderProfile(){
  const cls=getClass(chosen);
  const faction=FACTIONS.find(f=>f.id===cls.faction);
  const level=Number(levelInput.value);
+ document.getElementById('select').textContent='Selecionar para este laboratório';
  document.getElementById('factionTag').textContent=faction.name+' · '+faction.home;
  document.getElementById('className').textContent=cls.name;
  document.getElementById('weapon').textContent=cls.role+' · '+cls.weapon;
