@@ -3738,6 +3738,206 @@
     }
   }
 
+  // Humanóides redesenhados: silhueta orgânica, roupa em camadas e animação contínua.
+  const LIVING_SPRITES = new Set([
+    'knight','guard','commander','merchant','scribe','smith','innkeeper',
+    'alchemist','mage','healer'
+  ]);
+  function livingCharacterPhase(seed='npc'){
+    let hash=0;
+    for(let i=0;i<String(seed).length;i++)hash=(hash*31+String(seed).charCodeAt(i))>>>0;
+    return (hash%628)/100;
+  }
+  function drawLivingHumanoidSprite(target,px,py,entityType,opts={}){
+    const dir=opts.dir||'down',moving=!!opts.moving;
+    const time=Number(opts.time)||0,phase=Number(opts.phase)||0;
+    const cycle=time*.001*(moving?10.5:1.25)+phase;
+    const stride=moving?Math.sin(cycle):0;
+    const bob=moving?Math.abs(Math.sin(cycle))*.9:Math.sin(cycle*.9)*.38;
+    const armMotion=moving?Math.sin(cycle+Math.PI)*.42:Math.sin(cycle*.72+phase)*.055;
+    const blink=Math.sin(time*.0011+phase*2.7)>.986;
+    const palettes={
+      knight:{coat:'#8f3029',light:'#e2a36b',dark:'#421e1d',metal:'#9da8ad',trim:'#e7bd65',skin:'#c58e69',hair:'#493027'},
+      guard:{coat:'#294b79',light:'#82a8c9',dark:'#172b48',metal:'#aab4bb',trim:'#d9b66b',skin:'#c58d68',hair:'#493027'},
+      commander:{coat:'#76501f',light:'#d6ae60',dark:'#392817',metal:'#b8b7a6',trim:'#f1d58b',skin:'#d1a17c',hair:'#5b3827'},
+      merchant:{coat:'#496346',light:'#9db27b',dark:'#263a2a',metal:'#98754a',trim:'#d7b77a',skin:'#c9906c',hair:'#493027'},
+      scribe:{coat:'#6b503d',light:'#c5a77c',dark:'#352820',metal:'#8e7556',trim:'#d8c59e',skin:'#d1a17c',hair:'#59402d'},
+      smith:{coat:'#555b61',light:'#aab0b2',dark:'#292e32',metal:'#9ba6ad',trim:'#e1a34e',skin:'#bd8969',hair:'#382a23'},
+      innkeeper:{coat:'#914b61',light:'#d99a9d',dark:'#4a2938',metal:'#98704f',trim:'#e7c28c',skin:'#e0ad83',hair:'#693b34'},
+      alchemist:{coat:'#367477',light:'#9ac9b7',dark:'#1d4149',metal:'#78999a',trim:'#c8d98c',skin:'#c89579',hair:'#49372f'},
+      mage:{coat:'#553b82',light:'#aa8bd0',dark:'#281d4c',metal:'#8b79b0',trim:'#e5c879',skin:'#c99a7b',hair:'#e0d6c4'},
+      healer:{coat:'#386c88',light:'#a5d0d7',dark:'#1e3d59',metal:'#8faeb3',trim:'#e5d6a6',skin:'#d5a486',hair:'#805b4a'}
+    };
+    const p=palettes[entityType]||palettes.merchant;
+    const outfit=opts.outfit||{};
+    if(entityType==='knight'){
+      p.coat=outfit.primary||p.coat;p.metal=outfit.secondary||p.metal;
+      p.trim=outfit.head||p.trim;p.dark=outfit.detail||p.dark;
+    }
+    const side=dir==='left'||dir==='right';
+    target.save();
+    target.translate(Math.round(px),Math.round(py+bob));
+    target.imageSmoothingEnabled=false;
+    target.fillStyle='rgba(0,0,0,.34)';
+    target.beginPath();target.ellipse(24,42,12.5,4.2,-.12,0,Math.PI*2);target.fill();
+    target.translate(24,0);
+    if(dir==='left')target.scale(-1,1);
+    target.translate(-24,0);
+
+    const outline='#241c1a';
+    const strokePath=(fill,stroke=outline,width=1.35)=>{
+      target.fillStyle=fill;target.fill();target.lineWidth=width;
+      target.strokeStyle=stroke;target.stroke();
+    };
+    const grad=(x1,y1,x2,y2,a,b)=>{
+      const g=target.createLinearGradient(x1,y1,x2,y2);g.addColorStop(0,a);g.addColorStop(.52,b);g.addColorStop(1,p.dark);return g;
+    };
+    const limb=(x,y,angle,color,highlight,width=7,length=11,boot=false)=>{
+      target.save();target.translate(x,y);target.rotate(angle);
+      target.lineCap='round';target.lineJoin='round';
+      target.beginPath();target.moveTo(0,0);target.quadraticCurveTo(-1.8,length*.42,0,length);
+      target.strokeStyle=outline;target.lineWidth=width+2.2;target.stroke();
+      target.strokeStyle=grad(-width/2,0,width/2,length,color,highlight);
+      target.lineWidth=width;target.stroke();
+      target.beginPath();target.moveTo(-width*.18,2);target.lineTo(-width*.18,length-2);
+      target.strokeStyle='rgba(255,255,255,.22)';target.lineWidth=1;target.stroke();
+      if(boot){
+        target.beginPath();target.ellipse(1,length+1,4.7,2.7,.08,0,Math.PI*2);
+        strokePath(p.dark);
+        target.fillStyle=p.trim;target.fillRect(-1,length,2,1);
+      }else{
+        target.beginPath();target.arc(0,length,2.3,0,Math.PI*2);strokePath(p.skin);
+      }
+      target.restore();
+    };
+
+    // Capa ou manto acompanha o tronco, com balanço leve em movimento.
+    if(['knight','guard','commander','mage','healer'].includes(entityType)){
+      target.save();target.translate(24,18);target.rotate(-stride*.07);target.translate(-24,-18);
+      target.beginPath();target.moveTo(16,16);target.quadraticCurveTo(24,12,32,17);
+      target.quadraticCurveTo(37,27,34+stride,39);target.quadraticCurveTo(24,43,13-stride,39);
+      target.quadraticCurveTo(11,26,16,16);strokePath(grad(13,18,35,40,p.coat,p.dark));
+      target.strokeStyle='rgba(255,230,180,.25)';target.lineWidth=1;
+      target.beginPath();target.moveTo(18,21);target.quadraticCurveTo(14,31,17,37);target.stroke();
+      target.restore();
+    }
+
+    // Pernas articuladas, com joelhos e pés arredondados.
+    limb(20,31,stride*.34,p.metal,p.light,6.2,8,true);
+    limb(28,31,-stride*.34,p.metal,p.light,6.2,8,true);
+
+    // Tronco com cintura, ombros e dobras de tecido em vez de blocos rígidos.
+    target.beginPath();target.moveTo(17,16);target.quadraticCurveTo(24,13,31,16);
+    target.quadraticCurveTo(35,20,33,29);target.quadraticCurveTo(32,34,29,36);
+    target.quadraticCurveTo(24,38,19,36);target.quadraticCurveTo(15,33,15,28);
+    target.quadraticCurveTo(13,20,17,16);strokePath(grad(14,17,34,35,p.coat,p.light));
+    target.strokeStyle='rgba(255,238,190,.35)';target.lineWidth=1;
+    target.beginPath();target.moveTo(19,19);target.quadraticCurveTo(17,26,20,33);
+    target.moveTo(29,19);target.quadraticCurveTo(32,26,29,33);target.stroke();
+    target.fillStyle=p.trim;target.fillRect(18,30,12,2);
+    target.fillStyle='#33251d';target.fillRect(22,29,4,4);
+    target.fillStyle=p.trim;target.fillRect(23,30,2,2);
+
+    // Braços com ombros arredondados e balanço oposto ao das pernas.
+    limb(16,19,-.26-armMotion,p.coat,p.light,6.4,10,false);
+    limb(32,19,.26+armMotion,p.coat,p.light,6.4,10,false);
+
+    // Acessórios funcionais identificam cada profissão.
+    if(entityType==='merchant'){
+      target.beginPath();target.moveTo(30,22);target.quadraticCurveTo(39,23,38,34);
+      target.quadraticCurveTo(32,37,29,32);target.closePath();strokePath('#8b6038');
+      target.fillStyle='#d9b875';target.fillRect(32,26,4,2);
+      target.strokeStyle='#e0c18a';target.lineWidth=1;target.beginPath();target.moveTo(18,14);target.lineTo(30,15);target.stroke();
+    }else if(entityType==='scribe'){
+      target.save();target.translate(10,23);target.rotate(-.12+armMotion*.2);
+      target.beginPath();target.moveTo(0,0);target.lineTo(9,1);target.lineTo(9,12);target.lineTo(0,10);target.closePath();strokePath('#e6d5ae');
+      target.strokeStyle='#947a55';target.lineWidth=1;target.beginPath();target.moveTo(4,2);target.lineTo(4,10);target.stroke();target.restore();
+    }else if(entityType==='smith'){
+      target.save();target.translate(37,21);target.rotate(armMotion*.3);
+      target.fillStyle='#79502e';target.fillRect(-1,1,3,16);
+      target.beginPath();target.moveTo(-5,0);target.lineTo(5,0);target.lineTo(4,5);target.lineTo(-4,5);target.closePath();strokePath('#9ba4aa');target.restore();
+      target.fillStyle='#e58a39';target.fillRect(21,26,3,2);
+    }else if(entityType==='alchemist'){
+      target.beginPath();target.moveTo(35,25);target.lineTo(40,25);target.lineTo(41,34);
+      target.quadraticCurveTo(38,38,34,34);target.closePath();strokePath('#75c6bc');
+      target.fillStyle='rgba(197,255,224,.8)';target.fillRect(36,28,3,4);
+    }else if(entityType==='healer'||entityType==='mage'){
+      target.strokeStyle='#76502d';target.lineWidth=2.5;target.beginPath();target.moveTo(39,10);target.lineTo(39,41);target.stroke();
+      target.fillStyle=entityType==='mage'?'#b9a4ff':'#a9e7e2';
+      target.beginPath();target.arc(39,9,3.2+Math.sin(cycle*1.5)*.4,0,Math.PI*2);target.fill();
+    }
+
+    // Pescoço e cabeça: oval com orelhas, cabelo, nariz e expressão.
+    target.fillStyle=p.skin;target.fillRect(21,13,6,6);
+    target.beginPath();target.ellipse(24,9.3,7.1,8.1,0,0,Math.PI*2);
+    strokePath(grad(17,3,31,17,p.skin,'#edc29c'));
+    const hair=entityType==='mage'?'#d9d2c2':entityType==='innkeeper'?'#713d37':
+      entityType==='healer'?'#8a604c':entityType==='smith'?'#40312a':
+      entityType==='scribe'?'#60442f':'#493126';
+    if(dir==='up'){
+      target.beginPath();target.moveTo(17,9);target.quadraticCurveTo(14,0,24,0);
+      target.quadraticCurveTo(34,0,31,11);target.quadraticCurveTo(29,17,24,17);
+      target.quadraticCurveTo(18,15,17,9);target.closePath();strokePath(hair);
+      target.fillStyle='rgba(255,255,255,.18)';target.fillRect(19,4,9,2);
+    }else{
+      target.beginPath();target.moveTo(17,8);target.quadraticCurveTo(14,0,23,0);
+      target.quadraticCurveTo(33,0,31,9);target.lineTo(29,6);
+      target.quadraticCurveTo(26,11,18,8);target.closePath();strokePath(hair);
+      if(entityType==='merchant'||entityType==='guard'||entityType==='commander'){
+        target.fillStyle=p.dark;target.beginPath();target.ellipse(24,3.5,9,3.1,0,0,Math.PI*2);target.fill();
+        target.fillStyle=p.light;target.fillRect(17,3,14,1);
+      }
+      if(!side){
+        target.fillStyle='#33241f';
+        if(!blink){target.beginPath();target.ellipse(21,9,1.15,1.45,0,0,Math.PI*2);target.ellipse(27,9,1.15,1.45,0,0,Math.PI*2);target.fill();}
+        else{target.fillRect(20,9,3,1);target.fillRect(26,9,3,1);}
+        target.strokeStyle='rgba(65,39,29,.7)';target.lineWidth=.8;
+        target.beginPath();target.moveTo(20,7);target.lineTo(22,6.5);target.moveTo(26,6.5);target.lineTo(28,7);target.stroke();
+        target.fillStyle='rgba(151,77,65,.55)';target.fillRect(21,12,6,1);
+        target.fillStyle='#e5b08a';target.fillRect(23,10,2,2);
+      }else{
+        target.fillStyle='#33241f';target.fillRect(27,9,2,2);
+        target.fillStyle='#e7b18c';target.fillRect(30,10,2,3);
+      }
+    }
+
+    // Capacetes e chapéus têm volume, não uma placa quadrada sobre a cabeça.
+    if(entityType==='knight'||entityType==='guard'||entityType==='commander'){
+      target.beginPath();target.moveTo(16,8);target.quadraticCurveTo(14,-1,24,-1);
+      target.quadraticCurveTo(34,-1,32,8);target.lineTo(29,7);target.quadraticCurveTo(24,5,19,8);target.closePath();
+      strokePath(grad(15,0,33,10,p.metal,p.dark));
+      target.fillStyle='#20272b';target.beginPath();target.moveTo(18,8);target.quadraticCurveTo(24,6,30,8);
+      target.lineTo(29,12);target.quadraticCurveTo(24,14,19,12);target.closePath();target.fill();
+      target.fillStyle='#e5c36e';target.fillRect(21,8,6,1);
+      target.fillStyle=p.trim;target.beginPath();target.moveTo(23,0);target.lineTo(25,-5);target.lineTo(28,1);target.closePath();target.fill();
+    }else if(entityType==='mage'){
+      target.beginPath();target.moveTo(15,5);target.lineTo(23,-8);target.quadraticCurveTo(29,-2,33,5);
+      target.closePath();strokePath(grad(15,-6,33,7,p.coat,p.dark));
+      target.fillStyle=p.trim;target.fillRect(22,-2,3,5);
+    }else if(entityType==='smith'){
+      target.beginPath();target.moveTo(15,4);target.quadraticCurveTo(24,-2,33,4);
+      target.lineTo(31,7);target.lineTo(17,7);target.closePath();strokePath('#4b4c50');
+      target.fillStyle='#d0a05d';target.fillRect(19,4,10,1);
+    }else if(entityType==='scribe'){
+      target.beginPath();target.moveTo(15,4);target.quadraticCurveTo(24,-1,33,4);
+      target.lineTo(31,7);target.lineTo(17,7);target.closePath();strokePath('#65462e');
+      target.fillStyle='#d3b07b';target.fillRect(21,2,6,1);
+    }else if(entityType==='innkeeper'){
+      target.beginPath();target.moveTo(16,4);target.quadraticCurveTo(24,-1,32,4);
+      target.lineTo(30,7);target.lineTo(18,7);target.closePath();strokePath('#7a394d');
+      target.fillStyle='#e6b2a0';target.fillRect(20,3,8,1);
+    }else if(entityType==='alchemist'||entityType==='healer'){
+      target.beginPath();target.moveTo(15,5);target.quadraticCurveTo(24,-2,33,5);
+      target.lineTo(30,8);target.lineTo(18,8);target.closePath();strokePath(p.dark);
+      target.fillStyle=p.trim;target.fillRect(22,1,4,2);
+    }else if(entityType==='merchant'){
+      target.beginPath();target.moveTo(15,4);target.quadraticCurveTo(24,-2,33,4);
+      target.lineTo(31,7);target.lineTo(17,7);target.closePath();strokePath('#405339');
+      target.fillStyle='#d9bd7d';target.fillRect(21,3,6,1);
+    }
+    target.restore();
+  }
+
   // Desenha Nome + Barra de Vida Acima do Personagem Estilo Tibia 7.6
   function drawTibiaNameAndBar(px, py, name, hpPct, isNpc = false) {
     const barW = 32;
@@ -4278,10 +4478,13 @@
           ctx.strokeStyle='#df8fff';ctx.lineWidth=2;ctx.strokeRect(px-4,py-4,54,51);
           ctx.fillStyle='#fbbf24';ctx.fillRect(px+19,py-8,14,4);
         }
-        drawTibiaRealisticSprite(ctx, px, py, e.sprite, {
-          dir: e.dir || 'down',
-          frame: isMoving ? e.walkFrame : 0
-        });
+        const spriteOpts={
+          dir:e.dir||'down',frame:isMoving?e.walkFrame:0,moving:isMoving,
+          time:now,phase:livingCharacterPhase(e.id||e.name),seed:e.id||e.name
+        };
+        if(LIVING_SPRITES.has(e.sprite))
+          drawLivingHumanoidSprite(ctx,px,py,e.sprite,spriteOpts);
+        else drawTibiaRealisticSprite(ctx,px,py,e.sprite,spriteOpts);
         if(!e.ambient||Math.hypot(e.x-player.x,e.y-player.y)<=5.5)
           drawTibiaNameAndBar(px, py, e.name, e.hp / e.maxHp, e.type === 'npc');
       });
@@ -4292,14 +4495,12 @@
         const py = Math.round((player.renderY - camY) * TILE_SIZE);
         const isMoving = Math.abs(player.x - player.renderX) > 0.04 || Math.abs(player.y - player.renderY) > 0.04;
 
-        drawTibiaRealisticSprite(ctx, px, py, 'knight', {
-          dir: player.dir,
-          frame: isMoving ? player.walkFrame : 0,
-          isAttacking: now < player.attackAnimUntil,
-          outfit: player.outfit,
-          legendary: player.legendarySword,
-          forgedTier: player.weaponTier||0,
-          shieldWall: now < player.shieldWallUntil
+        drawLivingHumanoidSprite(ctx,px,py,'knight',{
+          dir:player.dir,frame:isMoving?player.walkFrame:0,moving:isMoving,
+          time:now,phase:livingCharacterPhase(player.name||'Ivo'),seed:player.name,
+          isAttacking:now<player.attackAnimUntil,outfit:player.outfit,
+          legendary:player.legendarySword,forgedTier:player.weaponTier||0,
+          shieldWall:now<player.shieldWallUntil
         });
         drawTibiaNameAndBar(px, py, player.name, player.hp / player.maxHp, false);
       }
