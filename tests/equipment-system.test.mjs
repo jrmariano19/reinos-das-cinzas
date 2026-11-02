@@ -18,9 +18,14 @@ test('templates cobrem as oito classes',()=>{
  assert.equal(Object.keys(MIX_RECIPES).length,2);
 });
 test('raridade, spec e atributos dependem do RNG, sem contaminar outros itens',()=>{
- const common=make('common',()=>.8);
- const rare=make('rare',()=>.1);
- const epic=make('epic',()=>.02);
+ const rolled=(id,rarity)=>{
+  let i=0;
+  const values=[rarity,.5];
+  return make(id,()=>values[i++]);
+ };
+ const common=rolled('common',.8);
+ const rare=rolled('rare',.1);
+ const epic=rolled('epic',.02);
  assert.equal(common.rarity,'comum');
  assert.equal(rare.rarity,'raro');
  assert.equal(epic.rarity,'epico');
