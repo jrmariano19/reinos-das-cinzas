@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  GAMEPLAY_ZOOM,ZOOM_MIN,ZOOM_MAX,clampZoom,distanceToHouse,
- shouldHideRoof,shouldShowHouseLabel,shouldShowActorLabel,isWorldNearby
+ shouldHideRoof,houseBlocksCamera,shouldHideRoofFromCamera,
+ shouldShowHouseLabel,shouldShowActorLabel,isWorldNearby
 } from '../src/live-world-visibility.js';
 import {readFileSync} from 'node:fs';
 import {Script} from 'node:vm';
@@ -28,6 +29,30 @@ test('telhados próximos são escondidos apenas na camada visual',()=>{
  assert.equal(shouldHideRoof(house,far),false);
  assert.deepEqual(house,{x:22,y:4,w:13,h:9});
 });
+test('telhados na linha de visão entre jogador e câmera deixam de obstruir',()=>{
+ const p={x:10,y:10};
+ const foreground={x:13,y:13,w:4,h:4};
+ const behind={x:2,y:2,w:3,h:3};
+ const side={x:16,y:2,w:3,h:3};
+ assert.equal(shouldHideRoof(foreground,p),false);
+ assert.equal(houseBlocksCamera(foreground,p,Math.PI/4),true);
+ assert.equal(shouldHideRoofFromCamera(foreground,p,Math.PI/4),true);
+ assert.equal(houseBlocksCamera(behind,p,Math.PI/4),false);
+ assert.equal(houseBlocksCamera(side,p,Math.PI/4),false);
+ assert.equal(shouldHideRoofFromCamera(behind,p,Math.PI/4),false);
+ assert.equal(houseBlocksCamera(foreground,p,-Math.PI/4),false);
+ assert.equal(houseBlocksCamera(foreground,p,Number.NaN),false);
+});
+test('herói recebe armadura detalhada e pose de ataque sincronizada com o combate real',()=>{
+ const js=readFileSync(new URL('../src/live-world-3d.js',import.meta.url),'utf8');
+ assert.match(js,/const cuirass=addBox\(body/);
+ assert.match(js,/shield=new THREE.Group\(\)/);
+ assert.match(js,/hero\.group\.scale\.setScalar\(isTouch\?1\.26:1\.16\)/);
+ assert.match(js,/hero\.arms\[1\]\.rotation\.x=player\.attackAnimUntil>now/);
+ assert.match(js,/hero\.mesh\.material=armorColor/);
+ assert.match(js,/cameraAt\.lerp\(goal,\.19\)/);
+});
+
 test('só placas e NPCs próximos aparecem',()=>{
  assert.equal(shouldShowHouseLabel(house,close),true);
  assert.equal(shouldShowHouseLabel(house,far),false);
@@ -38,8 +63,8 @@ test('só placas e NPCs próximos aparecem',()=>{
 });
 test('renderizador aplica visibilidade, marcador do herói e órbita',()=>{
  const js=readFileSync(new URL('../src/live-world-3d.js',import.meta.url),'utf8');
- assert.match(js,/shouldHideRoof\(house,player\)/);
- assert.match(js,/shouldShowHouseLabel\(house,player,isTouch\?5:8\)/);
+ assert.match(js,/shouldHideRoofFromCamera\(house,player,azimuth\)/);
+ assert.match(js,/shouldShowHouseLabel\(house,player,isTouch\?4:7\)/);
  assert.match(js,/shouldShowActorLabel\(e,\{x:px,y:pz\},isTouch\?3\.3:6\)/);
  assert.match(js,/const heroRing=new THREE\.Mesh/);
  assert.match(js,/heroRing\.position\.set/);
