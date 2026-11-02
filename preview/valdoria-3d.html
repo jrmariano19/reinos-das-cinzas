@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valdoria 3D — REINOS DAS CINZAS</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}
+body{margin:0;background:#101722;color:#f6e8c8;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#scene{width:100vw;height:100dvh;display:block;touch-action:none}
+.hud{position:absolute;z-index:5;pointer-events:none}
+.top{top:16px;left:19px;right:19px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.logo{background:linear-gradient(125deg,rgba(15,24,35,.94),rgba(24,33,43,.79));border:1px solid #b9915d8a;padding:13px 16px;box-shadow:0 8px 30px #0006;max-width:360px;border-radius:10px;backdrop-filter:blur(12px)}
+.eyebrow{font-size:10px;letter-spacing:.24em;color:#edc58c;text-transform:uppercase;font-weight:800}
+h1{font:700 23px Georgia,serif;color:#f8e3ac;margin:3px 0 5px;text-shadow:0 2px 5px #000}
+.logo p{font-size:12px;color:#d6cfbd;line-height:1.5;margin:0}
+.status{border:1px solid #a0885f85;border-radius:25px;padding:8px 12px;font-size:11px;background:#131b26dd;color:#f4d7a0;white-space:nowrap}
+.bottom{left:18px;right:18px;bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.toolbar{display:flex;gap:7px;flex-wrap:wrap;pointer-events:auto;background:#141e2ae8;border:1px solid #a88c6388;padding:8px;border-radius:10px;backdrop-filter:blur(10px);max-width:720px}
+button{background:linear-gradient(#584a38,#373125);border:1px solid #b49965;color:#fce6bc;padding:9px 11px;font-size:12px;border-radius:6px;font-weight:650;cursor:pointer}
+button:hover,button:focus-visible{background:#776040;outline:2px solid #e8c98d}
+button.active{background:#917143;color:#111b24}
+.hint{max-width:300px;color:#d9cbb1;font-size:11px;text-align:right;background:#111923ca;padding:11px 14px;border-radius:9px;line-height:1.5;border:1px solid #95764a70}
+.info{position:absolute;right:18px;top:78px;max-width:270px;z-index:8;background:#161e2ce8;border:1px solid #977f58aa;box-shadow:0 10px 30px #0007;padding:14px;border-radius:9px;display:none}
+.info.open{display:block}.info h2{font:700 17px Georgia,serif;color:#ffe0a8;margin:0 0 6px}
+.info p{font-size:12px;line-height:1.55;color:#cfc8b5;margin:0}
+.info button{margin-top:11px}
+#loading{position:absolute;inset:0;background:#131d29;display:grid;place-content:center;z-index:40;text-align:center;color:#ddc297;font-size:16px}
+#loading small{display:block;color:#ad9a7c;margin-top:8px;font-size:12px}
+#error{display:none;position:absolute;inset:0;z-index:50;align-content:center;text-align:center;padding:24px;background:#111b28;color:#ffdfbf}
+@media(max-width:700px){.top{top:8px;left:8px;right:8px}.logo{padding:9px 11px;max-width:270px}h1{font-size:18px}.status{display:none}.hint{display:none}.bottom{left:8px;right:8px;bottom:8px}.toolbar{gap:5px;padding:6px}button{padding:7px 8px;font-size:11px}.info{top:97px;right:8px;max-width:220px}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="loading"><div>Construindo Valdoria em 3D…</div><small>Um protótipo original, sem assets de outros jogos.</small></div>
+<div id="error" role="alert"><h2>Não foi possível carregar a cena 3D</h2><p>Verifique sua conexão e se o navegador permite módulos 3D/WebGL.</p></div>
+<canvas id="scene" aria-label="Cena tridimensional de Valdoria"></canvas>
+<div class="hud top">
+  <div class="logo"><div class="eyebrow">Reinos das Cinzas · Estudo de direção de arte</div><h1>Valdoria, a Fortaleza de Brasa</h1><p>Um primeiro cenário 3D com edifícios, praça, muralhas, comércio e iluminação. Ainda não é a cidade final do jogo.</p></div>
+  <div class="status">◆ Nova direção visual · Cenário original</div>
+</div>
+<div id="info" class="info"><h2 id="infoTitle">Edifício</h2><p id="infoText"></p><button id="closeInfo">Fechar</button></div>
+<div class="hud bottom"><div class="toolbar">
+  <button id="home" title="Centralizar a câmera">Praça central</button>
+  <button id="aerial" title="Ver a cidade do alto">Vista aérea</button>
+  <button id="street" title="Aproximar dos edifícios">Ver arquitetura</button>
+  <button id="day" class="active">Dia</button>
+  <button id="night">Noite</button>
+</div><div class="hint">Arraste para girar • Role para aproximar • Clique nos edifícios para conhecer a cidade</div></div>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
+try {
+const canvas=document.getElementById('scene');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.65;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();scene.background=new THREE.Color('#8797a1');scene.fog=new THREE.FogExp2('#8797a1',.008);
+const camera=new THREE.PerspectiveCamera(43,1,.1,400);
+camera.position.set(55,49,63);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.target.set(0,3,0);controls.enableDamping=true;controls.dampingFactor=.065;
+controls.minDistance=18;controls.maxDistance=145;controls.maxPolarAngle=Math.PI*.475;
+controls.enablePan=true;controls.update();
+const mat=(color,roughness=1,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+const stone=mat('#767b7b'),darkStone=mat('#464d53'),pale=mat('#b0a18a'),plaster=mat('#b4a28a'),oak=mat('#624636'),oakLight=mat('#876244'),iron=mat('#30363c',.58,.7),gold=mat('#c7a15e',.48,.67),darkGold=mat('#7c613d'),glass=mat('#88c2bc',.2,.12),waterMat=mat('#438a9f',.23,.24);
+const grass=mat('#456a50'),hedge=mat('#315745'),trunk=mat('#574133'),warmGlass=new THREE.MeshStandardMaterial({color:'#ffcf76',emissive:'#9b5420',emissiveIntensity:.44,roughness:.3});
+const groups=[];const pickTargets=[];
+function addMesh(geometry,material,parent=scene,x=0,y=0,z=0,shadow=true){
+ const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);
+ m.castShadow=shadow;m.receiveShadow=true;parent.add(m);return m;
+}
+function block(parent,w,h,d,x,y,z,material,cast=true){return addMesh(new THREE.BoxGeometry(w,h,d),material,parent,x,y,z,cast)}
+function cylinder(parent,r1,r2,h,x,y,z,material,sides=12){return addMesh(new THREE.CylinderGeometry(r1,r2,h,sides),material,parent,x,y,z)}
+function sphere(parent,r,x,y,z,material,w=14,h=9){return addMesh(new THREE.SphereGeometry(r,w,h),material,parent,x,y,z)}
+function cone(parent,r,h,x,y,z,material,sides=7){return addMesh(new THREE.ConeGeometry(r,h,sides),material,parent,x,y,z)}
+function textureStone(){
+ const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d');
+ g.fillStyle='#85827b';g.fillRect(0,0,512,512);
+ let seed=137;const rng=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
+ for(let y=0;y<512;y+=32){for(let x=0;x<512;x+=70){
+   const ox=(Math.floor(y/32)%2)*35;
+   const v=Math.floor(113+rng()*45);g.fillStyle='rgb('+v+','+(v-2)+','+(v-6)+')';
+   g.fillRect(x+ox+2,y+2,65,27);g.strokeStyle='#4c4b48';g.lineWidth=2;g.strokeRect(x+ox+1,y+1,66,29);
+   g.fillStyle='#ffffff13';g.fillRect(x+ox+6,y+3,51,2);
+ }}
+ for(let i=0;i<3000;i++){g.fillStyle=rng()>.5?'#ffffff12':'#00000014';g.fillRect(rng()*512,rng()*512,2,2)}
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
+}
+const cobbleTex=textureStone();
+const cobble=new THREE.MeshStandardMaterial({map:cobbleTex,roughness:1,color:'#bdb6a8'});
+function roofMaterial(base){
+ const c=document.createElement('canvas');c.width=256;c.height=256;const g=c.getContext('2d');
+ g.fillStyle=base;g.fillRect(0,0,256,256);g.strokeStyle='#241d1d70';g.lineWidth=3;
+ for(let y=0;y<260;y+=22){g.beginPath();g.moveTo(0,y);g.lineTo(256,y);g.stroke();
+ for(let x=(Math.floor(y/22)%2?0:18);x<260;x+=35){g.beginPath();g.moveTo(x,y);g.lineTo(x,y+22);g.stroke()}}
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;
+ return new THREE.MeshStandardMaterial({map:t,color:'#ded8cc',roughness:.86,side:THREE.DoubleSide});
+}
+const roofRed=roofMaterial('#925145'),roofBlue=roofMaterial('#525d75'),roofGreen=roofMaterial('#55665c'),roofGold=roofMaterial('#a57d47');
+const ground=block(scene,134,1.6,134,0,-1,0,grass,false);ground.receiveShadow=true;
+const foundation=block(scene,70,.65,71,0,-.05,0,cobble,false);
+const centerPlaza=cylinder(scene,18.8,18.8,.18,0,.34,0,cobble,56);
+for(let x=-41;x<=41;x+=7){
+ block(scene,6,.13,9,x,.18,0,cobble,false);
+ block(scene,9,.13,6,0,.18,x,cobble,false);
+}
+// Cobblestone edging and original symbolic radial plaza.
+for(let n=0;n<32;n++){
+ const a=n*Math.PI*2/32;const x=Math.cos(a)*15.2,z=Math.sin(a)*15.2;
+ const p=block(scene,2.2,.17,1.1,x,.47,z,stone,false);p.rotation.y=-a;
+}
+for(let n=0;n<8;n++){
+ const a=n*Math.PI/4;
+ const p=block(scene,1.5,.2,8.3,Math.sin(a)*7.3,.48,Math.cos(a)*7.3,darkGold,false);
+ p.rotation.y=a;
+}
+// Fountain with stepped polished-stone basin and central flame motif.
+cylinder(scene,5.6,6.1,1.3,0,1.02,0,darkStone,24);
+cylinder(scene,5,5, .28,0,1.81,0,stone,24);
+cylinder(scene,4.5,4.5,.09,0,1.96,0,waterMat,24);
+cylinder(scene,1.28,1.7,4,0,3.85,0,pale,12);
+cylinder(scene,2.9,2.9,.34,0,5.75,0,stone,18);
+cylinder(scene,2.55,2.55,.08,0,5.96,0,waterMat,18);
+cylinder(scene,.85,1.2,3.5,0,7.8,0,pale,12);
+cone(scene,1.15,2,0,10.45,0,gold,7);
+const waterSpouts=[];
+for(let i=0;i<8;i++){const a=i*Math.PI/4;const b=sphere(scene,.28,Math.sin(a)*3.4,2.25,Math.cos(a)*3.4,glass);b.material=glass;waterSpouts.push(b)}
+// Banner group for a distinctive city emblem.
+function banner(parent,x,y,z,color='#843f41'){
+ block(parent,.13,6,.13,x,y,z,iron);
+ block(parent,2.8,.16,.16,x+1.2,y+2.9,z,iron);
+ const cloth=new THREE.MeshStandardMaterial({color,roughness:.86,side:THREE.DoubleSide});
+ block(parent,2.4,3,.13,x+1.15,y+1.1,z,cloth);
+ block(parent,.5,1.1,.2,x+1.15,y+.0,z,gold);
+}
+const buildingInfos={
+ forge:{title:'Forja das Cinzas',desc:'Metal quente, telhados de cobre, chaminés fumegantes e armaduras de ferro. Um edifício de ofício, não uma caixa decorativa.'},
+ guild:{title:'Guilda dos Juramentos',desc:'Um salão elevado com frontão, bandeiras e guardas. Aqui se concentram contratos, grupos e progressão.'},
+ inn:{title:'Estalagem da Brasa',desc:'Um lugar acolhedor com varandas, vigas expostas, lanternas e hospedagem para aventureiros.'},
+ market:{title:'Armazém dos Mercadores',desc:'Mercado coberto, fardos, barris e tecidos. Um ponto de encontro econômico da cidade.'},
+ temple:{title:'Templo da Vigília',desc:'A construção espiritual de Valdoria: torres, vitrôs, arcadas e um santuário próprio da mitologia de Reinos das Cinzas.'}
+};
+function makeBuilding(key,x,z,w,d,h,roof,kind){
+ const root=new THREE.Group();root.position.set(x,0,z);scene.add(root);groups.push(root);
+ const base=block(root,w+1.4,1.05,d+1.4,0,.59,0,darkStone);
+ block(root,w,h,d,0,h/2+1,0,plaster);
+ // Stone footing, long timber framing and stone corner supports.
+ for(const sx of [-1,1])for(const sz of [-1,1]){
+ block(root,.82,h+.35,.82,sx*w/2,h/2+1.1,sz*d/2,stone);
+ }
+ for(const sx of [-1,1]){block(root,.36,h,.36,sx*(w/2-1),h/2+1, d/2+.2,oak);}
+ for(let y=2;y<h;y+=3.4){block(root,w+.4,.3,.4,0,y+.4,d/2+.1,oakLight)}
+ // Gabled roof: two inclined planes, continuous ridge.
+ const rise=w*.26,half=w/2+1.1,slant=Math.hypot(half,rise);
+ for(const side of [-1,1]){
+  const piece=block(root,slant,.42,d+2.5,side*half/2,h+1+rise/2,0,roof);
+  piece.rotation.z=-side*Math.atan2(rise,half);
+ }
+ const ridge=block(root,.32,.44,d+2.5,0,h+1+rise,0,gold);
+ // End gable fills.
+ for(const front of [-1,1]){
+  const points=[[-w/2,h+1],[w/2,h+1],[0,h+1+rise]];
+  const sh=new THREE.Shape();
+  sh.moveTo(points[0][0],points[0][1]);sh.lineTo(points[1][0],points[1][1]);sh.lineTo(points[2][0],points[2][1]);sh.closePath();
+  const geom=new THREE.ShapeGeometry(sh);
+  const face=addMesh(geom,plaster,root,0,0,front*(d/2+.015));
+  if(front===-1)face.rotation.y=Math.PI;
+ }
+ // Doors, visible portal surrounds and a shallow stair.
+ block(root,2.8,4.8,.37,0,3,d/2+.25,oak);
+ block(root,3.1,.36,.65,0,5.55,d/2+.45,gold);
+ block(root,.34,5,.7,-1.55,3,d/2+.3,stone);
+ block(root,.34,5,.7,1.55,3,d/2+.3,stone);
+ sphere(root,.14,.95,3.05,d/2+.52,gold,8,6);
+ for(let k=0;k<3;k++)block(root,4.3+k*.8,.26,.9+k*.2,0,.28-k*.13,d/2+1.2+k*.72,stone,false);
+ // Windows with frames and warm interior lighting.
+ const count=Math.max(2,Math.floor(w/5));
+ for(let i=0;i<count;i++){
+  const px= -w/2+2.5+i*(w-5)/(count-1);
+  if(Math.abs(px)<2.3)continue;
+  block(root,1.9,2.3,.18,px,h*.55,d/2+.22,oak);
+  block(root,1.55,1.88,.22,px,h*.55,d/2+.36,warmGlass);
+  block(root,.18,2.2,.35,px,h*.55,d/2+.45,iron);
+  block(root,1.8,.16,.35,px,h*.55,d/2+.45,iron);
+  block(root,2.5,.31,.8,px,h*.55-1.2,d/2+.46,stone);
+ }
+ for(let side of [-1,1]){
+  for(let k=0;k<2;k++){
+   const pz=(-.24+k*.48)*d;
+   block(root,1.8,2.2,.14,side*(w/2+.15),h*.55,pz,oak);
+   block(root,1.4,1.8,.19,side*(w/2+.29),h*.55,pz,warmGlass);
+  }
+ }
+ // Special silhouettes so every building reads differently.
+ if(kind==='forge'){
+  const chimneyX=w*.27,chimneyZ=-d*.24;
+  block(root,2.7,h*.75,2.7,chimneyX,h*.85,chimneyZ,darkStone);
+  block(root,3.3,.7,3.3,chimneyX,h*1.25,chimneyZ,stone);
+  const awning=block(root,7,.35,3.4,0,5.6,d/2+3.1,roofRed);
+  awning.rotation.x=.19;
+  for(let side of [-1,1])block(root,.25,5,.25,side*3.1,2.9,d/2+4.1,oak);
+  block(root,2.2,.5,1.4,2.9,.6,d/2+4,iron);
+ }
+ if(kind==='guild'){
+  const tower=block(root,5,h*.65,5,-w*.28,h+1,-d*.2,darkStone);
+  for(let side of [-1,1])block(root,1,h*.95,1,-w*.28+side*2.2,h+1,-d*.2+side*2.2,stone);
+  cone(root,4.4,5.3,-w*.28,h*1.67+3,-d*.2,roofBlue,4).rotation.y=Math.PI/4;
+  banner(root,w/2+.7,h*.65,0);
+ }
+ if(kind==='inn'){
+  block(root,w*.68,.42,4.2,0,h*.65,d/2+2.7,oakLight);
+  for(let ix=-1;ix<=1;ix++)block(root,.42,h*.65,.42,ix*w*.23,h*.36,d/2+4.2,oak);
+  banner(root,w/2+.85,h*.72,d/2+.6,'#a35e42');
+ }
+ if(kind==='market'){
+  for(let i=0;i<3;i++){
+   block(root,2.3,2.4,2.3,-w*.22+i*w*.22,1.5,d/2+3.8,oak);
+   cone(root,1.8,.7,-w*.22+i*w*.22,2.96,d/2+3.8,i%2?roofRed:roofGold,4).rotation.y=Math.PI/4;
+  }
+ }
+ if(kind==='temple'){
+  for(const sx of [-1,1]){
+   const tx=sx*(w*.34);
+   block(root,4.7,h*.78,4.7,tx,h*.93,-d*.12,stone);
+   cone(root,4,7,tx,h*1.35+4,-d*.12,roofBlue,6);
+   sphere(root,.65,tx,h*1.35+8,-d*.12,gold,8,6);
+  }
+  block(root,2.9,4.6,.26,0,h*.58,d/2+.25,glass);
+  block(root,.36,4.9,.44,0,h*.58,d/2+.45,gold);
+  block(root,3.1,.3,.44,0,h*.58,d/2+.45,gold);
+ }
+ root.userData={key,...buildingInfos[key]};root.traverse(o=>{if(o.isMesh){o.userData=root.userData;pickTargets.push(o)}});
+ return root;
+}
+makeBuilding('forge',-27,-20,18,14,10,roofRed,'forge');
+makeBuilding('guild',28,-22,20,15,13,roofBlue,'guild');
+makeBuilding('inn',-28,23,20,14,11,roofGold,'inn');
+makeBuilding('market',27,24,20,14,11,roofGreen,'market');
+makeBuilding('temple',0,-48,22,15,16,roofBlue,'temple');
+// Trees: layered canopy + varied silhouette, benches, barrel clusters.
+function tree(x,z,scale=1){
+ const root=new THREE.Group();root.position.set(x,0,z);root.scale.setScalar(scale);scene.add(root);
+ cylinder(root,.55,.78,6,0,3,0,trunk,9);
+ sphere(root,3.1,0,8,0,hedge,9,7);sphere(root,3.8,-1,10,0,grass,10,7);
+ sphere(root,3.2,1.3,11.4,-.4,hedge,10,8);sphere(root,2.3,-.3,13.3,.2,grass,9,7);
+}
+[[-15,-14],[-12,18],[-17,33],[14,-15],[14,17],[16,33],[-47,-5],[-47,18],[47,-12],[47,12],[-21,-42],[22,-43],[-6,40],[8,40]].forEach(([x,z],i)=>tree(x,z,.65+(i%4)*.1));
+function lamp(x,z){
+ const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
+ cylinder(g,.19,.34,6,0,3,0,iron,8);
+ block(g,2.2,.18,.18,.88,6.2,0,iron);
+ const lightBox=block(g,1.1,1.8,1.1,1.3,5.7,0,warmGlass);
+ cone(g,1.1,.8,1.3,7.04,0,darkStone,4).rotation.y=Math.PI/4;
+ const point=new THREE.PointLight('#ffb65b',5.5,12,2);point.position.set(1.3,6,0);g.add(point);point.visible=false;
+ return point;
+}
+const nightLights=[[11,11],[-11,-11],[11,-11],[-11,11],[-36,8],[36,8],[-7,-34],[9,-34]].map(([x,z])=>lamp(x,z));
+function bench(x,z,rot=0){
+ const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;scene.add(g);
+ block(g,4.2,.35,1.3,0,1.25,0,oakLight);
+ block(g,4.3,1.4,.27,0,2,-.55,oak);
+ for(let side of [-1,1])block(g,.35,1.3,.32,side*1.7,.6,0,iron);
+}
+bench(-10,8,Math.PI/3);bench(9,-9,-Math.PI/3);bench(10,9,-Math.PI/3);
+function barrel(x,z){
+ cylinder(scene,.85,.85,2,x,1,z,oakLight,10);
+ for(let y of [.3,1,1.8])cylinder(scene,.88,.88,.12,x,y,z,iron,10);
+}
+[[-21,-9],[-19,-10],[-24,-7],[18,16],[20,15],[22,17]].forEach(([x,z])=>barrel(x,z));
+function marketStall(x,z,color){
+ const group=new THREE.Group();group.position.set(x,0,z);scene.add(group);
+ for(const sx of [-1,1])for(const sz of [-1,1])block(group,.22,5.3,.22,sx*2.7,2.6,sz*1.7,oak);
+ block(group,6,.28,3.5,0,3.9,0,oakLight);
+ const canopy=block(group,7,.3,4.6,0,5.5,0,mat(color));canopy.rotation.z=.06;
+ for(let i=-2;i<=2;i++){block(group,.45,.15,4.7,i*1.3,5.65,0,i%2?roofGold:roofRed)}
+ for(let i=-2;i<=2;i++)sphere(group,.43,i*.86,4.3,.2,i%2?grass:gold,8,6);
+}
+marketStall(-16,1,'#a14c43');marketStall(18,2,'#b99653');
+// Defensive city perimeter: towers, walls and a southern gate with battlements.
+const wallLine=mat('#656c70');
+function wall(x,z,w,d){block(scene,w,8,d,x,4,z,wallLine);
+ const length=w>d?w:d,across=w>d;
+ for(let t=-length/2+1;t<length/2;t+=2.7){
+  block(scene,across?1.45:d,1.8,across?d:1.45,x+(across?t:0),8.9,z+(across?0:t),stone);
+ }
+}
+wall(-52,-54,115,3);wall(-52,54,38,3);wall(52,54,38,3);
+wall(-57,0,3,108);wall(57,0,3,108);
+wall(-52,54,36,3);wall(52,54,36,3);
+function watchTower(x,z){
+ cylinder(scene,5,5.5,14,x,7,z,stone,8);
+ cylinder(scene,5.3,5.3,.9,x,14.3,z,darkStone,8);
+ for(let i=0;i<8;i++){const a=i*Math.PI/4;block(scene,2.3,2.1,1.5,x+Math.sin(a)*4.3,15.4,z+Math.cos(a)*4.3,stone)}
+ cone(scene,5,6,x,19.1,z,roofBlue,8);
+}
+watchTower(-56,-54);watchTower(56,-54);watchTower(-56,54);watchTower(56,54);
+watchTower(-13,54);watchTower(13,54);
+block(scene,15,10,4,0,9,54,darkStone);
+block(scene,11.5,8,.5,0,4.5,56,oak);
+for(let k=-4;k<=4;k++)block(scene,.18,8,.28,k*1.3,4.5,56.4,iron);
+banner(scene,-9,13,55,'#853a42');banner(scene,9,13,55,'#853a42');
+// Atmospheric details and ambient population.
+const knightSteel=mat('#747f8c',.44,.4),navy=mat('#34485c'),skin=mat('#c59c79');
+function human(x,z,rot=0,color=navy){
+ const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot;scene.add(g);
+ cylinder(g,.5,.55,2.2,0,1.9,0,iron,8);
+ block(g,1.6,2.25,.85,0,3.75,0,color);
+ sphere(g,.79,0,5.28,0,skin,10,8);
+ cone(g,.93,1.3,0,6.1,0,knightSteel,8);
+ block(g,.43,1.8,.46,-1,3.5,0,knightSteel);
+ block(g,.43,1.8,.46,1,3.5,0,knightSteel);
+ cylinder(g,.09,.09,6,1.65,4.3,0,oakLight,7);
+ cone(g,.38,1.1,1.65,7.7,0,iron,5);
+}
+[[-9,20,0],[8,19,1],[1,30,1.8],[-18,-8,1],[-37,8,2],[35,6,-.3]].forEach(([x,z,rot],i)=>human(x,z,rot,i%2?navy:knightSteel));
+const sun=new THREE.DirectionalLight('#ffe3bc',3.6);sun.position.set(-40,74,48);
+sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-85;sun.shadow.camera.right=85;sun.shadow.camera.top=85;sun.shadow.camera.bottom=-85;
+sun.shadow.camera.near=.5;sun.shadow.camera.far=200;sun.shadow.bias=-.0002;scene.add(sun);
+const fill=new THREE.HemisphereLight('#d4e5f3','#5a483d',2.3);scene.add(fill);
+function applyNight(value){
+ scene.background=new THREE.Color(value?'#121b32':'#8797a1');
+ scene.fog.color.set(value?'#172138':'#8797a1');
+ sun.intensity=value?.34:3.6;sun.color.set(value?'#8d9ec7':'#ffe3bc');
+ fill.intensity=value?.82:2.3;renderer.toneMappingExposure=value?1.4:1.65;
+ warmGlass.emissiveIntensity=value?1.8:.44;
+ nightLights.forEach(l=>l.visible=value);
+ document.getElementById('night').classList.toggle('active',value);
+ document.getElementById('day').classList.toggle('active',!value);
+}
+document.getElementById('day').addEventListener('click',()=>applyNight(false));
+document.getElementById('night').addEventListener('click',()=>applyNight(true));
+function moveCamera(x,y,z,tx=0,ty=4,tz=0){camera.position.set(x,y,z);controls.target.set(tx,ty,tz);controls.update()}
+document.getElementById('home').addEventListener('click',()=>moveCamera(55,49,63));
+document.getElementById('aerial').addEventListener('click',()=>moveCamera(2,93,4));
+document.getElementById('street').addEventListener('click',()=>moveCamera(18,18,27,0,5,0));
+const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
+let down=null;
+canvas.addEventListener('pointerdown',event=>{down={x:event.clientX,y:event.clientY}});
+canvas.addEventListener('pointerup',event=>{
+ if(!down || Math.hypot(event.clientX-down.x,event.clientY-down.y)>6){down=null;return;}
+ down=null;
+ const rect=canvas.getBoundingClientRect();
+ pointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
+ raycaster.setFromCamera(pointer,camera);
+ const hits=raycaster.intersectObjects(pickTargets,false);
+ if(!hits.length)return;
+ const data=hits[0].object.userData;
+ if(!data||!data.title)return;
+ document.getElementById('infoTitle').textContent=data.title;
+ document.getElementById('infoText').textContent=data.desc;
+ document.getElementById('info').classList.add('open');
+});
+document.getElementById('closeInfo').addEventListener('click',()=>document.getElementById('info').classList.remove('open'));
+function resize(){
+ const width=canvas.clientWidth,height=canvas.clientHeight;
+ camera.aspect=width/Math.max(1,height);camera.updateProjectionMatrix();
+ renderer.setSize(width,height,false);
+}
+window.addEventListener('resize',resize);resize();
+function loop(t){
+ controls.update();for(let i=0;i<waterSpouts.length;i++)waterSpouts[i].position.y=2.2+Math.sin(t*.002+i)*.09;
+ renderer.render(scene,camera);requestAnimationFrame(loop);
+}
+document.getElementById('loading').remove();requestAnimationFrame(loop);
+} catch(error) {
+ console.error('Falha ao iniciar Valdoria 3D:',error);
+ document.getElementById('loading')?.remove();
+ document.getElementById('error').style.display='grid';
+}
+</script>
+</body></html>
