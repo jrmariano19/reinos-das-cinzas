@@ -1305,7 +1305,41 @@
    * Projeção Oblíqua 45° (Inclinado para Noroeste - Topo/Esquerda), Contorno Preto 1px,
    * Sombra no Chão, Animação de Pernas/Braços (walkFrame) e Direção (up, down, left, right)
    */
-  function drawTibiaRealisticSprite(ctxTarget, px, py, entityType, opts = {}) {
+  // Bestiário: criaturas orgânicas com silhuetas legíveis em 48px.
+function drawAshBeast(c,x,y,type,opts={}){
+  const colors={rat:['#766f6b','#c3a59c'],wolf:['#414b55','#9eacb4'],spider:['#342d3e','#a66ac3']};
+  const [base,light]=colors[type];
+  const step=opts.frame===1?2:opts.frame===2?-2:0;
+  c.save();c.translate(Math.round(x),Math.round(y));
+  c.fillStyle='rgba(0,0,0,.35)';c.beginPath();c.ellipse(24,40,16,4,0,0,7);c.fill();
+  if(type==='spider'){
+    c.strokeStyle='#221b2b';c.lineWidth=4;
+    for(let k=0;k<4;k++)for(const side of [-1,1]){
+      const sy=19+k*4;
+      c.beginPath();c.moveTo(24,sy);c.lineTo(24+side*(14+k*2),sy-5+step);
+      c.lineTo(24+side*(19+k*2),sy+10-step);c.stroke();
+    }
+    c.fillStyle=base;c.beginPath();c.ellipse(24,26,13,11,0,0,7);c.fill();
+    c.fillStyle=light;c.beginPath();c.ellipse(24,23,8,6,0,0,7);c.fill();
+    c.fillStyle='#ed6565';c.fillRect(18,20,3,3);c.fillRect(27,20,3,3);
+  }else{
+    c.fillStyle=base;c.beginPath();c.ellipse(25,28,15,10,0,0,7);c.fill();
+    for(const lx of [15,29]){
+      c.fillStyle='#28282c';c.fillRect(lx,33+step,5,8-step);
+    }
+    c.fillStyle=light;c.beginPath();c.ellipse(16,26,9,7,0,0,7);c.fill();
+    c.fillStyle=base;
+    for(const ex of [11,19]){
+      c.beginPath();c.moveTo(ex-3,22);c.lineTo(ex,11);c.lineTo(ex+5,22);c.fill();
+    }
+    c.fillStyle='#ed6862';c.fillRect(10,24,3,2);
+    c.strokeStyle=base;c.lineWidth=3;c.beginPath();c.moveTo(38,28);
+    c.quadraticCurveTo(49,16+step,45,12);c.stroke();
+  }
+  c.restore();
+}
+function drawTibiaRealisticSprite(ctxTarget, px, py, entityType, opts = {}) {
+    if(['rat','wolf','spider'].includes(entityType)){drawAshBeast(ctxTarget,px,py,entityType,opts);return;}
     const dir = opts.dir || 'down';
     const frame = opts.frame || 0; // 0, 1, 2
     const isAttacking = opts.isAttacking || false;
