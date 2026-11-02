@@ -50,3 +50,14 @@
  #mobileRpgHud .mobile-skills .mobile-attack{width:44px;height:44px}
  .mobile-title{display:none}
 }
+
+/* Bastião mobile: clear the quest panel and retain playable screen area. */
+@media (pointer:coarse) and (max-width:1024px) and (orientation:landscape){
+ #mobileRpgHud .mobile-top{top:max(8px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));background:linear-gradient(120deg,#26170eee,#0b0c12ee);border:1px solid #b28a4f;box-shadow:0 3px 12px #000a}
+ #mobileRpgHud .mobile-menu{top:max(8px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:4}
+ #mobileRpgHud .mobile-menu button{min-height:42px;min-width:64px;background:#1a1515f0}
+ #mobileRpgHud .mobile-skills button{background:radial-gradient(circle at 40% 25%,#73512b,#1b1719 75%);border:2px solid #c9a061}
+ #mobileRpgHud .mobile-controls{background:radial-gradient(circle,#5d452caa,#171319d9)}
+ .viewport-container #pzBadge{top:52px!important;left:10px!important}
+ .viewport-container #questTracker,.viewport-container #questHud,.viewport-container #missionTracker{top:58px!important;right:12px!important;max-width:min(290px,38vw)!important}
+}
