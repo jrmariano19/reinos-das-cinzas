@@ -12,6 +12,7 @@ export const GEAR_TEMPLATES=Object.freeze({
  cetro:{name:'Cetro da Aurora',icon:'✨',slot:'weapon',attack:10,defense:1,absorption:0,block:0,weight:4},
  orbe:{name:'Orbe dos Ecos',icon:'🔮',slot:'weapon',attack:11,defense:1,absorption:0,block:0,weight:3},
  adagas:{name:'Adagas da Noite',icon:'🗡️',slot:'weapon',attack:16,defense:0,absorption:0,block:0,weight:4},
+ escudo:{name:'Escudo do Bastiao',icon:'🛡️',slot:'armor',attack:0,defense:8,absorption:1,block:10,weight:12},
  armadura:{name:'Couraca de Valdoria',icon:'🛡️',slot:'armor',attack:0,defense:10,absorption:2,block:0,weight:14},
  manto:{name:'Manto das Cinzas',icon:'🥋',slot:'armor',attack:0,defense:5,absorption:1,block:0,weight:4}
 });
