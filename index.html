@@ -4553,9 +4553,9 @@
         if(rx>canvas.width+36 || ry>canvas.height+36 || rx+rw<0 || ry+rh<0)continue;
         const vale=(h.floor??0)===1;
         const roofStyles={
-          stone:{edge:'#30383c',light:'#b1b8b5',mid:'#69777a',dark:'#3d4a4d',ridge:'#d0d0c2'},
+          stone:{edge:'#1b2834',light:'#8498a4',mid:'#455b6a',dark:'#293a49',ridge:'#b6b4a5'},
           slate:{edge:'#111b2b',light:'#718ca8',mid:'#304965',dark:'#1a304a',ridge:'#b1c3d2'},
-          brick:{edge:'#4c251e',light:'#e6a076',mid:'#ad563c',dark:'#733928',ridge:'#f1c38a'},
+          brick:{edge:'#3c2930',light:'#c88772',mid:'#8c5050',dark:'#542f39',ridge:'#e0b58b'},
           timber:{edge:'#352319',light:'#c59a69',mid:'#765034',dark:'#4b3022',ridge:'#d6b17d'},
           plaster:{edge:'#55352c',light:'#e6c59a',mid:'#b9815b',dark:'#81533e',ridge:'#f2d7ad'},
           moss:{edge:'#293b2b',light:'#a4b982',mid:'#647d52',dark:'#40583b',ridge:'#c7d6a3'}
@@ -4610,6 +4610,20 @@
           ctx.fillRect(wx,wy+6,19,2);
           ctx.fillStyle='#8b6346';ctx.fillRect(rx+6,ry+rh-7,rw-12,3);
           ctx.fillStyle='rgba(238,188,107,.28)';ctx.fillRect(rx+6,ry+rh-8,rw-12,1);
+        }
+        // Relevo arquitetônico: torreão, bandeira e luz de vigia.
+        if(!vale && rw>=144 && rh>=144){
+          const tx=rx+rw*.5, ty=ry-32;
+          ctx.fillStyle='#253545';
+          ctx.beginPath();ctx.moveTo(tx-17,ty);ctx.lineTo(tx,ty-29);
+          ctx.lineTo(tx+17,ty);ctx.closePath();ctx.fill();
+          ctx.fillStyle='#adbcbd';ctx.fillRect(tx-3,ty-3,6,3);
+          ctx.strokeStyle='#d4b37b';ctx.lineWidth=2;
+          ctx.beginPath();ctx.moveTo(tx,ty-29);ctx.lineTo(tx,ty-47);ctx.stroke();
+          ctx.fillStyle='#9d3934';
+          ctx.beginPath();ctx.moveTo(tx+1,ty-45);ctx.lineTo(tx+18,ty-39);
+          ctx.lineTo(tx+1,ty-34);ctx.closePath();ctx.fill();
+          ctx.fillStyle='#f4bb6a';ctx.fillRect(tx-2,ty-13,4,7);
         }
         // Chaminé, dormer e placa de madeira distinguem as profissões.
         if(h.id==='forja'||h.id==='alquimia_vale'||h.id==='laboratorio'){
