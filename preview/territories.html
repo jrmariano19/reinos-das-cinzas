@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Atlas de Territórios — REINOS DAS CINZAS</title>
+<style>
+:root{color-scheme:dark;--bg:#101820;--gold:#efc583;--muted:#bcbdba}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(140deg,#172631,#0e151e 65%);color:#f6e9d5;font:15px system-ui,sans-serif}
+header{padding:21px clamp(18px,4vw,55px);border-bottom:1px solid #8f774a77;background:#151e28}
+.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:11px;font-weight:800;color:var(--gold)}
+h1{font:700 clamp(26px,3vw,39px) Georgia,serif;color:#ffe3b3;margin:5px 0 8px}
+header p{color:#c9c9bf;line-height:1.5;margin:0;max-width:900px}
+main{max-width:1550px;margin:auto;display:grid;grid-template-columns:minmax(360px,1.3fr) minmax(300px,.7fr);gap:22px;padding:24px clamp(15px,3vw,40px)}
+.map{background:radial-gradient(ellipse at 40% 30%,#40584955,transparent 55%),linear-gradient(135deg,#2a3e46,#16252e);border:1px solid #a68b6199;border-radius:12px;overflow:hidden;min-width:0;box-shadow:0 14px 40px #0007}
+.map svg{width:100%;height:auto;min-height:390px;display:block}
+.map-caption{padding:11px 15px;border-top:1px solid #7c735a66;color:#d5c9b7;font-size:12px;line-height:1.45}
+.territory{cursor:pointer;outline:none}.territory circle{fill:#313f4a;stroke:#d9b36c;stroke-width:2.5;transition:all .2s}
+.territory text{fill:#f7e8c8;text-anchor:middle;font-weight:800;font-size:13px;paint-order:stroke;stroke:#1c2b35;stroke-width:4px}
+.territory .status{font-size:9px;font-weight:700;fill:#cfddd4;stroke-width:3px}
+.territory.planned circle{fill:#263640;stroke:#888f91;stroke-dasharray:4 3}
+.territory.selected circle,.territory:hover circle,.territory:focus circle{fill:#715233;stroke:#ffe0a0;stroke-width:4px}
+.territory:focus{outline:none}
+.route{fill:none;stroke:#d2b787;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.74}
+.route.planned{stroke:#a1a5a4;stroke-dasharray:8 11;stroke-width:2.5;opacity:.45}
+.panel{background:linear-gradient(145deg,#273540,#1a2631);border:1px solid #9d845d;border-radius:12px;padding:22px;align-self:start;box-shadow:0 13px 35px #0006}
+.panel small{font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;font-weight:750}
+.panel h2{font:700 clamp(22px,2.3vw,29px) Georgia,serif;margin:10px 0;color:#f9dfab}
+.panel p{color:#d9d1c2;line-height:1.55;font-size:14px}
+.kv{display:flex;justify-content:space-between;gap:15px;border-bottom:1px solid #73808560;padding:9px 0;color:#ddd5c6}
+.kv span{color:#b5bdc1}.kv b{text-align:right;color:#ffe0ab}
+h3{font:700 17px Georgia,serif;color:#f2d49d;margin:20px 0 11px}
+.district{padding:12px 10px;margin:7px 0;background:#0e182180;border-left:3px solid #b18b54;border-radius:3px}
+.district strong{display:block;color:#f4d8a5}.district em{color:#c9c5bd;font-style:normal;font-size:12px}
+.services{display:flex;flex-wrap:wrap;gap:7px}.services span{font-size:12px;padding:6px 9px;background:#35434c;color:#ffe5be;border-radius:24px;border:1px solid #90744d}
+.pill{padding:5px 9px;border-radius:99px;color:#cae8d4;border:1px solid #8bb5a055;background:#35524677;display:inline-block;font-size:11px;font-weight:800}
+.pill.future{color:#c3cad0;background:#38444c77;border-color:#8a909655}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}button{border:1px solid #aa885b;background:#263540;color:#efddbe;padding:9px 12px;border-radius:7px;cursor:pointer}
+button:hover,button:focus-visible,button.active{background:#846139;color:#fff3cf;outline:1px solid #ffd28d}
+footer{max-width:1440px;margin:0 auto;padding:0 25px 25px;color:#b4b8b9;font-size:12px;line-height:1.6}
+@media(max-width:900px){main{grid-template-columns:1fr}.map svg{min-height:320px}}
+</style>
+</head>
+<body>
+<header><div class="eyebrow">Reinos das Cinzas · Expansão do mundo v0.1</div>
+<h1>Atlas das Capitais e Territórios</h1>
+<p>Proposta de urbanismo baseada no GDD recebido: duas capitais de facção, vilarejos de apoio e uma cidadela neutra. As novas localidades estão <strong>planejadas</strong> e não foram inseridas no mapa jogável.</p></header>
+<main>
+<section>
+<nav aria-label="Exibição de localidades">
+<button type="button" id="all" class="active">Mostrar todas</button>
+<button type="button" id="playable">Somente jogáveis</button>
+</nav>
+<div class="map">
+<svg id="atlas" viewBox="0 0 870 575" role="img" aria-label="Mapa esquemático dos territórios planejados, com ligação entre cidades. Não representa distâncias reais">
+<defs>
+<pattern id="dots" width="27" height="27" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#b6ab8970"/></pattern>
+<linearGradient id="marsh" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#587b66"/><stop offset="1" stop-color="#243d4c"/></linearGradient>
+</defs>
+<rect width="870" height="575" fill="url(#dots)" opacity=".45"/>
+<path d="M0 215Q100 105 230 144T468 95T870 133V0H0Z" fill="#586c68" opacity=".18"/>
+<path d="M0 500Q210 410 315 480T620 410T870 490V575H0Z" fill="#526a58" opacity=".24"/>
+<path d="M590 0Q610 175 660 260T700 570" fill="none" stroke="#4c8692" opacity=".35" stroke-width="36"/>
+<path d="M25 370Q165 315 300 360T550 310T825 355" fill="none" stroke="#9b8259" opacity=".22" stroke-width="15"/>
+<g id="links"></g><g id="locations"></g>
+</svg>
+<div class="map-caption">Esquema conceitual de conexão entre regiões — não é um mapa geográfico definitivo. Linhas sólidas representam rotas já existentes; tracejadas são ideias futuras.</div>
+</div>
+</section>
+<aside class="panel" aria-live="polite">
+<span class="pill" id="status">Jogável atualmente</span>
+<h2 id="name">Valdoria</h2>
+<p id="theme"></p>
+<div class="kv"><span>Facção</span><b id="faction"></b></div>
+<div class="kv"><span>Faixa de nível proposta</span><b id="levelRange"></b></div>
+<div class="kv"><span>Região</span><b id="region"></b></div>
+<div class="kv"><span>Arquitetura</span><b id="visual"></b></div>
+<h3>Bairros e pontos de referência</h3>
+<div id="districts"></div>
+<h3>Serviços propostos</h3>
+<div class="services" id="services"></div>
+<p id="notice"></p>
+</aside>
+</main>
+<footer>As facções preservam a identidade do REINOS DAS CINZAS. O GDD forneceu o padrão de urbanismo; a distribuição, os nomes adaptados e as conexões planejadas são decisões originais de design. Nada desta página altera os saves.</footer>
+<script type="module">
+import {SETTLEMENTS,getSettlement} from '../src/territories.js';
+const NS='http://www.w3.org/2000/svg';
+const positions={
+ valdoria:[171,240],lanternas:[220,455],noxara:[700,132],
+ navira:[400,315],marisma:[565,465],'cidadela-neutra':[680,310]
+};
+let selected='valdoria',onlyPlayable=false;
+const links=document.getElementById('links');
+const locations=document.getElementById('locations');
+function element(tag,attrs,parent){
+ const el=document.createElementNS(NS,tag);
+ for(const [key,value] of Object.entries(attrs))el.setAttribute(key,String(value));
+ parent.appendChild(el);return el;
+}
+function renderMap(){
+ links.replaceChildren();locations.replaceChildren();
+ const done=new Set();
+ for(const from of SETTLEMENTS){
+  for(const link of from.links){
+   const key=[from.id,link.to].sort().join(':');
+   if(done.has(key))continue;
+   done.add(key);
+   const to=getSettlement(link.to);
+   if(!to||!positions[from.id]||!positions[to.id])continue;
+   if(onlyPlayable && (from.status!=='playable'||to.status!=='playable'))continue;
+   const a=positions[from.id],b=positions[to.id];
+   const planned=link.kind==='planned'||to.status!=='playable'||from.status!=='playable';
+   element('path',{d:'M'+a[0]+','+a[1]+' L'+b[0]+','+b[1],class:'route'+(planned?' planned':'')},links);
+  }
+ }
+ for(const city of SETTLEMENTS){
+  if(onlyPlayable&&city.status!=='playable')continue;
+  const [x,y]=positions[city.id];
+  const g=element('g',{
+   transform:'translate('+x+' '+y+')',
+   class:'territory '+(city.status==='planned'?'planned ':'')+(selected===city.id?'selected':''),
+   tabindex:0,role:'button','aria-label':city.name+', '+(city.status==='playable'?'jogável':'planejada')
+  },locations);
+  element('circle',{cx:0,cy:0,r:27},g);
+  element('text',{x:0,y:5,'font-size':23,'stroke-width':0},g).textContent=
+    city.type==='capital'?'♜':city.type==='neutral-citadel'?'◆':'✦';
+  element('text',{x:0,y:50},g).textContent=city.name.split(',')[0];
+  element('text',{x:0,y:64,class:'status'},g).textContent=
+    city.status==='playable'?'JOGÁVEL':'PLANEJADA';
+  g.addEventListener('click',()=>select(city.id));
+  g.addEventListener('keydown',event=>{
+   if(event.key==='Enter'||event.key===' '){event.preventDefault();select(city.id);}
+  });
+ }
+}
+function select(id){
+ const city=getSettlement(id);
+ if(!city)return;
+ selected=id;
+ const byId=name=>document.getElementById(name);
+ byId('status').textContent=city.status==='playable'?'Jogável atualmente':'Em planejamento';
+ byId('status').classList.toggle('future',city.status!=='playable');
+ byId('name').textContent=city.name;
+ byId('theme').textContent=city.theme;
+ byId('faction').textContent={
+  legiao:'Legião das Brasas',conclave:'Conclave do Véu',neutral:'Neutra'
+ }[city.faction];
+ byId('levelRange').textContent=city.levelRange[0]+'–'+city.levelRange[1];
+ byId('region').textContent=city.region;
+ byId('visual').textContent=city.visual;
+ const districts=byId('districts');districts.replaceChildren();
+ for(const d of city.districts){
+  const box=document.createElement('div');box.className='district';
+  const title=document.createElement('strong');title.textContent=d.name;
+  const purpose=document.createElement('em');purpose.textContent=d.purpose;
+  box.append(title,purpose);districts.append(box);
+ }
+ const services=byId('services');services.replaceChildren();
+ const translations={
+  forge:'Forja e Aging',market:'Comércio',quest:'Missões',guild:'Guildas',
+  'rune-mastery':'Runas e Mixing',meditation:'Meditação',inn:'Estalagem',
+  'repair-basic':'Reparos básicos',potions:'Poções',respawn:'Ponto de retorno',
+  'repair-specialist':'Ferreiro especializado','party-hub':'Reunião de grupos',
+  auction:'Leilão futuro',siege:'Cerco de guildas futuro'
+ };
+ for(const service of city.services){
+  const pill=document.createElement('span');pill.textContent=translations[service]||service;
+  services.append(pill);
+ }
+ byId('notice').textContent=city.status==='playable'
+  ?'A região já possui mapa no protótipo, mas os serviços completos do GDD ainda podem estar pendentes.'
+  :'Região ainda não construída. A escolha neste Atlas serve apenas para planejar futuras expansões.';
+ renderMap();
+}
+function mode(playable){
+ onlyPlayable=playable;
+ document.getElementById('all').classList.toggle('active',!playable);
+ document.getElementById('playable').classList.toggle('active',playable);
+ if(playable&&getSettlement(selected)?.status!=='playable')selected='valdoria';
+ select(selected);
+}
+document.getElementById('all').addEventListener('click',()=>mode(false));
+document.getElementById('playable').addEventListener('click',()=>mode(true));
+select('valdoria');
+</script>
+</body></html>
