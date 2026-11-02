@@ -819,40 +819,38 @@
   // Dois mapas de superfície interligados e dois níveis subterrâneos.
   const maps = { 0: [], 1: [], '-1': [], '-2': [] };
 
-  // Bastião ampliado: dezesseis edifícios em quatro quarteirões, além da Vila das Lanternas.
+  // Valdoria: cidade reconstruída em distritos, com marcos arquitetônicos e ruas conectadas.
   const houses = [
-    {id:'arquivo',name:'Arquivo dos Reinos',x:6,y:5,w:5,h:5,door:8,style:'stone'},
-    {id:'templo',name:'Templo da Chama Serena',x:13,y:5,w:5,h:5,door:15,style:'slate'},
-    {id:'quartel',name:'Quartel da Guarda',x:26,y:5,w:5,h:5,door:28,style:'stone'},
-    {id:'forja',name:'Forja das Brasas',x:33,y:5,w:5,h:5,door:35,style:'brick'},
-    {id:'estalagem',name:'Estalagem da Última Brasa',x:6,y:12,w:5,h:5,door:8,style:'timber'},
-    {id:'banco',name:'Banco do Bastião',x:13,y:12,w:5,h:5,door:15,style:'plaster'},
-    {id:'deposito',name:'Depósito dos Aventureiros',x:26,y:12,w:5,h:5,door:28,style:'timber'},
-    {id:'laboratorio',name:'Laboratório da Névoa',x:33,y:12,w:5,h:5,door:35,style:'slate'},
-    {id:'residencial',name:'Morada dos Artífices',x:6,y:19,w:5,h:5,door:8,style:'plaster'},
-    {id:'taverna',name:'Taverna do Corvo',x:13,y:19,w:5,h:5,door:15,style:'timber'},
-    {id:'arsenal',name:'Arsenal da Muralha',x:26,y:19,w:5,h:5,door:28,style:'stone'},
-    {id:'guilda',name:'Guilda dos Mercadores',x:33,y:19,w:5,h:5,door:35,style:'brick'},
-    {id:'cartografia',name:'Casa dos Cartógrafos',x:6,y:26,w:5,h:5,door:8,style:'slate'},
-    {id:'contratos',name:'Salão dos Contratos',x:13,y:26,w:5,h:5,door:15,style:'stone'},
-    {id:'reliquias',name:'Oficina de Relíquias',x:26,y:26,w:5,h:5,door:28,style:'moss'},
-    {id:'caravanas',name:'Entreposto das Caravanas',x:33,y:26,w:5,h:5,door:35,style:'timber'},
-    {id:'arquivo_vale',name:'Casa do Cartógrafo',floor:1,x:11,y:10,w:6,h:5,door:14,style:'brick'},
-    {id:'alquimia_vale',name:'Armazém das Lanternas',floor:1,x:28,y:10,w:6,h:5,door:30,style:'moss'}
+    {id:'templo',name:'Catedral da Chama Serena',x:4,y:5,w:8,h:8,door:8,style:'slate',role:'cathedral'},
+    {id:'arquivo',name:'Arquivo dos Reinos',x:14,y:5,w:7,h:7,door:17,style:'plaster',role:'archive'},
+    {id:'castelo',name:'Cidadela de Valdoria',x:22,y:4,w:13,h:9,door:27,style:'stone',role:'keep'},
+    {id:'torre',name:'Torre do Vigia Astral',x:37,y:5,w:8,h:8,door:40,style:'moss',role:'tower'},
+    {id:'quartel',name:'Quartel da Guarda',x:4,y:17,w:8,h:8,door:8,style:'stone',role:'barracks'},
+    {id:'arsenal',name:'Arsenal da Muralha',x:14,y:17,w:7,h:7,door:17,style:'brick',role:'arsenal'},
+    {id:'laboratorio',name:'Laboratório da Névoa',x:37,y:17,w:7,h:7,door:40,style:'slate',role:'alchemy'},
+    {id:'deposito',name:'Depósito dos Aventureiros',x:45,y:17,w:7,h:8,door:48,style:'timber',role:'warehouse'},
+    {id:'estalagem',name:'Estalagem da Última Brasa',x:4,y:28,w:8,h:8,door:8,style:'timber',role:'inn'},
+    {id:'cartografia',name:'Casa dos Cartógrafos',x:14,y:28,w:7,h:8,door:17,style:'plaster',role:'archive'},
+    {id:'forja',name:'Forja das Brasas',x:22,y:29,w:8,h:8,door:25,style:'brick',role:'forge'},
+    {id:'taverna',name:'Taverna do Corvo',x:31,y:29,w:7,h:8,door:34,style:'timber',role:'inn'},
+    {id:'guilda',name:'Guilda dos Mercadores',x:39,y:28,w:7,h:8,door:42,style:'moss',role:'guild'},
+    {id:'banco',name:'Banco de Valdoria',x:47,y:28,w:6,h:8,door:49,style:'stone',role:'bank'},
+    {id:'arquivo_vale',name:'Casa do Cartógrafo',floor:1,x:11,y:10,w:6,h:5,door:14,style:'brick',role:'archive'},
+    {id:'alquimia_vale',name:'Armazém das Lanternas',floor:1,x:28,y:10,w:6,h:5,door:30,style:'moss',role:'warehouse'}
   ];
   const chests = [
-    {id:'arquivo',name:'Baú dos Registros',x:7,y:8,gold:80,mp:1},
-    {id:'forja',name:'Baú do Ferreiro',x:34,y:8,gold:110,hp:1},
-    {id:'estalagem',name:'Baú de Provisões',x:7,y:15,gold:65,food:true},
-    {id:'laboratorio',name:'Baú Alquímico',x:34,y:15,gold:90,mp:2},
-    {id:'banco',name:'Cofre de Reserva',x:14,y:15,gold:130,hp:1},
-    {id:'deposito',name:'Baú dos Aventureiros',x:27,y:15,gold:150,mp:1},
-    {id:'arsenal',name:'Arca do Arsenal',x:27,y:22,gold:180,hp:2},
-    {id:'guilda',name:'Cofre da Guilda',x:34,y:22,gold:190,mp:2},
-    {id:'cartografia',name:'Baú dos Mapas Antigos',x:7,y:29,gold:210,mp:2},
-    {id:'contratos',name:'Cofre dos Caçadores',x:14,y:29,gold:220,hp:2},
-    {id:'reliquias',name:'Arca das Relíquias',x:27,y:29,gold:260,mp:2},
-    {id:'caravanas',name:'Cofre das Caravanas',x:34,y:29,gold:280,hp:2},
+    {id:'arquivo',name:'Baú dos Registros',x:17,y:10,gold:80,mp:1},
+    {id:'forja',name:'Baú do Ferreiro',x:27,y:35,gold:110,hp:1},
+    {id:'estalagem',name:'Baú de Provisões',x:8,y:34,gold:65,food:true},
+    {id:'laboratorio',name:'Baú Alquímico',x:40,y:22,gold:90,mp:2},
+    {id:'banco',name:'Cofre de Reserva',x:50,y:34,gold:130,hp:1},
+    {id:'deposito',name:'Baú dos Aventureiros',x:49,y:23,gold:150,mp:1},
+    {id:'arsenal',name:'Arca do Arsenal',x:17,y:22,gold:180,hp:2},
+    {id:'guilda',name:'Cofre da Guilda',x:42,y:34,gold:190,mp:2},
+    {id:'cartografia',name:'Baú dos Mapas Antigos',x:17,y:34,gold:210,mp:2},
+    {id:'contratos',name:'Cofre dos Caçadores',x:34,y:34,gold:220,hp:2},
+    {id:'reliquias',name:'Arca das Relíquias',x:29,y:34,gold:260,mp:2},
+    {id:'caravanas',name:'Cofre das Caravanas',x:45,y:34,gold:280,hp:2},
     {id:'cartas_vale',name:'Baú das Cartas do Vale',floor:1,x:12,y:13,gold:140,mp:1},
     {id:'suprimentos_vale',name:'Baú dos Exploradores',floor:1,x:32,y:13,gold:180,hp:2}
   ];
@@ -1169,159 +1167,110 @@
       spriteCache['water_'+v]=c;
     }
 
-    // Fachadas com seis paletas autorais: a cidade não parece um conjunto de casas copiadas.
+    // Fachadas exclusivas: volumes em perspectiva, telhados altos e elementos por profissão.
     const housePalettes={
-      brick:{wall:'#dac5a1',base:'#7e6146',post:'#5d3c25',trim:'#3e231d',roof:'#a64e35',light:'#e09360',dark:'#6c3026'},
-      slate:{wall:'#b9c4c8',base:'#596873',post:'#35434c',trim:'#202b35',roof:'#40536f',light:'#8299b6',dark:'#263447'},
-      stone:{wall:'#c7c3b3',base:'#777365',post:'#514e45',trim:'#34332f',roof:'#777c79',light:'#bfc5bd',dark:'#454a48'},
-      timber:{wall:'#c69a69',base:'#79502f',post:'#4d3020',trim:'#302019',roof:'#75462d',light:'#bd8652',dark:'#43271c'},
-      plaster:{wall:'#e0d3b6',base:'#92795d',post:'#6a4a31',trim:'#493328',roof:'#8d5339',light:'#d18a5d',dark:'#573126'},
-      moss:{wall:'#b9bd9d',base:'#65704f',post:'#455337',trim:'#283326',roof:'#526447',light:'#9bad76',dark:'#34432e'}
+      brick:{wall:'#c8a27a',base:'#72503a',post:'#493020',trim:'#2c201b',roof:'#9b4935',light:'#e3ad70',dark:'#542b25'},
+      slate:{wall:'#b8c2c4',base:'#59656b',post:'#35434a',trim:'#20292e',roof:'#40566c',light:'#91a9b5',dark:'#26343c'},
+      stone:{wall:'#bcb9aa',base:'#777467',post:'#514e45',trim:'#30302d',roof:'#686e70',light:'#d0c9b5',dark:'#414744'},
+      timber:{wall:'#c69a69',base:'#79502f',post:'#4d3020',trim:'#302019',roof:'#70432d',light:'#d5a36b',dark:'#43271c'},
+      plaster:{wall:'#dfd0b2',base:'#92795d',post:'#674b35',trim:'#493328',roof:'#8d5339',light:'#e4bd83',dark:'#573126'},
+      moss:{wall:'#b9bd9d',base:'#65704f',post:'#455337',trim:'#283326',roof:'#526447',light:'#a9bd7b',dark:'#34432e'}
     };
-    Object.entries(housePalettes).forEach(([style,p])=>{
-      const houseWall=createOffscreen(48,64),hw=houseWall.getContext('2d');
-      hw.fillStyle='rgba(0,0,0,.25)';hw.fillRect(3,18,44,46);
-      hw.fillStyle=p.base;hw.fillRect(0,14,48,46);
-      hw.fillStyle=p.wall;hw.fillRect(2,17,44,24);
-      hw.fillStyle=p.base;hw.fillRect(0,41,48,18);
-      hw.fillStyle=p.post;hw.fillRect(2,16,5,43);hw.fillRect(42,16,5,43);
-      hw.fillStyle=p.trim;hw.fillRect(0,10,48,9);
-      for(let x=0;x<48;x+=12){
-        hw.fillStyle=(x/12)%2?p.roof:p.dark;hw.fillRect(x,2,11,14);
-        hw.fillStyle=p.light;hw.fillRect(x+1,3,9,2);
-        hw.fillStyle=p.dark;hw.fillRect(x,13,12,2);
-      }
-      hw.fillStyle=p.light;hw.fillRect(7,21,31,2);
-      if(style==='slate'||style==='stone'){
-        hw.fillStyle='rgba(255,255,255,.16)';
-        hw.fillRect(5,27,8,2);hw.fillRect(27,34,12,2);
-      }
-      if(style==='timber'){
-        hw.fillStyle='#49301f';hw.fillRect(10,25,3,15);hw.fillRect(35,25,3,15);
-      }
-      spriteCache['house_wall_'+style]=houseWall;
-    });
-    spriteCache['house_wall']=spriteCache['house_wall_brick'];
-
-    // Edifícios completos: cada casa é composta como uma construção única,
-    // em vez de repetir a mesma pequena fachada em cada SQM.
     houses.forEach(h=>{
-      const p=housePalettes[h.style]||housePalettes.brick;
-      const w=h.w*48+20, height=h.h*48+76, ground=height-10;
-      const c=createOffscreen(w,height),g=c.getContext('2d');
-      const cx=w/2;
-      g.imageSmoothingEnabled=false;
-      g.fillStyle='rgba(0,0,0,.38)';
-      g.beginPath();g.ellipse(cx,ground-1,w*.49,13,0,0,Math.PI*2);g.fill();
-
-      // Alicerce de pedra e paredes laterais.
-      g.fillStyle='#332b25';g.fillRect(9,ground-150,w-18,145);
-      g.fillStyle=p.base;g.fillRect(13,ground-151,w-26,143);
-      g.fillStyle=p.wall;g.fillRect(18,ground-145,w-36,130);
-      g.fillStyle='rgba(255,255,255,.16)';g.fillRect(20,ground-143,w-40,3);
-      g.fillStyle=p.post;g.fillRect(13,ground-151,8,143);g.fillRect(w-21,ground-151,8,143);
-      g.fillStyle=p.trim;g.fillRect(10,ground-16,w-20,9);
-      g.fillStyle=p.light;g.fillRect(12,ground-17,w-24,3);
-      for(let by=ground-135;by<ground-24;by+=25){
-        g.fillStyle='rgba(45,31,25,.14)';g.fillRect(22,by,w-44,1);
+      const p=housePalettes[h.style]||housePalettes.stone;
+      const W=h.w*48+48,H=h.h*48+280,ground=H-20,fx=24,fw=h.w*48,cx=fx+fw/2,right=fx+fw;
+      const c=createOffscreen(W,H),g=c.getContext('2d');g.imageSmoothingEnabled=false;
+      g.fillStyle='rgba(0,0,0,.42)';g.beginPath();g.ellipse(W/2,ground+3,fw*.56,17,0,0,Math.PI*2);g.fill();
+      // Parede lateral, alicerce e fachada frontal.
+      g.beginPath();g.moveTo(right-4,ground-165);g.lineTo(right+24,ground-181);g.lineTo(right+24,ground-8);g.lineTo(right-4,ground);g.closePath();
+      g.fillStyle=p.dark;g.fill();g.strokeStyle=p.trim;g.lineWidth=4;g.stroke();
+      g.fillStyle=p.base;g.fillRect(fx+5,ground-22,fw-2,22);
+      g.fillStyle=p.light;g.fillRect(fx+7,ground-22,fw-6,4);
+      g.fillStyle=p.wall;g.fillRect(fx+8,ground-164,fw-16,143);
+      g.fillStyle='rgba(255,255,255,.17)';g.fillRect(fx+10,ground-162,fw-20,4);
+      g.fillStyle=p.post;g.fillRect(fx+7,ground-166,9,166);g.fillRect(right-16,ground-166,9,166);
+      for(let row=0;row<6;row++){
+        const yy=ground-145+row*23;g.strokeStyle='rgba(46,35,28,.20)';g.lineWidth=2;
+        g.beginPath();g.moveTo(fx+18,yy);g.lineTo(right-18,yy);g.stroke();
+        for(let bx=0;bx<fw-38;bx+=54){const xx=fx+20+bx+(row%2)*25;g.strokeStyle='rgba(58,43,32,.16)';g.beginPath();g.moveTo(xx,yy);g.lineTo(xx,yy+21);g.stroke();}
       }
-
-      // Frontão triangular e telhado de duas águas com telhas individualizadas.
-      g.beginPath();g.moveTo(8,ground-148);g.lineTo(cx,ground-276);g.lineTo(w-8,ground-148);g.closePath();
-      g.fillStyle=p.wall;g.fill();g.strokeStyle=p.trim;g.lineWidth=4;g.stroke();
-      g.beginPath();g.moveTo(4,ground-145);g.lineTo(cx,ground-282);g.lineTo(w-4,ground-145);
-      g.lineTo(w-12,ground-126);g.lineTo(cx,ground-246);g.lineTo(12,ground-126);g.closePath();
-      g.fillStyle=p.roof;g.fill();g.strokeStyle=p.dark;g.lineWidth=4;g.stroke();
-      g.beginPath();g.moveTo(cx,ground-280);g.lineTo(cx,ground-247);g.lineTo(12,ground-126);
-      g.lineTo(4,ground-145);g.closePath();g.fillStyle=p.light;g.globalAlpha=.28;g.fill();g.globalAlpha=1;
-      for(let row=0;row<7;row++){
-        const yy=ground-252+row*17;
-        const inset=row*5;
-        g.strokeStyle='rgba(25,20,19,.34)';g.lineWidth=2;
-        g.beginPath();g.moveTo(12+inset,yy);g.lineTo(cx,yy+18);g.lineTo(w-12-inset,yy);g.stroke();
-        for(let col=0;col<8;col++){
-          const xx=18+col*28+(row%2)*8;
-          if(xx>w-20)continue;
-          g.fillStyle=col%3===0?'rgba(255,255,255,.16)':'rgba(0,0,0,.10)';
-          g.fillRect(xx,yy+3,13,3);
-        }
+      g.fillStyle=p.trim;g.fillRect(fx+2,ground-170,fw-4,9);g.fillStyle=p.light;g.fillRect(fx+4,ground-168,fw-8,2);
+      // Telhado de duas águas com faces sombreadas e telhas em fiadas.
+      g.beginPath();g.moveTo(fx-13,ground-165);g.lineTo(cx,ground-280);g.lineTo(right+13,ground-165);g.lineTo(right+2,ground-143);g.lineTo(cx,ground-244);g.lineTo(fx-2,ground-143);g.closePath();
+      const rg=g.createLinearGradient(fx,ground-250,right,ground-150);rg.addColorStop(0,p.light);rg.addColorStop(.48,p.roof);rg.addColorStop(1,p.dark);
+      g.fillStyle=rg;g.fill();g.strokeStyle=p.trim;g.lineWidth=5;g.stroke();
+      g.beginPath();g.moveTo(cx,ground-278);g.lineTo(cx,ground-244);g.lineTo(fx-2,ground-143);g.lineTo(fx-13,ground-165);g.closePath();g.fillStyle='rgba(255,255,255,.12)';g.fill();
+      for(let row=0;row<6;row++){
+        const yy=ground-257+row*17,off=row*5;g.strokeStyle='rgba(28,23,22,.40)';g.lineWidth=2;
+        g.beginPath();g.moveTo(fx-7+off,yy);g.lineTo(cx,yy+17);g.lineTo(right+7-off,yy);g.stroke();
+        for(let col=0;col<Math.floor(fw/38);col++){const xx=fx+col*38+(row%2)*9;g.fillStyle=col%2?'rgba(255,255,255,.13)':'rgba(0,0,0,.13)';g.fillRect(xx,yy+3,17,4);}
       }
-      g.fillStyle=p.trim;g.fillRect(cx-4,ground-280,8,36);
-      g.fillStyle=p.light;g.fillRect(cx-2,ground-276,3,25);
-
-      // Janelas profundas, vitrais, peitoris e floreiras.
-      const windowXs=[34,w-78];
-      windowXs.forEach((wx,i)=>{
-        const wy=ground-113;
-        g.fillStyle=p.trim;g.fillRect(wx-3,wy-3,48,48);
-        g.fillStyle='#292a2a';g.fillRect(wx,wy,42,39);
-        g.fillStyle=h.style==='slate'?'#8bc1d1':h.id==='templo'?'#9b8bd0':'#6f9ba0';
-        g.fillRect(wx+4,wy+4,34,30);
-        g.fillStyle='rgba(225,246,239,.55)';g.fillRect(wx+7,wy+6,5,25);
-        g.fillStyle=p.trim;g.fillRect(wx+19,wy+3,3,33);g.fillRect(wx+3,wy+18,36,3);
-        g.fillStyle=p.base;g.fillRect(wx-5,wy+38,52,6);
-        g.fillStyle=p.light;g.fillRect(wx-4,wy+38,50,2);
-        if(h.id==='templo'||h.id==='arquivo'){
-          g.fillStyle=p.trim;g.beginPath();g.arc(wx+21,wy+18,7,0,Math.PI*2);g.fill();
-          g.fillStyle=p.light;g.fillRect(wx+19,wy+11,4,15);g.fillRect(wx+14,wy+16,14,4);
-        }
+      g.fillStyle=p.trim;g.fillRect(cx-5,ground-282,10,39);g.fillStyle=p.light;g.fillRect(cx-2,ground-279,3,30);
+      // Vitrais, janelas profundas, molduras e peitoris.
+      [fx+35,right-83].forEach(wx=>{
+        const wy=ground-119;g.fillStyle=p.trim;g.fillRect(wx-4,wy-4,50,55);g.fillStyle='#171f25';g.fillRect(wx,wy,42,45);
+        g.fillStyle=h.role==='cathedral'?'#8d79b7':h.role==='alchemy'?'#63a7a4':'#7ca5ad';g.fillRect(wx+4,wy+4,34,36);
+        g.fillStyle='rgba(255,226,165,.55)';g.fillRect(wx+7,wy+7,5,29);g.fillStyle=p.trim;
+        g.fillRect(wx+19,wy+3,4,39);g.fillRect(wx+3,wy+21,36,4);g.fillStyle=p.base;g.fillRect(wx-6,wy+43,54,8);
+        g.fillStyle=p.light;g.fillRect(wx-4,wy+43,50,2);
       });
-
-      // Portal de entrada, arco em pedra e placa própria de cada estabelecimento.
-      const doorX=Math.max(18,Math.min(w-62,(h.door-h.x)*48+2));
-      g.fillStyle=p.trim;g.fillRect(doorX-8,ground-91,58,91);
-      g.fillStyle=p.light;g.fillRect(doorX-5,ground-88,52,4);
-      g.fillStyle='#201b19';g.fillRect(doorX,ground-80,42,80);
-      g.fillStyle=p.post;g.fillRect(doorX+4,ground-76,34,76);
-      g.fillStyle=p.dark;g.fillRect(doorX+8,ground-70,26,70);
-      g.fillStyle=p.light;g.fillRect(doorX+10,ground-68,3,63);
-      g.fillStyle=p.trim;g.fillRect(doorX+28,ground-67,3,62);
-      g.fillStyle='#e1bd70';g.fillRect(doorX+30,ground-37,4,5);
-      g.fillStyle=p.base;g.fillRect(doorX-10,ground-99,62,13);
-      g.fillStyle=p.light;g.fillRect(doorX-7,ground-97,56,3);
-      g.fillStyle='#2d211b';g.fillRect(doorX-1,ground-94,44,7);
-      g.fillStyle=p.trim;g.fillRect(doorX+5,ground-92,32,3);
-
-      // Brasão e elementos arquitetônicos exclusivos por função.
-      g.fillStyle=p.trim;g.fillRect(cx-17,ground-207,34,25);
-      g.fillStyle=p.light;g.fillRect(cx-14,ground-204,28,19);
-      g.fillStyle=p.dark;g.fillRect(cx-11,ground-201,22,13);
-      g.fillStyle=h.id==='forja'?'#f28a35':h.id==='templo'?'#d7c2ff':h.id==='quartel'?'#d9b96b':'#e5c27d';
-      g.beginPath();g.arc(cx,ground-195,5,0,Math.PI*2);g.fill();
-      g.fillStyle=p.trim;g.fillRect(14,ground-155, w-28,5);
-      g.fillStyle=p.light;g.fillRect(15,ground-153,w-30,2);
-
-      if(['forja','laboratorio','reliquias'].includes(h.id)){
-        g.fillStyle='#51443b';g.fillRect(w-58,ground-270,23,95);
-        g.fillStyle='#82705b';g.fillRect(w-62,ground-278,31,12);
-        g.fillStyle='rgba(75,78,79,.5)';
-        for(let q=0;q<3;q++){g.beginPath();g.arc(w-47+q*5,ground-290-q*7,7+q*2,0,Math.PI*2);g.fill();}
-        if(h.id==='forja'){g.fillStyle='#f18a36';g.fillRect(w-54,ground-190,12,9);}
+      // Entrada em arco, degraus e letreiro.
+      const dx=fx+(h.door-h.x)*48+3;
+      g.fillStyle='rgba(0,0,0,.35)';g.fillRect(dx-12,ground-91,68,94);g.fillStyle=p.trim;g.fillRect(dx-8,ground-94,58,94);
+      g.fillStyle=p.light;g.fillRect(dx-5,ground-91,52,4);g.fillStyle='#201b19';g.fillRect(dx,ground-83,42,83);
+      g.fillStyle=p.post;g.fillRect(dx+4,ground-78,34,78);g.fillStyle='#34231d';g.fillRect(dx+8,ground-72,26,72);
+      g.fillStyle=p.light;g.fillRect(dx+10,ground-69,3,64);g.fillStyle=p.trim;g.fillRect(dx+28,ground-69,3,64);
+      g.fillStyle='#e5bd70';g.fillRect(dx+29,ground-39,4,5);g.fillStyle=p.base;g.fillRect(dx-13,ground-101,68,12);
+      g.fillStyle=p.light;g.fillRect(dx-10,ground-99,62,3);
+      for(let st=0;st<3;st++){g.fillStyle=st===0?'#c5b18e':'#897b68';g.fillRect(dx-9-st*3,ground+st*5-4,60+st*6,5);}
+      g.fillStyle=p.trim;g.fillRect(cx-20,ground-157,40,29);g.fillStyle=p.light;g.fillRect(cx-16,ground-153,32,21);
+      g.fillStyle=p.dark;g.fillRect(cx-12,ground-149,24,13);
+      g.fillStyle=h.role==='forge'?'#f18a36':h.role==='cathedral'?'#d8c8ff':h.role==='keep'?'#e3c36e':h.role==='alchemy'?'#7dd3c7':'#d9b878';
+      g.beginPath();g.arc(cx,ground-143,6,0,Math.PI*2);g.fill();
+      // Silhuetas monumentais exclusivas por função.
+      if(h.role==='keep'){
+        [fx+7,right-39].forEach(tx=>{
+          g.fillStyle=p.dark;g.fillRect(tx,ground-231,32,75);g.fillStyle=p.base;g.fillRect(tx-5,ground-238,42,12);
+          g.fillStyle=p.roof;g.beginPath();g.moveTo(tx-4,ground-238);g.lineTo(tx+16,ground-274);g.lineTo(tx+36,ground-238);g.closePath();g.fill();
+          g.fillStyle=p.light;g.fillRect(tx+12,ground-220,8,22);g.fillStyle=p.trim;for(let k=0;k<4;k++)g.fillRect(tx+k*9,ground-246,5,10);
+        });
+        g.fillStyle=p.trim;for(let k=0;k<9;k++)g.fillRect(fx+12+k*42,ground-177,24,13);
       }
-      if(['estalagem','taverna','guilda','caravanas'].includes(h.id)){
-        g.fillStyle=p.trim;g.fillRect(doorX-9,ground-128,60,19);
-        for(let q=0;q<6;q++){
-          g.fillStyle=q%2?'#e8d7b7':p.roof;g.fillRect(doorX-7+q*10,ground-126,10,15);
-        }
-        g.fillStyle=p.light;g.fillRect(doorX-7,ground-128,58,3);
+      if(h.role==='cathedral'){
+        g.fillStyle=p.trim;g.fillRect(cx-7,ground-303,14,44);g.fillStyle=p.base;
+        g.beginPath();g.moveTo(cx-28,ground-298);g.lineTo(cx,ground-344);g.lineTo(cx+28,ground-298);g.closePath();g.fill();
+        g.fillStyle=p.light;g.fillRect(cx-3,ground-334,6,28);g.fillRect(cx-12,ground-325,24,6);
       }
-      if(h.id==='templo'){
-        g.fillStyle='#e5d5ad';g.fillRect(cx-2,ground-235,4,27);g.fillRect(cx-10,ground-226,20,4);
+      if(h.role==='tower'){
+        g.fillStyle=p.dark;g.fillRect(cx-24,ground-246,48,84);g.fillStyle=p.base;g.fillRect(cx-31,ground-251,62,12);
+        g.beginPath();g.moveTo(cx-34,ground-250);g.lineTo(cx,ground-326);g.lineTo(cx+34,ground-250);g.closePath();
+        g.fillStyle=p.roof;g.fill();g.strokeStyle=p.trim;g.lineWidth=4;g.stroke();g.fillStyle=p.light;g.fillRect(cx-3,ground-312,5,52);
       }
-      if(h.id==='quartel'||h.id==='arsenal'){
-        g.fillStyle='#b13f32';g.fillRect(cx-5,ground-238,10,28);
-        g.fillStyle='#e6c47c';g.fillRect(cx-2,ground-233,4,18);
+      if(h.role==='forge'){
+        g.fillStyle='#493b32';g.fillRect(right-55,ground-285,31,128);g.fillStyle='#8b7762';g.fillRect(right-61,ground-292,43,13);
+        g.fillStyle='rgba(86,88,86,.48)';for(let q=0;q<3;q++){g.beginPath();g.arc(right-43+q*8,ground-306-q*9,8+q*2,0,Math.PI*2);g.fill();}
+        g.fillStyle='#f18a36';g.fillRect(right-51,ground-184,17,13);g.fillStyle='#ffd17a';g.fillRect(right-47,ground-181,7,7);
       }
-
-      // Pequenas pedras de acabamento na base.
-      for(let i=0;i<Math.floor(w/24);i++){
-        g.fillStyle=i%2?'#8c8271':'#b2a58e';
-        g.fillRect(17+i*24,ground-7,18,4);
+      if(h.role==='inn'||h.role==='guild'){
+        g.fillStyle=p.trim;g.fillRect(dx-17,ground-133,76,22);
+        for(let q=0;q<7;q++){g.fillStyle=q%2?'#ead9b9':p.roof;g.fillRect(dx-14+q*10,ground-130,10,17);}
+        g.fillStyle=p.light;g.fillRect(dx-13,ground-132,68,3);
+      }
+      if(h.role==='bank'){
+        for(let q=0;q<4;q++){const xx=fx+30+q*54;g.fillStyle=p.trim;g.fillRect(xx,ground-153,8,111);g.fillStyle=p.light;g.fillRect(xx+2,ground-150,2,105);g.fillStyle=p.base;g.fillRect(xx-7,ground-157,22,7);g.fillRect(xx-7,ground-45,22,7);}
+      }
+      if(h.role==='barracks'||h.role==='arsenal'){
+        g.fillStyle='#8c302c';g.fillRect(cx-5,ground-257,10,61);g.fillStyle='#d7bd7d';g.fillRect(cx-2,ground-250,4,45);
+      }
+      if(h.role==='alchemy'){
+        g.fillStyle='#3b5b5a';g.fillRect(right-42,ground-256,20,95);g.fillStyle='#9bd6c4';g.fillRect(right-39,ground-250,14,7);
+        g.fillStyle='rgba(117,220,196,.35)';for(let q=0;q<3;q++){g.beginPath();g.arc(right-33+q*7,ground-270-q*10,7+q*2,0,Math.PI*2);g.fill();}
       }
       spriteCache['town_building_'+h.id]=c;
     });
 
     // Postes e mobiliário próprios, sem recurso gráfico protegido.
+
     const lamp = createOffscreen(48,64), lg = lamp.getContext('2d');
     lg.fillStyle = '#151316'; lg.fillRect(21,19,7,43);
     lg.fillStyle = '#80613b'; lg.fillRect(23,19,3,41);
@@ -1792,240 +1741,106 @@
   }
 
   // Constrói o Mapa do Térreo (0: Cidadela de Valdoria + Campos) e Subsolo (-1: Catacumbas)
+  // Geração integral dos mapas: cidadela ao norte, praça monumental e bairros de ofícios.
   function initWorldMap() {
-    for (let y = 0; y < MAP_SIZE; y++) {
-      maps[0][y] = [];
-      maps[1][y] = [];
-      maps['-1'][y] = [];
-      maps['-2'][y] = [];
-      for (let x = 0; x < MAP_SIZE; x++) {
-        // Vale das Lanternas (mapa 1): superfície autônoma conectada pelo caminho sul.
-        const border = x===0 || y===0 || x===MAP_SIZE-1 || y===MAP_SIZE-1;
-        maps[1][y][x] = border ? TILE.TREE : TILE.GRASS;
-
-        // Subsolo (-1): Catacumbas de Valdoria (x: 14..30, y: 8..24)
-        if (x >= 14 && x <= 30 && y >= 8 && y <= 24) {
-          const isDWall = (x === 14 || x === 30 || y === 8 || y === 24);
-          maps['-1'][y][x] = isDWall ? TILE.DUNGEON_WALL : TILE.DUNGEON_FLOOR;
-        } else {
-          maps['-1'][y][x] = TILE.DUNGEON_WALL;
-        }
-
-        // Segundo subsolo: Cripta dos Ecos, area de exploracao original.
-        const cryptRoom = x >= 12 && x <= 32 && y >= 7 && y <= 26;
-        const cryptBorder = x === 12 || x === 32 || y === 7 || y === 26;
-        const cryptPartition = x === 18 && y >= 9 && y <= 21 && y !== 15 && y !== 20;
-        maps['-2'][y][x] = cryptRoom && !cryptBorder && !cryptPartition
-          ? ((x * 19 + y * 7) % 9 === 0 ? TILE.MOSS_FLOOR : TILE.CRYPT_FLOOR)
-          : TILE.CRYPT_WALL;
-
-        // Superfície (0)
-        if (x === 0 || y === 0 || x === MAP_SIZE - 1 || y === MAP_SIZE - 1) {
-          maps[0][y][x] = TILE.TREE;
-          continue;
-        }
-
-        // Bastião das Cinzas: muralhas amplas, portões norte/sul e quatro quarteirões conectados.
-        if (x >= 4 && x <= 39 && y >= 4 && y <= 33) {
-          const isBorder = x===4 || x===39 || y===4 || y===33;
-          const northGate = y===4 && x>=20 && x<=24;
-          const southGate = y===33 && x>=20 && x<=24;
-          if (northGate || southGate) {
-            maps[0][y][x] = (x===20 || x===24) ? TILE.GATE_ARCH : TILE.DIRT_ROAD;
-          } else if (isBorder) {
-            maps[0][y][x] = ((x+y)%7===0) ? TILE.TORCH_WALL : TILE.CASTLE_WALL;
-          } else if ((x>=21 && x<=23) || [10,11,17,18,24,25,32].includes(y)) {
-            maps[0][y][x] = TILE.DIRT_ROAD;
-          } else {
-            maps[0][y][x] = TILE.STONE_FLOOR;
-          }
-        } else if (x >= 21 && x <= 23 && y > 33 && y < 50) {
-          maps[0][y][x] = TILE.DIRT_ROAD;
-        } else {
-          maps[0][y][x] = TILE.GRASS;
+    for(let y=0;y<MAP_SIZE;y++){
+      maps[0][y]=[];maps[1][y]=[];maps['-1'][y]=[];maps['-2'][y]=[];
+      for(let x=0;x<MAP_SIZE;x++){
+        const border=x===0||y===0||x===MAP_SIZE-1||y===MAP_SIZE-1;
+        maps[1][y][x]=border?TILE.TREE:TILE.GRASS;
+        if(x>=14&&x<=30&&y>=8&&y<=24){
+          maps['-1'][y][x]=(x===14||x===30||y===8||y===24)?TILE.DUNGEON_WALL:TILE.DUNGEON_FLOOR;
+        }else maps['-1'][y][x]=TILE.DUNGEON_WALL;
+        const room=x>=12&&x<=32&&y>=7&&y<=26;
+        const wall=x===12||x===32||y===7||y===26;
+        const partition=x===18&&y>=9&&y<=21&&y!==15&&y!==20;
+        maps['-2'][y][x]=room&&!wall&&!partition?((x*19+y*7)%9===0?TILE.MOSS_FLOOR:TILE.CRYPT_FLOOR):TILE.CRYPT_WALL;
+        if(border){maps[0][y][x]=TILE.TREE;continue;}
+        const city=x>=3&&x<=53&&y>=3&&y<=39;
+        maps[0][y][x]=city?TILE.STONE_FLOOR:TILE.GRASS;
+        if(city&&(x===3||x===53||y===3||y===39)){
+          const gate=(y===3||y===39)&&x>=25&&x<=29;
+          maps[0][y][x]=gate?((x===25||x===29)?TILE.GATE_ARCH:TILE.DIRT_ROAD):
+            (((x+y)%6===0)?TILE.TORCH_WALL:TILE.CASTLE_WALL);
         }
       }
     }
+    // Avenidas e ruas secundárias.
+    for(let y=4;y<=39;y++)for(let x=25;x<=28;x++)maps[0][y][x]=TILE.DIRT_ROAD;
+    for(let x=4;x<=52;x++)for(let y=14;y<=16;y++)maps[0][y][x]=TILE.DIRT_ROAD;
+    for(let x=13;x<=46;x++)for(let y=25;y<=27;y++)maps[0][y][x]=TILE.DIRT_ROAD;
+    for(let y=17;y<=27;y++)for(let x=21;x<=36;x++)maps[0][y][x]=TILE.STONE_FLOOR;
+    for(let y=13;y<=28;y++)for(let x=22;x<=35;x++){
+      const dx=(x-28.5)/7.2,dy=(y-20.5)/7.6;
+      if(dx*dx+dy*dy<=1.05)maps[0][y][x]=TILE.STONE_FLOOR;
+    }
+    for(let y=12;y<=28;y++){maps[0][y][13]=TILE.DIRT_ROAD;maps[0][y][36]=TILE.DIRT_ROAD;}
+    for(let x=13;x<=45;x++)maps[0][24][x]=TILE.DIRT_ROAD;
+    for(let x=4;x<=53;x++){maps[0][37][x]=TILE.DIRT_ROAD;maps[0][38][x]=TILE.DIRT_ROAD;}
 
-    // Praça central, entrada das Catacumbas e marcos subterrâneos.
-    maps[0][14][24] = TILE.SEWER_GRATE;
-    maps['-1'][14][26] = TILE.ROPE_LADDER;
-    maps['-1'][21][28] = TILE.STAIR_DOWN;
-    maps['-2'][21][28] = TILE.STAIR_UP;
-    [[15,11],[24,10],[16,23],[29,14]].forEach(([x,y]) => { maps['-2'][y][x] = TILE.RUIN_PILLAR; });
-    maps['-2'][12][25] = TILE.FLOWERS;
+    // Grande Praça: fonte, mercado, jardins, lanternas e acesso às catacumbas.
+    maps[0][20][28]=TILE.FOUNTAIN;
+    maps[0][14][24]=TILE.SEWER_GRATE;
+    [[22,19],[34,19],[22,23],[34,23]].forEach(([x,y])=>maps[0][y][x]=TILE.MARKET_STALL);
+    [[20,18],[35,18],[20,24],[35,24],[24,12],[29,12],[24,28],[29,28],
+      [18,17],[38,17],[18,26],[38,26]].forEach(([x,y])=>maps[0][y][x]=TILE.LANTERN);
+    [[26,23],[30,23],[26,26],[30,26]].forEach(([x,y])=>maps[0][y][x]=TILE.BENCH);
+    [[21,21],[35,21],[21,25],[35,25]].forEach(([x,y])=>maps[0][y][x]=TILE.FLOWERS);
+    maps[0][18][27]=TILE.SIGNPOST;maps[0][22][30]=TILE.SIGNPOST;
 
-    // Pilares das Catacumbas (-1).
-    [[18,12],[26,12],[18,18],[26,18]].forEach(([px, py]) => {
-      maps['-1'][py][px] = TILE.RUIN_PILLAR;
+    // Casas com interiores reais, portas e fachadas únicas.
+    houses.forEach(({x,y,w,h,door,floor=0})=>{
+      for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++){
+        const edge=yy===y||yy===y+h-1||xx===x||xx===x+w-1;
+        maps[floor][yy][xx]=edge?TILE.HOUSE_WALL:TILE.WOOD_FLOOR;
+      }
+      maps[floor][y+h-1][door]=TILE.HOUSE_DOOR;
+      maps[floor][y+1][x+1]=TILE.FURNITURE;
+      maps[floor][y+1][x+w-2]=TILE.FURNITURE;
+    });
+    chests.forEach(ch=>{maps[ch.floor??0][ch.y][ch.x]=TILE.CHEST;});
+
+    [[15,13],[18,13],[32,13],[35,13],[15,27],[19,27],[37,27],[41,27]]
+      .forEach(([x,y])=>{if(maps[0][y][x]===TILE.DIRT_ROAD)maps[0][y][x]=TILE.BARREL;});
+    [[16,13],[40,13],[16,26],[40,26]].forEach(([x,y])=>{
+      if(maps[0][y][x]===TILE.DIRT_ROAD)maps[0][y][x]=TILE.CRATE;
     });
 
-    // Ruínas e árvores ficam fora das ruas e dos quatro quarteirões.
-    const trees = [
-      [2,35],[8,36],[16,37],[28,35],[37,36],[3,40],[18,43],[30,42],
-      [41,44],[14,49],[29,49],[25,46],[19,48]
-    ];
-    trees.forEach(([tx, ty]) => { if (maps[0][ty]) maps[0][ty][tx] = TILE.TREE; });
-    const ruins = [[15,38],[17,38],[15,41],[28,39],[30,39],[29,43]];
-    ruins.forEach(([rx, ry]) => { if (maps[0][ry]) maps[0][ry][rx] = TILE.RUIN_PILLAR; });
+    // Ermos ao sul: estrada de saída, lago, bosque e ruínas.
+    for(let y=40;y<MAP_SIZE-1;y++)for(let x=1;x<MAP_SIZE-1;x++){
+      if(x>=25&&x<=28)maps[0][y][x]=TILE.DIRT_ROAD;
+      else if((x*17+y*29+x*y)%23===0)maps[0][y][x]=TILE.WILD_FLOWERS;
+      else if(x<13&&(x*11+y*7)%9<3)maps[0][y][x]=TILE.PINE;
+      else if(x>39&&(x*13+y*5)%11<3)maps[0][y][x]=TILE.TREE;
+    }
+    for(let y=42;y<=50;y++)for(let x=3;x<=13;x++){
+      const dx=(x-8)/5.5,dy=(y-46)/4.5;
+      if(dx*dx+dy*dy<1)maps[0][y][x]=TILE.WATER;
+    }
+    for(let y=42;y<=50;y++)if(maps[0][y][8]===TILE.WATER)maps[0][y][8]=TILE.BRIDGE;
+    maps[0][41][8]=TILE.DIRT_ROAD;maps[0][51][8]=TILE.DIRT_ROAD;
+    [[15,43],[17,43],[15,46],[30,43],[32,43],[31,48],[38,50],[18,52]]
+      .forEach(([x,y])=>{if(maps[0][y])maps[0][y][x]=TILE.RUIN_PILLAR;});
 
-    // Todas as moradias recebem interiores, portas e fachadas com identidade visual própria.
-    houses.forEach(({x,y,w,h,door,floor=0}) => {
-      for (let yy = y; yy < y + h; yy++) {
-        for (let xx = x; xx < x + w; xx++) {
-          const edge = yy === y || yy === y + h - 1 || xx === x || xx === x + w - 1;
-          maps[floor][yy][xx] = edge ? TILE.HOUSE_WALL : TILE.WOOD_FLOOR;
-        }
+    // Subsolos e ligações mantidos.
+    maps['-1'][14][26]=TILE.ROPE_LADDER;maps['-1'][21][28]=TILE.STAIR_DOWN;maps['-2'][21][28]=TILE.STAIR_UP;
+    [[18,12],[26,12],[18,18],[26,18]].forEach(([x,y])=>maps['-1'][y][x]=TILE.RUIN_PILLAR);
+    [[15,11],[24,10],[16,23],[29,14]].forEach(([x,y])=>maps['-2'][y][x]=TILE.RUIN_PILLAR);
+    maps['-2'][12][25]=TILE.FLOWERS;
+
+    // Vila das Lanternas continua sendo uma região separada.
+    houses.filter(h=>(h.floor??0)===1).forEach(({x,y,w,h,door})=>{
+      for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++){
+        const edge=yy===y||yy===y+h-1||xx===x||xx===x+w-1;
+        maps[1][yy][xx]=edge?TILE.HOUSE_WALL:TILE.WOOD_FLOOR;
       }
-      maps[floor][y + h - 1][door] = TILE.HOUSE_DOOR;
-      maps[floor][y + 1][x + 1] = TILE.FURNITURE;
-      maps[floor][y + 1][x + w - 2] = TILE.FURNITURE;
-    });
-    chests.forEach(ch => { maps[ch.floor??0][ch.y][ch.x] = TILE.CHEST; });
-
-    // Praça do mercado: um largo pavimentado com fonte, bancas e quatro acessos.
-    // O eixo central permanece livre para a circulação e para o início do jogador.
-    for(let y=12;y<=16;y++)for(let x=18;x<=25;x++){
-      if(maps[0][y][x]===TILE.STONE_FLOOR||maps[0][y][x]===TILE.DIRT_ROAD)maps[0][y][x]=TILE.STONE_FLOOR;
-    }
-    maps[0][13][19] = TILE.FOUNTAIN;
-    maps[0][13][25] = TILE.MARKET_STALL;
-    maps[0][15][25] = TILE.MARKET_STALL;
-    maps[0][15][19] = TILE.FLOWERS;
-    [[18,12],[20,12],[18,16],[20,16]].forEach(([x,y])=>maps[0][y][x]=TILE.FLOWERS);
-    [[25,12],[18,14],[20,15],[25,16]].forEach(([x,y])=>maps[0][y][x]=TILE.LANTERN);
-    maps[0][12][20] = TILE.LANTERN;
-    maps[0][16][20] = TILE.LANTERN;
-    maps[0][12][24] = TILE.LANTERN;
-    maps[0][16][24] = TILE.LANTERN;
-    maps[0][18][20] = TILE.SIGNPOST;
-    maps[0][18][24] = TILE.SIGNPOST;
-
-    // Mobiliário urbano: áreas de descanso, carga e abastecimento dos bairros.
-    [[12,13],[31,13],[12,20],[31,20],[12,27],[31,27]].forEach(([x,y])=>maps[0][y][x]=TILE.BARREL);
-    [[12,14],[31,14]].forEach(([x,y])=>maps[0][y][x]=TILE.CRATE);
-    [[18,20],[25,20],[18,27],[25,27]].forEach(([x,y])=>maps[0][y][x]=TILE.BENCH);
-    [[11,10],[18,10],[25,10],[32,10],[11,17],[18,17],[25,17],[32,17],
-      [11,24],[18,24],[25,24],[32,24],[11,32],[18,32],[25,32],[32,32]]
-      .forEach(([x,y]) => { if (maps[0][y][x]===TILE.DIRT_ROAD) maps[0][y][x]=TILE.LANTERN; });
-
-    // Lago de Pedra Clara e passarela de madeira ao sudoeste.
-    for (let y=37;y<=45;y++) for(let x=3;x<=14;x++){
-      const dx=(x-8.5)/5.8,dy=(y-41)/4.5;
-      if(dx*dx+dy*dy<0.88 && maps[0][y][x]===TILE.GRASS)maps[0][y][x]=TILE.WATER;
-    }
-    for(let y=37;y<=45;y++) {
-      if(maps[0][y][7]===TILE.WATER) maps[0][y][7]=TILE.BRIDGE;
-    }
-    // Entradas secas para que a passarela seja realmente alcançável.
-    maps[0][36][7]=TILE.DIRT_ROAD;
-    maps[0][46][7]=TILE.DIRT_ROAD;
-
-    // Biomas originais: Bosque das Sombras, Pantano da Nevoa e Circulo dos Antigos.
-    for (let y = 34; y < 55; y++) {
-      for (let x = 1; x < 12; x++) {
-        const v = (x * 47 + y * 31 + x * y * 7) % 19;
-        if (v < 5 && maps[0][y][x] === TILE.GRASS) maps[0][y][x] = TILE.PINE;
-        else if (v === 8 && maps[0][y][x] === TILE.GRASS) maps[0][y][x] = TILE.FLOWERS;
-      }
-      for (let x = 34; x < 55; x++) {
-        const v = (x * 17 + y * 23 + x * y) % 13;
-        if (v < 3 && maps[0][y][x] === TILE.GRASS) maps[0][y][x] = TILE.MARSH;
-        else if (v === 4 && maps[0][y][x] === TILE.GRASS) maps[0][y][x] = TILE.TREE;
-      }
-    }
-    [[8,49],[10,49],[9,48],[9,50],[8,51],[10,51]].forEach(([x,y]) => {
-      if (maps[0][y][x] !== TILE.PINE) maps[0][y][x] = TILE.ANCIENT_STONE;
-    });
-    // Vegetação miúda e pedras, sempre em SQMs antes livres e sem bloquear caminhos.
-    for(let y=34;y<=54;y++)for(let x=2;x<=53;x++){
-      if(maps[0][y][x]!==TILE.GRASS)continue;
-      const n=(x*29+y*17+x*y*3)%37;
-      if(n===3||n===16)maps[0][y][x]=TILE.FERN;
-      else if(n===11)maps[0][y][x]=TILE.MUSHROOM;
-      else if(n===23)maps[0][y][x]=TILE.ROCK;
-    }
-
-    // Estrada longa ao sul até a passagem do Vale das Lanternas.
-    for(let y=50;y<=53;y++) for(let x=21;x<=23;x++) maps[0][y][x]=TILE.DIRT_ROAD;
-    maps[0][52][22]=TILE.PORTAL_EXIT;
-    maps[0][50][20]=TILE.SIGNPOST;
-
-    // Vila das Lanternas: ruas de pedra e praças com iluminação quente.
-    for(let y=5;y<=18;y++) for(let x=9;x<=35;x++){
-      if(x===9 || x===35) maps[1][y][x]=TILE.CASTLE_WALL;
-      else if(y===5) maps[1][y][x]=TILE.CASTLE_WALL;
-      else if(y===18 && (x<20 || x>24)) maps[1][y][x]=TILE.CASTLE_WALL;
-      else maps[1][y][x]=TILE.STONE_FLOOR;
-    }
-    for(let y=6;y<=42;y++)for(let x=21;x<=23;x++)maps[1][y][x]=TILE.DIRT_ROAD;
-    // Casa do Cartógrafo e Armazém: reaplica os interiores sobre a praça.
-    houses.filter(h=>h.floor===1).forEach(({x,y,w,h,door})=>{
-      for(let yy=y;yy<y+h;yy++) for(let xx=x;xx<x+w;xx++)
-        maps[1][yy][xx]=(xx===x||yy===y||xx===x+w-1||yy===y+h-1)
-          ?TILE.HOUSE_WALL:TILE.WOOD_FLOOR;
       maps[1][y+h-1][door]=TILE.HOUSE_DOOR;
-      maps[1][y+1][x+1]=TILE.FURNITURE;
-      maps[1][y+1][x+w-2]=TILE.FURNITURE;
+      maps[1][y+1][x+1]=TILE.FURNITURE;maps[1][y+1][x+w-2]=TILE.FURNITURE;
     });
-    chests.filter(c=>c.floor===1).forEach(c=>maps[1][c.y][c.x]=TILE.CHEST);
-    [[19,9],[26,9],[19,16],[26,16]].forEach(([x,y])=>maps[1][y][x]=TILE.LANTERN);
-    maps[1][12][18]=TILE.FOUNTAIN;
-    maps[1][12][26]=TILE.MARKET_STALL;
-    maps[1][6][22]=TILE.PORTAL_RETURN;
-    maps[1][18][20]=TILE.GATE_ARCH;
-    maps[1][18][24]=TILE.GATE_ARCH;
-    maps[1][20][18]=TILE.SIGNPOST;
-
-    // Rio Largo: divide a região de leste a oeste com ponte atravessável.
-    for(let x=1;x<=42;x++) {
-      const middle=27+Math.round(Math.sin(x*0.34)*1.2);
-      for(let dy=-2;dy<=2;dy++){
-        const yy=middle+dy;
-        if(yy>18&&yy<42)maps[1][yy][x]=TILE.WATER;
-      }
-    }
-    // A passarela atravessa toda a correnteza e encontra terra nas duas margens.
-    for(let yy=23;yy<=32;yy++) for(let xx=21;xx<=23;xx++)
-      maps[1][yy][xx]=yy>=24&&yy<=31?TILE.BRIDGE:TILE.DIRT_ROAD;
-    for(let yy=20;yy<=42;yy++)for(let xx=21;xx<=23;xx++)
-      if(maps[1][yy][xx]!==TILE.BRIDGE)maps[1][yy][xx]=TILE.DIRT_ROAD;
-
-    // Horta da vila, com canteiros e vegetação cultivada.
-    for(let y=10;y<=16;y++)for(let x=3;x<=7;x++)maps[1][y][x]=TILE.FARM;
-    maps[1][13][8]=TILE.SIGNPOST;
-
-    // Bosques, pradarias floridas, ruínas e acampamento de saqueadores.
-    for(let y=19;y<=42;y++)for(let x=1;x<=42;x++){
-      const t=maps[1][y][x],n=(x*19+y*31+x*y*3)%23;
-      if(t!==TILE.GRASS)continue;
-      if((x<=12||x>=33)&&n<5)maps[1][y][x]=TILE.PINE;
-      else if(n===8||n===13)maps[1][y][x]=TILE.WILD_FLOWERS;
-      else if(n===16)maps[1][y][x]=TILE.FLOWERS;
-      else if(n===3||n===11)maps[1][y][x]=TILE.FERN;
-      else if(n===19)maps[1][y][x]=TILE.MUSHROOM;
-      else if(n===21)maps[1][y][x]=TILE.ROCK;
-    }
-    // Encosta rochosa do extremo nordeste; não bloqueia a ponte nem o acampamento.
-    for(let y=20;y<=26;y++)for(let x=40;x<=42;x++)
-      if(maps[1][y][x]!==TILE.WATER)maps[1][y][x]=TILE.CLIFF;
-    // Junco nas margens do Rio Largo.
-    for(let x=3;x<=41;x++)for(let y=23;y<=32;y++){
-      if(maps[1][y][x]!==TILE.GRASS)continue;
-      if((maps[1][y-1][x]===TILE.WATER||maps[1][y+1][x]===TILE.WATER)&&
-        (x*7+y*3)%4===0)maps[1][y][x]=TILE.REEDS;
-    }
-    [[7,21],[9,21],[6,23],[9,25],[35,20],[37,20],[37,22],[35,23]]
-      .forEach(([x,y])=>maps[1][y][x]=TILE.ANCIENT_STONE);
-    // Acampamento à margem sul do rio: clareira, tendas e fogueira.
-    for(let y=34;y<=41;y++)for(let x=28;x<=40;x++){
-      maps[1][y][x]=(x+y)%7===0?TILE.DIRT_ROAD:TILE.GRASS;
-    }
-    [[31,36],[37,36],[33,40]].forEach(([x,y])=>maps[1][y][x]=TILE.TENT);
-    maps[1][38][34]=TILE.CAMP_FIRE;
-    maps[1][33][27]=TILE.SIGNPOST;
-    for(let y=34;y<=41;y++)for(let x=22;x<=29;x++)
-      if(maps[1][y][x]!==TILE.CAMP_FIRE)maps[1][y][x]=TILE.DIRT_ROAD;
+    maps[1][28][22]=TILE.BRIDGE;maps[1][12][22]=TILE.PORTAL_RETURN;maps[1][6][22]=TILE.PORTAL_EXIT;
+    [[21,13],[23,13],[21,17],[23,17],[15,15],[30,15]].forEach(([x,y])=>{
+      if(maps[1][y][x]===TILE.GRASS)maps[1][y][x]=TILE.FLOWERS;
+    });
   }
 
   // Inicializa NPCs e Criaturas Clássicas do Tibia no Térreo (0) e Subsolo (-1)
@@ -2194,15 +2009,15 @@
 
     // Monstros dos Ermos Cinzentos (Floor 0 - Sul do Portão)
     const surfaceSpawns = [
-      { name: 'Rato das Cinzas', sprite: 'rat', x: 21, y: 35, hp: 35, atk: 7, xp: 20, gold: [5, 12] },
-      { name: 'Troll Cinzento', sprite: 'troll', x: 25, y: 36, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
-      { name: 'Troll Cinzento', sprite: 'troll', x: 18, y: 37, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
-      { name: 'Orc Saqueador', sprite: 'orc', x: 23, y: 39, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
-      { name: 'Orc Saqueador', sprite: 'orc', x: 16, y: 41, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
-      { name: 'Orc Saqueador', sprite: 'orc', x: 27, y: 41, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
-      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 20, y: 45, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
-      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 27, y: 46, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
-      { name: 'Dragão das Cinzas', sprite: 'dragon', x: 22, y: 38, hp: 320, atk: 34, xp: 280, gold: [100, 220] }
+      { name: 'Rato das Cinzas', sprite: 'rat', x: 24, y: 42, hp: 35, atk: 7, xp: 20, gold: [5, 12] },
+      { name: 'Troll Cinzento', sprite: 'troll', x: 20, y: 44, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
+      { name: 'Troll Cinzento', sprite: 'troll', x: 29, y: 44, hp: 65, atk: 12, xp: 35, gold: [10, 22] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 24, y: 46, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 17, y: 48, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Orc Saqueador', sprite: 'orc', x: 31, y: 48, hp: 95, atk: 17, xp: 55, gold: [16, 35] },
+      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 20, y: 51, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
+      { name: 'Ciclope das Cinzas', sprite: 'cyclops', x: 29, y: 51, hp: 160, atk: 24, xp: 110, gold: [35, 70] },
+      { name: 'Dragão das Cinzas', sprite: 'dragon', x: 26, y: 47, hp: 320, atk: 34, xp: 280, gold: [100, 220] }
     ];
 
     surfaceSpawns.forEach((m, idx) => {
@@ -2259,34 +2074,43 @@
 
     sewerSpawns.forEach((m, idx) => {
       entities.push({
-        id: `mob_sewer_${idx}`,
-        name: m.name,
-        type: 'monster',
-        sprite: m.sprite,
-        floor: -1,
-        x: m.x,
-        y: m.y,
-        spawnX: m.x,
-        spawnY: m.y,
-        renderX: m.x,
-        renderY: m.y,
-        dir: 'down',
-        walkFrame: 0,
-        hp: m.hp,
-        maxHp: m.hp,
-        atk: m.atk,
-        xp: m.xp,
-        goldRange: m.gold,
-        lastMove: 0,
-        lastAtk: 0,
-        dead: false,
-        respawnAt: 0
+        id: `mob_sewer_${idx}`,name:m.name,type:'monster',sprite:m.sprite,floor:-1,
+        x:m.x,y:m.y,spawnX:m.x,spawnY:m.y,renderX:m.x,renderY:m.y,dir:'down',
+        walkFrame:0,hp:m.hp,maxHp:m.hp,atk:m.atk,xp:m.xp,goldRange:m.gold,
+        lastMove:0,lastAtk:0,dead:false,respawnAt:0
       });
+    });
+    const townPositions={
+      npc_kaelen:[27,13],npc_guard:[12,26],npc_healer:[19,14],npc_breno:[35,16],
+      mira:[18,13],doran:[27,27],seris:[10,27],veyra:[40,26],npc_rurik:[12,15],
+      npc_nara:[44,26],npc_elira:[13,26],npc_ferren:[18,26],npc_odran:[30,27],
+      npc_lysa:[36,26],npc_helga:[20,27],npc_karst:[21,26],npc_solan:[35,26],npc_marek:[45,26]
+    };
+    Object.entries(townPositions).forEach(([id,pos])=>{
+      const e=entities.find(v=>v.id===id);
+      if(e){e.x=pos[0];e.y=pos[1];e.renderX=e.x;e.renderY=e.y;}
+    });
+    const patrolRoutes={
+      npc_ada:[[17,13],[18,13],[19,13],[20,13],[21,13],[22,13]],
+      npc_bram:[[29,13],[30,13],[31,13],[32,13],[33,13],[34,13]],
+      npc_timo:[[24,17],[25,17],[26,17],[27,17],[28,17],[29,17]],
+      npc_nira:[[15,16],[16,16],[17,16],[18,16],[19,16],[20,16]],
+      npc_olen:[[21,23],[22,23],[23,23],[24,23],[25,23],[26,23]],
+      npc_ves:[[29,23],[30,23],[31,23],[32,23],[33,23],[34,23]],
+      npc_darek:[[15,26],[16,26],[17,26],[18,26],[19,26],[20,26]],
+      npc_mirael:[[35,16],[36,16],[37,16],[38,16],[39,16],[40,16]],
+      npc_pavo:[[17,27],[18,27],[19,27],[20,27],[21,27],[22,27]],
+      npc_eron_city:[[29,27],[30,27],[31,27],[32,27],[33,27],[34,27]]
+    };
+    Object.entries(patrolRoutes).forEach(([id,route])=>{
+      const e=entities.find(v=>v.id===id);
+      if(e){e.patrolRoute=route.map(([x,y])=>({x,y}));e.patrolIndex=0;e.patrolDirection=1;
+        e.x=route[0][0];e.y=route[0][1];e.renderX=e.x;e.renderY=e.y;}
     });
   }
 
   function isProtectionZone(floor, x, y) {
-    if (floor===0) return x>=5&&x<=38&&y>=5&&y<=33;
+    if (floor===0) return x>=3&&x<=53&&y>=3&&y<=39;
     if (floor===1) return x>=10&&x<=34&&y>=6&&y<=17;
     return false;
   }
@@ -2327,14 +2151,14 @@
   // Atlas: cada região é explorável separadamente; clicar traça rota real no mesmo andar.
   const WORLD_LANDMARKS={
     0:[
-      {x:22,y:14,label:'Praça das Cinzas'},
+      {x:28,y:20,label:'Grande Praça de Valdoria'},
       {x:24,y:14,label:'Entrada das Catacumbas'},
-      {x:15,y:7,label:'Templo e Arquivo'},
-      {x:35,y:7,label:'Forja e Quartel'},
-      {x:22,y:28,label:'Bairro dos Artesãos'},
-      {x:22,y:33,label:'Portão Sul'},
-      {x:8,y:41,label:'Lago de Pedra Clara'},
-      {x:22,y:52,label:'Passagem para o Vale'}
+      {x:28,y:10,label:'Cidadela Real'},
+      {x:8,y:12,label:'Catedral da Chama'},
+      {x:28,y:34,label:'Distrito dos Ofícios'},
+      {x:27,y:39,label:'Portão Sul'},
+      {x:8,y:46,label:'Lago de Pedra Clara'},
+      {x:27,y:52,label:'Passagem para o Vale'}
     ],
     1:[
       {x:22,y:12,label:'Vila das Lanternas'},
@@ -3610,7 +3434,7 @@
     } else if (!player.cityQuestCompleted) {
       questTitle.textContent = '📜 Missão: Tesouros do Bastião';
       questCounter.textContent = cityChestCount() + '/' + player.cityQuestGoal;
-      questDesc.textContent = 'Explore os quatro quarteirões e abra '+player.cityQuestGoal+' dos '+chests.filter(c=>(c.floor??0)===0).length+' baús do Bastião.';
+      questDesc.textContent = 'Explore os distritos de Valdoria e abra '+player.cityQuestGoal+' dos '+chests.filter(c=>(c.floor??0)===0).length+' baús do Bastião.';
       questDesc.className = 'text-amber-200 leading-tight';
     } else if(!player.valeCompleted){
       questTitle.textContent='📜 Missão: Paz no Vale';
@@ -4284,7 +4108,7 @@
         }
 
         // Acabamento de cidade: calçamento irregular e detalhes artesanais por SQM.
-        if(player.floor===0 && gx>=7 && gx<=37 && gy>=7 && gy<=35 &&
+        if(player.floor===0 && gx>=4 && gx<=52 && gy>=4 && gy<=38 &&
            (t===TILE.DIRT_ROAD || t===TILE.STONE_FLOOR)){
           const seed=(gx*92821+gy*68917)>>>0;
           if(t===TILE.DIRT_ROAD){
@@ -4309,13 +4133,13 @@
         }
 
         // Mosaico da praça: filetes de bronze e desenho radial na pedra clara.
-        if(player.floor===0 && gx>=18 && gx<=25 && gy>=12 && gy<=16 &&
+        if(player.floor===0 && gx>=21 && gx<=35 && gy>=13 && gy<=27 &&
            t!==TILE.FOUNTAIN && t!==TILE.MARKET_STALL && t!==TILE.LANTERN && t!==TILE.FLOWERS){
           ctx.strokeStyle='rgba(190,157,99,.34)';ctx.lineWidth=1;
           ctx.strokeRect(px+3,py+3,42,42);
           ctx.fillStyle='rgba(224,198,145,.16)';
           if((gx+gy)%2===0){ctx.fillRect(px+7,py+7,3,3);ctx.fillRect(px+38,py+38,3,3);}
-          if(gx===21||gx===22){ctx.fillStyle='rgba(49,76,79,.18)';ctx.fillRect(px+22,py+4,4,40);}
+          if(gx===28||gy===20){ctx.fillStyle='rgba(49,76,79,.18)';ctx.fillRect(px+22,py+4,4,40);}
         }
 
         // Elementos centrais redesenhados como objetos de cenário, não apenas ícones de tile.
@@ -4374,6 +4198,17 @@
           ctx.fillStyle='#a96d39';ctx.fillRect(px+10,py+11,29,2);
         }
       }
+    }
+
+    // Camada arquitetônica: fachadas completas aparecem mesmo com o SQM-âncora fora da câmera.
+    if(player.floor===0||player.floor===1){
+      houses.filter(h=>(h.floor??0)===player.floor).slice().sort((a,b)=>a.y-b.y).forEach(h=>{
+        const building=spriteCache['town_building_'+h.id];if(!building)return;
+        const bx=Math.round((h.x-camX)*TILE_SIZE-24),by=Math.round((h.y-camY)*TILE_SIZE-260);
+        const bw=h.w*TILE_SIZE+48,bh=h.h*TILE_SIZE+280;
+        if(bx+bw<0||by+bh<0||bx>canvas.width||by>canvas.height)return;
+        ctx.drawImage(building,bx,by);
+      });
     }
 
     // 2. POÇAS DE SANGUE E CORPOS ABATIDOS NO CHÃO
@@ -4445,16 +4280,7 @@
           ctx.fillStyle='#33473c';ctx.fillRect(px+9,py+28,13,5);
           ctx.fillStyle='#b5a58d';ctx.fillRect(px+5,py+34,40,3);
         } else if (t === TILE.HOUSE_WALL) {
-          const h=houseAt(gx,gy);
-          if(h && gx===h.x && gy===h.y+h.h-1){
-            // Fachadas externas nunca ficam translúcidas por proximidade.
-            // A regra antiga de 30% era feita para paredes internas e apagava
-            // justamente a construção que deveria aparecer ao redor do jogador.
-            const building=spriteCache['town_building_'+h.id];
-            ctx.globalAlpha=1;
-            if(building)ctx.drawImage(building,px-10,py-(h.h-1)*48-76);
-            ctx.globalAlpha=1;
-          }
+          // A fachada inteira já foi desenhada na camada arquitetônica dedicada.
         } else if (t === TILE.HOUSE_DOOR) {
           const opened=openDoors.has(doorKey(gx,gy));
           ctx.fillStyle = '#462b21'; ctx.fillRect(px+3,py-18,42,37);
@@ -5263,10 +5089,10 @@
     renderBackpack();
     renderBattleList();
 
-    addLog('Bem-vindo ao REINOS DAS CINZAS (MMORPG Clássico 7.6 • O Bastião de Cinza).', '#ffd700');
-    addLog(restored ? 'Progresso local recuperado! Boa aventura, Ivo.' : 'Ivo (Cavaleiro das Cinzas) entra no Bastião das Cinzas.', '#ffffff');
-    addLog('Dica: Pise no bueiro [24,14] para descer às Catacumbas (-1), depois na escada [28,21] para explorar a Cripta dos Ecos (-2).', '#66e0ff');
-    addLog('O Bastião agora tem 16 edifícios em quatro quarteirões, praça comercial e 12 baús para descobrir. Explore as portas com E!','#ffd166');
+    addLog('Bem-vindo a VALDORIA, a cidade-fortaleza de REINOS DAS CINZAS.', '#ffd700');
+    addLog(restored ? 'Progresso local recuperado! Boa aventura, Ivo.' : 'Ivo, o Cavaleiro das Cinzas, chega à Grande Praça de Valdoria.', '#ffffff');
+    addLog('Dica: use o acesso subterrâneo na praça [24,14] e a escada [28,21] para explorar a Cripta dos Ecos.', '#66e0ff');
+    addLog('Valdoria foi reconstruída com cidadela, catedral, torre, bairros comerciais e distrito de ofícios. Explore as portas e os baús!','#ffd166');
     addLog('Novo mundo: siga pela estrada sul até [22,52] para visitar a Vila das Lanternas!','#bef264');
 
     requestAnimationFrame(gameLoop);
