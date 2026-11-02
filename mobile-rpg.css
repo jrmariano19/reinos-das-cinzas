@@ -1,0 +1,25 @@
+/* REINOS DAS CINZAS — Mobile HUD v0.1. Touch-only progressive enhancement. */
+#mobileRpgHud{display:none}
+@media (pointer:coarse) and (max-width:1024px) and (orientation:landscape){
+ html,body{height:100%;height:100dvh;overscroll-behavior:none}
+ .client-grid{display:block;height:100dvh;width:100vw}
+ .viewport-container{position:absolute;inset:0;padding:0;border:0}
+ #gameCanvas{border:0;max-width:100%;max-height:100%;touch-action:none}
+ .client-grid>div:not(.viewport-container),.client-grid>aside{display:none!important}
+ .viewport-container>div.md\\:hidden{display:none!important}
+ #contextHint{display:none!important}
+ #mobileRpgHud{display:block;position:absolute;inset:0;z-index:30;pointer-events:none;font-family:Verdana,sans-serif;color:#f6e8c8}
+ #mobileRpgHud button{pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;border:1px solid #ae854c;color:#f9e4b7;background:linear-gradient(145deg,#4b3423ed,#181719ed);box-shadow:0 2px 8px #000b,inset 0 1px #e7b76a70;border-radius:50%;font-weight:700}
+ #mobileRpgHud button:active{background:#875023}
+ .mobile-top{position:absolute;top:max(7px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));display:flex;gap:6px;align-items:center;background:#111b;padding:6px 9px;border:1px solid #8d693a;border-radius:9px;font-size:12px}
+ .mobile-title{color:#e9bd70;font-weight:800;letter-spacing:.06em}
+ .mobile-controls{position:absolute;bottom:max(12px,env(safe-area-inset-bottom));left:max(16px,env(safe-area-inset-left));width:128px;height:128px;pointer-events:auto;touch-action:none;border-radius:50%;border:2px solid #a47c4c;background:radial-gradient(circle,#55442b99,#151719cc);box-shadow:0 0 20px #0009}
+ .mobile-stick{position:absolute;width:52px;height:52px;left:38px;top:38px;border-radius:50%;border:2px solid #e2bb79;background:linear-gradient(#70512e,#29221d);box-shadow:0 3px 9px #000c;pointer-events:none}
+ .mobile-skills{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,54px);gap:8px;align-items:end}
+ #mobileRpgHud .mobile-skills button{width:54px;height:54px;font-size:22px}
+ #mobileRpgHud .mobile-skills .mobile-attack{width:64px;height:64px;font-size:26px;border-color:#e5a457}
+ .mobile-menu{position:absolute;right:max(12px,env(safe-area-inset-right));top:9px;display:flex;gap:7px}
+ #mobileRpgHud .mobile-menu button{border-radius:9px;padding:7px 11px;font-size:12px}
+}
+@media (pointer:coarse) and (orientation:portrait){#mobilePortraitHint{display:flex!important}}
+#mobilePortraitHint{display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;text-align:center;background:#17120f;color:#f5d69b;font:700 18px Verdana;padding:30px}
