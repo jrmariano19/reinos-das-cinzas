@@ -399,7 +399,7 @@
         <div class="equip-slot" onclick="window.inspectEquip('helmet')" title="Elmo Cruzado das Cinzas (Arm: 6)">🪖</div>
         <div class="equip-slot" onclick="window.inspectEquip('backpack')" title="Mochila de Couro Cinzento (20 Slots)">🎒</div>
         <div id="slotWeapon" class="equip-slot" onclick="window.inspectEquip('weapon')" title="Espada Longa das Cinzas (Atk: 24, Def: 16)">🗡️</div>
-        <div class="equip-slot" onclick="window.inspectEquip('armor')" title="Armadura de Placas Forjada em Brasa (Arm: 11)">🛡️</div>
+        <div id="slotRuneArmor" class="equip-slot" onclick="window.inspectEquip('armor')" title="Armadura de Placas Forjada em Brasa (Arm: 11)">🛡️</div>
         <div class="equip-slot" onclick="window.inspectEquip('shield')" title="Escudo Torre do Bastião (Def: 26)">⚜️</div>
         <div class="equip-slot" onclick="window.inspectEquip('ring')" title="Anel de Brasa Viva">💍</div>
         <div class="equip-slot" onclick="window.inspectEquip('legs')" title="Grevas de Ferro Negro (Arm: 7)">👖</div>
@@ -590,6 +590,18 @@
     <div id="forgeDetails" class="text-xs text-neutral-200"></div>
     <button id="forgeUpgradeBtn" onclick="window.upgradeWeapon()" class="tibia-btn py-2 font-bold text-amber-300 text-xs">Aprimorar espada</button>
     <div id="forgeMessage" class="text-[10px] text-amber-200 min-h-4" aria-live="polite"></div>
+    <div class="border-t border-amber-700/50 pt-2 flex flex-col gap-2">
+      <div class="text-amber-300 font-bold text-xs">💠 Forja Rúnica · Equipamentos Procedurais</div>
+      <div class="text-[10px] text-neutral-400">Sistema experimental separado da espada legada. Equipe armas/armaduras pela mochila. Aging arrisca ouro; após +10 pode destruir o item.</div>
+      <div id="runeForgeDetails" class="text-[11px] text-amber-100 leading-relaxed"></div>
+      <div class="grid grid-cols-2 gap-1">
+        <button id="ageRuneWeapon" type="button" class="tibia-btn py-1" onclick="window.ageRuneGear('weapon')">Aging arma</button>
+        <button id="mixRuneWeapon" type="button" class="tibia-btn py-1" onclick="window.mixRuneGear('weapon','brasa')">Mixing arma</button>
+        <button id="ageRuneArmor" type="button" class="tibia-btn py-1" onclick="window.ageRuneGear('armor')">Aging armadura</button>
+        <button id="mixRuneArmor" type="button" class="tibia-btn py-1" onclick="window.mixRuneGear('armor','bastiao')">Mixing armadura</button>
+      </div>
+      <div id="runeForgeMessage" role="status" class="text-[11px] text-amber-200"></div>
+    </div>
     <button onclick="window.closeForge()" class="tibia-btn py-1">Voltar</button>
   </div>
 </div>
@@ -2546,7 +2558,72 @@
     document.getElementById('forgeUpgradeBtn').disabled=
       tier>=4||!nearForge()||player.gold<(cost||0)||player.level<(req||99)||
       (tier===3&&!player.brumaDefeated);
+    renderRuneForge();
   }
+  function renderRuneForge(){
+    const details=document.getElementById('runeForgeDetails');
+    if(!details)return;
+    if(!equipmentApi){
+      details.textContent='Carregando sistema de equipamentos...';
+      for(const id of ['ageRuneWeapon','mixRuneWeapon','ageRuneArmor','mixRuneArmor'])
+        document.getElementById(id).disabled=true;
+      return;
+    }
+    const count=player.lootBag.reduce((n,it)=>n+(it.id==='core-brasa'&&it.type==='material'?Math.max(0,Math.floor(it.qty||1)):0),0);
+    const pieces=['weapon','armor'].map(slot=>{
+      const item=player.equippedGear?.[slot];
+      if(!equipmentApi.isValidEquipment(item))return (slot==='weapon'?'Arma':'Armadura')+': slot vazio';
+      const stats=equipmentApi.itemBonuses(item,player.classId);
+      return item.name+' +'+item.aging+' ('+item.rarity+') · ATQ +'+stats.attack+
+        ', DEF +'+stats.defense+', ABS '+stats.absorption+
+        (item.mixId?' · Mixing aplicado':'')+
+        (item.aging<20?' · Aging '+equipmentApi.agingCost(item)+' ouro':' · máximo +20');
+    });
+    details.textContent=pieces.join(' | ')+' | Núcleos de Brasa: '+count+' · Ouro: '+player.gold;
+    for(const slot of ['weapon','armor']){
+      const valid=equipmentApi.isValidEquipment(player.equippedGear?.[slot]);
+      document.getElementById(slot==='weapon'?'ageRuneWeapon':'ageRuneArmor').disabled=
+        !valid||!nearForge()||player.equippedGear[slot].aging>=20||
+        player.gold<equipmentApi.agingCost(player.equippedGear[slot]);
+      document.getElementById(slot==='weapon'?'mixRuneWeapon':'mixRuneArmor').disabled=
+        !valid||!nearForge()||!!player.equippedGear[slot].mixId||count<2||player.gold<200;
+    }
+  }
+  window.ageRuneGear=function(slot){
+    if(!equipmentApi||!nearForge())return false;
+    const item=player.equippedGear?.[slot];
+    if(!equipmentApi.isValidEquipment(item))return false;
+    const cost=equipmentApi.agingCost(item);
+    const odds=equipmentApi.agingOdds(item.aging);
+    const warning=(odds.destroy>0?' Pode destruir permanentemente o item!':'');
+    if(!window.confirm('Tentar Aging '+item.name+' +'+(item.aging+1)+' por '+cost+
+      ' ouro? Sucesso '+Math.round(odds.success*100)+'%; risco de quebra '+
+      Math.round(odds.destroy*100)+'%.'+warning))return false;
+    try{
+      const result=equipmentApi.ageEquipped(player,slot);
+      player.gold=result.state.gold;
+      player.equippedGear=result.state.equippedGear;
+      const words={success:'Aging concluído!',fail:'Falha: nível mantido.',degrade:'Falha: item perdeu um nível.',destroy:'O equipamento se desfez em cinzas!'};
+      document.getElementById('runeForgeMessage').textContent=words[result.outcome];
+      addLog('Forja Rúnica: '+words[result.outcome]+' (-'+result.cost+' ouro)','#fcd34d');
+      updateHUD();renderForge();renderBackpack();saveProgress();
+      return true;
+    }catch(e){document.getElementById('runeForgeMessage').textContent=e.message;return false;}
+  };
+  window.mixRuneGear=function(slot,recipeId){
+    if(!equipmentApi||!nearForge())return false;
+    if(!window.confirm('Misturar dois Núcleos de Brasa e 200 ouro para adicionar um selo permanente?'))return false;
+    try{
+      const result=equipmentApi.mixEquipped(player,slot,recipeId);
+      player.gold=result.state.gold;
+      player.lootBag=result.state.lootBag;
+      player.equippedGear=result.state.equippedGear;
+      document.getElementById('runeForgeMessage').textContent='Mixing concluído, bônus permanente aplicado!';
+      addLog('Mixing: selo aplicado ao equipamento (-200 ouro, 2 Núcleos).','#91e4c7');
+      updateHUD();renderForge();renderBackpack();saveProgress();
+      return true;
+    }catch(e){document.getElementById('runeForgeMessage').textContent=e.message;return false;}
+  };
   window.upgradeWeapon=function(){
     const tier=player.weaponTier||0,cost=FORGE_COSTS[tier],req=FORGE_MIN_LEVEL[tier];
     if(tier>=4||!nearForge()||player.gold<cost||player.level<req || (tier===3&&!player.brumaDefeated)){
@@ -3536,8 +3613,12 @@
       amulet: 'You see um Amuleto de Cinza Ancestral (Arm: 1).',
       helmet: 'You see um Elmo Cruzado das Cinzas (Arm: 6).',
       backpack: `You see uma Mochila de Couro Cinzento (${backpackUnitCount()} itens em ${player.lootBag.length} pilhas).`,
-      weapon: `You see ${player.weaponName}.`,
-      armor: 'You see uma Armadura de Placas Forjada em Brasa (Arm: 11).',
+      weapon: player.equippedGear?.weapon
+        ?'Equipado: '+player.equippedGear.weapon.name+' +'+player.equippedGear.weapon.aging
+        :`You see ${player.weaponName}.`,
+      armor: player.equippedGear?.armor
+        ?'Equipado: '+player.equippedGear.armor.name+' +'+player.equippedGear.armor.aging
+        :'You see uma Armadura de Placas Forjada em Brasa (Arm: 11).',
       shield: 'You see um Escudo Torre do Bastião (Def: 26).',
       ring: 'You see um Anel de Brasa Viva (+1 Bênção).',
       legs: 'You see Grevas de Ferro Negro (Arm: 7).',
@@ -3624,8 +3705,13 @@
     if(slots)slots.textContent=player.lootBag.length+' pilhas';
     grid.innerHTML = player.lootBag.map((item, idx) => {
       const qty=Math.max(1,Math.floor(Number(item.qty)||1));
+      const label=item.type==='equipment'
+        ?item.name+' ['+item.rarity+'] +'+item.aging+' · Nível '+item.requiredLevel+
+          ' · Especialização '+(item.specClass||'livre')
+        :item.name+(qty>1?' ×'+qty:'');
+      const safeLabel=String(label).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       return `
-        <div onclick="window.useBackpackItem(${idx})" class="equip-slot !w-8 !h-8 text-sm relative" title="${item.name}${qty>1?' ×'+qty:''}">
+        <div onclick="window.useBackpackItem(${idx})" class="equip-slot !w-8 !h-8 text-sm relative" title="${safeLabel}">
           ${item.icon}
           ${qty>1?`<span class="absolute bottom-0 right-0.5 text-[8px] font-bold text-white text-shadow-black">×${qty}</span>`:''}
         </div>
@@ -3636,6 +3722,17 @@
   window.useBackpackItem = function(idx) {
     const item = player.lootBag[idx];
     if (!item) return;
+    if (item.type === 'equipment') {
+      if(!equipmentApi){addLog('Equipamentos ainda carregando...', '#ffa97a');return;}
+      try{
+        const result=equipmentApi.equipFromBag(player,idx);
+        player.lootBag=result.lootBag;
+        player.equippedGear=result.equippedGear;
+        addLog('Equipado: '+item.name+' +'+item.aging+'.', '#9be8b8');
+        updateHUD();renderBackpack();saveProgress();
+      }catch(e){addLog(e.message,'#ff9e82');}
+      return;
+    }
     if (item.type === 'food') {
       player.hp = Math.min(player.maxHp, player.hp + item.value);
       addFloatingText(player.floor, player.x, player.y - 0.4, 'Munch...', '#ff9933', true);
@@ -3680,7 +3777,15 @@
     document.getElementById('talentPointsBadge').textContent = player.talentPoints>0?`+${player.talentPoints}`:'0';
     document.getElementById('forgeTierBadge').textContent = `+${player.weaponTier||0}`;
     const slotW=document.getElementById('slotWeapon');
-    if(slotW){slotW.textContent=player.weaponTier>0?'⚔️':player.legendarySword?'🗡️':'⚔️';slotW.title=player.weaponName;}
+    if(slotW){
+      const current=player.equippedGear?.weapon;
+      slotW.textContent=current?.icon||(player.weaponTier>0?'⚔️':player.legendarySword?'🗡️':'⚔️');
+      slotW.title=current?'Equipado: '+current.name+' +'+current.aging:player.weaponName;
+    }
+    const slotA=document.getElementById('slotRuneArmor');
+    const armor=player.equippedGear?.armor;
+    if(slotA && armor){slotA.title='Equipado: '+armor.name+' +'+armor.aging;slotA.textContent=armor.icon;}
+    else if(slotA){slotA.title='Armadura legada de Valdoria';slotA.textContent='🛡️';}
     document.getElementById('hpPotCount').textContent = `×${player.hpPots}`;
     document.getElementById('mpPotCount').textContent = `×${player.mpPots}`;
 
