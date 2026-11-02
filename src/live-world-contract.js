@@ -26,6 +26,8 @@ export function obstacleKind(tile,TILE) {
  if(tile===TILE.HOUSE_WALL)return 'housewall';
  if(tile===TILE.HOUSE_DOOR)return 'door';
  if([TILE.TREE,TILE.PINE].includes(tile))return 'tree';
+ if([TILE.SEWER_GRATE,TILE.ROPE_LADDER,TILE.STAIR_DOWN,TILE.STAIR_UP,
+  TILE.PORTAL_EXIT,TILE.PORTAL_RETURN].includes(tile))return 'portal';
  if([TILE.FOUNTAIN,TILE.ALTAR].includes(tile))return 'fountain';
  if([TILE.LANTERN,TILE.TORCH_WALL,TILE.CAMP_FIRE].includes(tile))return 'flame';
  if([TILE.MARKET_STALL,TILE.TENT].includes(tile))return 'stall';
