@@ -2737,13 +2737,25 @@
   }
 
   function refreshClassSkillLabel(){
-    const slot=document.getElementById('hk1');
-    if(!slot)return;
-    const skillName=classApi?.availableClasses().find(c=>c.id===player.classId)?.skills[0]?.name;
-    const spans=slot.querySelectorAll(':scope > span');
-    if(spans.length>=3){
-      spans[1].textContent=skillName?'✦ '+skillName:'⚔️ Golpe Brutal';
-      spans[2].textContent=skillName?'(Tier 1)':'(Exori)';
+    const cls=classApi?.availableClasses().find(c=>c.id===player.classId);
+    // Sem classe: deixa todos os atalhos legados disponíveis como antes.
+    if(!cls)return;
+    for(let tier=1;tier<=4;tier++){
+      const slot=document.getElementById('hk'+tier);
+      if(!slot)continue;
+      const ability=cls.skills[tier-1];
+      const spans=slot.querySelectorAll(':scope > span');
+      if(spans.length<3||!ability)continue;
+      const unlocked=player.level>=ability.unlockLevel;
+      const implemented=tier===1;
+      spans[1].textContent='✦ '+ability.name;
+      spans[2].textContent=implemented?'(Tier 1)':unlocked?'(Em desenvolvimento)':'(Nv '+ability.unlockLevel+')';
+      slot.setAttribute('aria-disabled',String(!implemented));
+      slot.title=implemented
+        ?'Habilidade exclusiva da classe, ativa na tecla '+tier
+        :unlocked?'Habilidade Tier '+tier+' ainda em desenvolvimento'
+          :'Habilidade desbloqueada no nível '+ability.unlockLevel;
+      slot.style.opacity=implemented?'1':'.68';
     }
   }
   function renderClassChoices(){
@@ -2816,9 +2828,16 @@
   // Tecla 1 usa a habilidade exclusiva Tier 1 quando uma classe está selecionada.
   window.triggerHotkey = function(slot) {
     const now = performance.now();
-    if(slot===1 && player.classId){
-      if(!classApi){addLog('Preparando habilidade de classe...', '#f6c878');return;}
-      castTierOneClassSkill(now);
+    if(player.classId && slot>=1 && slot<=4){
+      if(!classApi){addLog('Preparando habilidades da classe...', '#f6c878');return;}
+      const cls=classApi.availableClasses().find(c=>c.id===player.classId);
+      const ability=cls?.skills[slot-1];
+      if(!ability){addLog('Habilidade desta classe indisponível.', '#f6c878');return;}
+      if(player.level<ability.unlockLevel){
+        addLog(ability.name+' desbloqueia no nível '+ability.unlockLevel+'.', '#f6c878');return;
+      }
+      if(slot===1)castTierOneClassSkill(now);
+      else addLog(ability.name+' (Tier '+slot+') ainda está em desenvolvimento.', '#f6c878');
       return;
     }
 
@@ -3158,6 +3177,7 @@
       player.def += amount('defense',2);
       player.cap += 25;
       syncTalentPoints();
+      if(player.classId)refreshClassSkillLabel();
       addFloatingText(player.floor, player.x, player.y - 0.6, `LEVEL ${player.level}!`, '#ffff00', true);
       addSpark(player.floor, player.x, player.y, 'magic');
       addLog(`You advanced from Level ${player.level - 1} to Level ${player.level}.`, '#ffffff');
