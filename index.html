@@ -599,6 +599,8 @@
         <button id="mixRuneWeapon" type="button" class="tibia-btn py-1" onclick="window.mixRuneGear('weapon','brasa')">Mixing arma</button>
         <button id="ageRuneArmor" type="button" class="tibia-btn py-1" onclick="window.ageRuneGear('armor')">Aging armadura</button>
         <button id="mixRuneArmor" type="button" class="tibia-btn py-1" onclick="window.mixRuneGear('armor','bastiao')">Mixing armadura</button>
+        <button id="unequipRuneWeapon" type="button" class="tibia-btn py-1" onclick="window.unequipRuneGear('weapon')">Guardar arma</button>
+        <button id="unequipRuneArmor" type="button" class="tibia-btn py-1" onclick="window.unequipRuneGear('armor')">Guardar armadura</button>
       </div>
       <div id="runeForgeMessage" role="status" class="text-[11px] text-amber-200"></div>
     </div>
@@ -838,9 +840,14 @@
     addLog('Forja rúnica temporariamente indisponível.', '#ffa577');
     return null;
   });
-  const gearBonuses=()=>equipmentApi
-    ?equipmentApi.totalGearBonuses(player.equippedGear,player.classId)
-    :{attack:0,defense:0,absorption:0,block:0};
+  const gearBonuses=()=>{
+    if(!equipmentApi)return {attack:0,defense:0,absorption:0,block:0};
+    try{return equipmentApi.totalGearBonuses(player.equippedGear,player.classId);}
+    catch(error){
+      console.warn('Equipamento antigo ou inválido ignorado no cálculo',error);
+      return {attack:0,defense:0,absorption:0,block:0};
+    }
+  };
   function grantStarterGearIfNeeded(){
     if(!equipmentApi || !player.classId || player.starterEquipmentGranted)return;
     const templateId=equipmentApi.CLASS_START_WEAPONS[player.classId];
@@ -2556,8 +2563,11 @@
       (tier===3&&!player.brumaDefeated?'<div class="text-purple-200">Requer derrotar Senhor da Bruma.</div>':''))+
       '<div class="mt-1 text-gray-400">Seu ouro: '+player.gold+'</div>';
     document.getElementById('forgeUpgradeBtn').disabled=
-      tier>=4||!nearForge()||player.gold<(cost||0)||player.level<(req||99)||
+      !!player.classId||tier>=4||!nearForge()||player.gold<(cost||0)||player.level<(req||99)||
       (tier===3&&!player.brumaDefeated);
+    document.getElementById('forgeUpgradeBtn').title=player.classId
+      ?'A espada legada não recebe novos aprimoramentos após escolher uma classe. Use a Forja Rúnica abaixo.'
+      :'Aprimoramento legado do Cavaleiro.';
     renderRuneForge();
   }
   function renderRuneForge(){
@@ -2565,7 +2575,7 @@
     if(!details)return;
     if(!equipmentApi){
       details.textContent='Carregando sistema de equipamentos...';
-      for(const id of ['ageRuneWeapon','mixRuneWeapon','ageRuneArmor','mixRuneArmor'])
+      for(const id of ['ageRuneWeapon','mixRuneWeapon','ageRuneArmor','mixRuneArmor','unequipRuneWeapon','unequipRuneArmor'])
         document.getElementById(id).disabled=true;
       return;
     }
@@ -2587,12 +2597,24 @@
         player.gold<equipmentApi.agingCost(player.equippedGear[slot]);
       document.getElementById(slot==='weapon'?'mixRuneWeapon':'mixRuneArmor').disabled=
         !valid||!nearForge()||!!player.equippedGear[slot].mixId||count<2||player.gold<200;
+      document.getElementById(slot==='weapon'?'unequipRuneWeapon':'unequipRuneArmor').disabled=!valid;
     }
   }
+  window.unequipRuneGear=function(slot){
+    if(!equipmentApi)return false;
+    try{
+      const result=equipmentApi.unequipToBag(player,slot);
+      player.lootBag=result.lootBag;
+      player.equippedGear=result.equippedGear;
+      addLog('Equipamento guardado na mochila.', '#a8eac0');
+      updateHUD();renderBackpack();renderForge();saveProgress();
+      return true;
+    }catch(e){document.getElementById('runeForgeMessage').textContent=e.message;return false;}
+  };
   window.ageRuneGear=function(slot){
     if(!equipmentApi||!nearForge())return false;
     const item=player.equippedGear?.[slot];
-    if(!equipmentApi.isValidEquipment(item))return false;
+    if(!equipmentApi.isValidEquipment(item) || item.aging>=20)return false;
     const cost=equipmentApi.agingCost(item);
     const odds=equipmentApi.agingOdds(item.aging);
     const warning=(odds.destroy>0?' Pode destruir permanentemente o item!':'');
@@ -2625,6 +2647,10 @@
     }catch(e){document.getElementById('runeForgeMessage').textContent=e.message;return false;}
   };
   window.upgradeWeapon=function(){
+    if(player.classId){
+      document.getElementById('forgeMessage').textContent='Classe definida: use a Forja Rúnica para seus equipamentos.';
+      return false;
+    }
     const tier=player.weaponTier||0,cost=FORGE_COSTS[tier],req=FORGE_MIN_LEVEL[tier];
     if(tier>=4||!nearForge()||player.gold<cost||player.level<req || (tier===3&&!player.brumaDefeated)){
       document.getElementById('forgeMessage').textContent='Aprimoramento indisponível: confira ouro, nível e proximidade da forja.';
