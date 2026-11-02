@@ -2921,6 +2921,79 @@
     }
   };
 
+  // Primeira habilidade de cada classe: dano/defesa/cura já afetam o jogo legado.
+  // Demais habilidades permanecem planejadas para integração em Tiers.
+  function castTierOneClassSkill(now){
+    const cls=classApi?.availableClasses().find(c=>c.id===player.classId);
+    const cost=classApi?.SKILL_1_COSTS[player.classId];
+    if(!cls || !cost)return;
+    if(now<cooldowns[1])return;
+    if(player.mp<cost.mana){
+      addLog('Mana insuficiente para '+cls.skills[0].name+' ('+cost.mana+' MP).','#ff8888');return;
+    }
+    const valid=entities.filter(e=>e.type==='monster' && !e.dead && e.hp>0 && e.floor===player.floor);
+    const range=mob=>Math.max(Math.abs(mob.x-player.x),Math.abs(mob.y-player.y));
+    const closest=(radius)=>valid.filter(m=>range(m)<=radius).sort((a,b)=>range(a)-range(b))[0];
+    const target=valid.find(e=>e.id===player.targetId);
+    let hits=[],heal=0,mitigation=false;
+    const id=player.classId;
+    if(id==='sentinela'){
+      if(now<player.shieldWallUntil){
+        addLog('Guarda da Brasa já está ativa.', '#f7cf8a');return;
+      }
+      mitigation=true;
+    }else if(id==='devota'){
+      if(player.hp>=player.maxHp){
+        addLog('Vida já está cheia.', '#f7cf8a');return;
+      }
+      heal=Math.max(12,Math.round(player.maxHp*.24));
+    }else{
+      if(isProtectionZone(player.floor,player.x,player.y)){
+        addLog('Habilidades ofensivas não funcionam em zona segura.', '#f7cf8a');return;
+      }
+      if(id==='colosso')hits=valid.filter(e=>range(e)<=1).slice(0,3);
+      if(id==='artifice')hits=valid.filter(e=>range(e)<=3).slice(0,4);
+      if(id==='arcanista'){
+        const center=target&&range(target)<=5?target:closest(5);
+        if(center)hits=valid.filter(e=>Math.max(Math.abs(e.x-center.x),Math.abs(e.y-center.y))<=1).slice(0,5);
+      }
+      if(id==='vigia'||id==='tecelao'||id==='espectro'){
+        const radius=id==='espectro'?1:5;
+        const focus=target&&range(target)<=radius?target:closest(radius);
+        if(focus)hits=[focus];
+      }
+      if(hits.length===0){
+        addLog('Nenhum monstro ao alcance de '+cls.skills[0].name+'.','#ffb17d');return;
+      }
+    }
+    player.mp-=cost.mana;
+    cooldowns[1]=now+cost.cooldown;
+    player.attackAnimUntil=now+360;
+    if(mitigation){
+      player.shieldWallUntil=now+5000;
+      addSpark(player.floor,player.x,player.y,'magic');
+      addLog('Guarda da Brasa: redução temporária de dano por 5s.','#a7f5c5');
+    }else if(heal){
+      player.hp=Math.min(player.maxHp,player.hp+heal);
+      addFloatingText(player.floor,player.x,player.y,'+'+heal,'#68efab');
+      addSpark(player.floor,player.x,player.y,'magic');
+    }else{
+      const coefficient={
+        colosso:1.22,vigia:1.2,artifice:.85,arcanista:1.15,
+        tecelao:.95,espectro:1.3
+      }[id]||1;
+      for(const mob of hits){
+        const critical=id==='espectro'&&Math.random()<.22?1.7:1;
+        const damage=Math.max(1,Math.floor(effectiveAttack()*coefficient*critical));
+        addSpark(mob.floor,mob.x,mob.y,'magic');
+        applyDamageToMonster(mob,damage,cls.skills[0].name);
+      }
+    }
+    addFloatingText(player.floor,player.x,player.y-0.5,cls.skills[0].name,'#ffd27d',true);
+    updateHUD();
+    saveProgress();
+  }
+
   function applyDamageToMonster(mob, dmg, sourceName = 'ataque') {
     if(!mob || mob.dead || dmg<=0)return;
     mob.hp = Math.max(0, mob.hp - dmg);
@@ -3073,12 +3146,16 @@
       player.xp -= player.maxXp;
       player.level++;
       player.maxXp = Math.floor(player.maxXp * 1.45);
-      player.maxHp += 35;
+      const growth=player.classId && classApi?classApi.nextLevelStats(player.classId):null;
+      const amount=(key,legacy)=>growth
+        ?Math.round((player.level-1)*growth[key])-Math.round((player.level-2)*growth[key])
+        :legacy;
+      player.maxHp += amount('hp',35);
       player.hp = player.maxHp;
-      player.maxMp += 15;
+      player.maxMp += amount('mp',15);
       player.mp = player.maxMp;
-      player.atk += 3;
-      player.def += 2;
+      player.atk += amount('attack',3);
+      player.def += amount('defense',2);
       player.cap += 25;
       syncTalentPoints();
       addFloatingText(player.floor, player.x, player.y - 0.6, `LEVEL ${player.level}!`, '#ffff00', true);
@@ -5385,6 +5462,18 @@
       completeCityQuest();
     }
     updateHUD();
+    classReadyPromise.then(api=>{
+      if(!api)return;
+      const current=api.availableClasses().find(c=>c.id===player.classId);
+      if(player.classId && !current)player.classId=null;
+      if(current)player.title=current.name;
+      refreshClassSkillLabel();
+      updateHUD();
+      const wanted=new URLSearchParams(window.location.search).get('chooseClass');
+      if(wanted && !player.classId && api.availableClasses().some(c=>c.id===wanted)){
+        window.openClassSelection(wanted);
+      }
+    });
     updateZoneUI();
     renderContracts();
     renderBackpack();
