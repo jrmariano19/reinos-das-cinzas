@@ -39,8 +39,8 @@ test('só placas e NPCs próximos aparecem',()=>{
 test('renderizador aplica visibilidade, marcador do herói e órbita',()=>{
  const js=readFileSync(new URL('../src/live-world-3d.js',import.meta.url),'utf8');
  assert.match(js,/shouldHideRoof\(house,player\)/);
- assert.match(js,/shouldShowHouseLabel\(house,player\)/);
- assert.match(js,/shouldShowActorLabel\(e,\{x:px,y:pz\}\)/);
+ assert.match(js,/shouldShowHouseLabel\(house,player,isTouch\?5:8\)/);
+ assert.match(js,/shouldShowActorLabel\(e,\{x:px,y:pz\},isTouch\?3\.3:6\)/);
  assert.match(js,/const heroRing=new THREE\.Mesh/);
  assert.match(js,/heroRing\.position\.set/);
  assert.match(js,/azimuth\+=delta\*\.008/);
