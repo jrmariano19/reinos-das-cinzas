@@ -64,7 +64,7 @@ test('renderizador 3D é importável e mapeia estado real para cliques do jogo',
  assert.match(source,/collectTileLayers\(map,TILE\)/);
  assert.match(source,/worldToTile\(point\.x,point\.z,activeLayer\.map\)/);
  assert.match(source,/onSelectTile\(tile\.x,tile\.y\)/);
- assert.match(source,/onSelectTile\(e\.x,e\.y\)/);
+ assert.match(source,/onSelectTile\(actor\.x,actor\.y\)/);
  assert.match(source,/updateDoors\(floor,openDoors\)/);
  assert.match(source,/renderCorpses\(corpses,floor,player\.x,player\.y\)/);
  assert.match(source,/visibleActor\(e,floor\)/);
