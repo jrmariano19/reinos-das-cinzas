@@ -23,7 +23,10 @@ A captura da cidade atual mostra um mundo top-down de edifícios e piso quadricu
 - [x] Motor de projeção, câmera e hit-test em módulos desacoplados.
 - [x] Visão experimental opt-in do mapa real; cliques passam pelo A* e interações existentes.
 - [x] Primeira ordenação de profundidade e cenário volumétrico provisório.
-- [ ] **Protótipo visual de referência de Valdoria**: praça, fachadas, lojas, árvores, barracas, atmosfera; sem modificar o mundo real.
+- [x] **Protótipo visual 3D de referência** em `preview/valdoria-3d.html`: praça, fachadas, lojas, árvores, barracas, torreões e iluminação diurna/noturna; não modifica o mapa jogável.
+- [x] **Moradores 3D experimentais**: guardas, ferreiro, mercadora, escriba e mensageiro com rotas em `src/valdoria-citylife.js`, animações de membros, placas de nomes e interação por clique.
+- [x] **Efeitos experimentais**: fumaça e brasas na forja; controles para mostrar/ocultar moradores.
+- [ ] Substituir modelos geométricos provisórios por arquitetura original detalhada e arte de personagem mais elaborada; validar visualmente e em dispositivos móveis.
 - [ ] Extrair catálogo de objetos e texturas originais para módulos reutilizáveis.
 - [ ] Implantar sprites animados originais e unificar terreno + cenário + atores na mesma ordenação de profundidade.
 - [ ] Reconstruir mapa real gradualmente, manter colisões, portas, quests e transições; validar rotas.
@@ -35,3 +38,6 @@ A captura da cidade atual mostra um mundo top-down de edifícios e piso quadricu
 - Toda alteração gráfica entra na branch `dev/priston-inspired-systems`; Preview Vercel antes da produção.
 - Não vender os desenhos provisórios como arte final. Performance em 56×56, click-targets e movimentação devem ser conferidos.
 - Se a geometria da nova cidade exigir mover paredes/portas, introduzir migração de posição para saves antes da publicação.
+
+## Estado da iteração 3D v0.3
+A cena é um laboratório independente. **Não há navegação jogável do herói em 3D, lojas reais ou NPCs conectados às quests** nesta etapa. Os moradores demonstram rotas e detalhes; sua funcionalidade real será integrada em uma etapa posterior. A versão oficial na branch `main` não deve ser substituída antes dessa integração e dos testes.
