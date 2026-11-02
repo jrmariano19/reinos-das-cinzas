@@ -1030,6 +1030,23 @@
         g.fillRect(15, 15, 4, 2);
         g.fillRect(27, 31, 5, 2);
       }
+      // Bastião das Cinzas: pavimento artesanal com juntas, desgaste e reflexos quentes.
+      // Apenas arte: não altera colisões, missões nem a grade do mapa.
+      g.save();
+      g.strokeStyle='rgba(20,17,22,.42)';g.lineWidth=1;
+      for(let row=0;row<4;row++){
+        const y=row*12+2,offset=(row%2)*11;
+        g.beginPath();g.moveTo(0,y);g.lineTo(48,y);g.stroke();
+        for(let x=-offset;x<48;x+=22){
+          g.beginPath();g.moveTo(x,y);g.lineTo(x-2,y+11);g.stroke();
+          g.fillStyle='rgba(232,171,92,.085)';g.fillRect(x+2,y+2,9,1);
+        }
+      }
+      if(v===0||v===2){
+        g.fillStyle='rgba(91,106,62,.35)';
+        g.fillRect(7+v*3,35,6,2);g.fillRect(33,11+v,4,2);
+      }
+      g.restore();
       spriteCache[`stone_${v}`] = c;
     }
 
@@ -3715,7 +3732,7 @@
     const armMotion=moving?Math.sin(cycle+Math.PI)*.42:Math.sin(cycle*.72+phase)*.055;
     const blink=Math.sin(time*.0011+phase*2.7)>.986;
     const palettes={
-      knight:{coat:'#8f3029',light:'#e2a36b',dark:'#421e1d',metal:'#9da8ad',trim:'#e7bd65',skin:'#c58e69',hair:'#493027'},
+      knight:{coat:'#82251f',light:'#d99a62',dark:'#2b1720',metal:'#b7bec2',trim:'#edc778',skin:'#c58e69',hair:'#493027'},
       guard:{coat:'#294b79',light:'#82a8c9',dark:'#172b48',metal:'#aab4bb',trim:'#d9b66b',skin:'#c58d68',hair:'#493027'},
       commander:{coat:'#76501f',light:'#d6ae60',dark:'#392817',metal:'#b8b7a6',trim:'#f1d58b',skin:'#d1a17c',hair:'#5b3827'},
       merchant:{coat:'#496346',light:'#9db27b',dark:'#263a2a',metal:'#98754a',trim:'#d7b77a',skin:'#c9906c',hair:'#493027'},
@@ -3745,6 +3762,19 @@
     if(dir==='left')target.scale(-1,1);
     target.translate(-24,0);
 
+    // Capa do cavaleiro: volume e movimento discretos, atrás do corpo.
+    if(entityType==='knight'){
+      const sway=moving?Math.sin(cycle)*2.5:Math.sin(cycle*.6)*.65;
+      target.fillStyle='#33161d';
+      target.beginPath();target.moveTo(19,17);target.lineTo(29,17);
+      target.lineTo(33+sway,38);target.quadraticCurveTo(24,44,14-sway,38);
+      target.closePath();target.fill();
+      target.fillStyle='#8f3028';target.beginPath();target.moveTo(20,19);
+      target.lineTo(27,19);target.lineTo(29+sway,36);
+      target.quadraticCurveTo(23,40,18-sway,36);target.closePath();target.fill();
+      target.strokeStyle='rgba(240,174,95,.5)';target.lineWidth=1;
+      target.beginPath();target.moveTo(20,20);target.lineTo(18-sway,35);target.stroke();
+    }
     const outline='#241c1a';
     const strokePath=(fill,stroke=outline,width=1.35)=>{
       target.fillStyle=fill;target.fill();target.lineWidth=width;
